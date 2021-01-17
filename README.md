@@ -1,6 +1,10 @@
 # Forgified Loom
 
+[![Download](https://api.bintray.com/packages/shedaniel/cloth/forgified-fabric-loom/images/download.svg)](https://dl.bintray.com/shedaniel/cloth/forgified-fabric-loom/forgified-fabric-loom.gradle.plugin/)
+
 Talk to us on [Discord](https://discord.gg/C2RdJDpRBP)!
+
+Documentation: https://architectury.github.io/architectury-documentations/
 
 A fork of [Juuxel's Loom fork](https://github.com/Juuxel/fabric-loom) that is a fork of [Fabric Loom](https://github.com/FabricMC/fabric-loom) that supports the Forge modding toolchain.
 
@@ -10,7 +14,12 @@ and there are probably many bugs and limitations here that FG doesn't have.
 
 ## Usage
 
-Starting with a Fabric project similar to the example mod,
+Starting with a Fabric project similar to the example mod, add `https://dl.bintray.com/shedaniel/cloth/` as a plugin repository, and switch to forgified-fabric-loom:
+```groovy
+plugins {
+	id "forgified-fabric-loom" version "INSERT LATEST VERSION HERE"
+}
+```
 
 Then you need to set `loom.forge = true` in your `gradle.properties`,
 and add the Forge dependency:
