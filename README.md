@@ -2,7 +2,7 @@
 
 Talk to us on [Discord](https://discord.gg/C2RdJDpRBP)!
 
-A fork of [Juuxel's Loom fork]("https://github.com/Juuxel/fabric-loom") that is a fork of [Fabric Loom](https://github.com/FabricMC/fabric-loom) that supports the Forge modding toolchain.
+A fork of [Juuxel's Loom fork](https://github.com/Juuxel/fabric-loom) that is a fork of [Fabric Loom](https://github.com/FabricMC/fabric-loom) that supports the Forge modding toolchain.
 
 Note that if ForgeGradle works fine for you, *use it*.
 This is not meant to be a complete replacement for ForgeGradle,
