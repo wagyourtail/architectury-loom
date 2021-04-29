@@ -208,7 +208,7 @@ public final class CompileConfiguration {
 
 			project1.getRepositories().maven(mavenArtifactRepository -> {
 				mavenArtifactRepository.setName("Forge");
-				mavenArtifactRepository.setUrl("https://files.minecraftforge.net/maven/");
+				mavenArtifactRepository.setUrl("https://maven.minecraftforge.net/");
 
 				mavenArtifactRepository.metadataSources(sources -> {
 					sources.mavenPom();
