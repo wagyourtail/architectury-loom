@@ -107,7 +107,7 @@ public class RemapJarTask extends Jar {
 
 	public RemapJarTask() {
 		super();
-		input = GradleSupport.getfileProperty(getProject());
+		input = getProject().getObjects().fileProperty();
 		addNestedDependencies = getProject().getObjects().property(Boolean.class);
 		addDefaultNestedDependencies = getProject().getObjects().property(Boolean.class);
 		remapAccessWidener = getProject().getObjects().property(Boolean.class);
