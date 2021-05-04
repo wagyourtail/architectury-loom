@@ -103,7 +103,7 @@ public abstract class AbstractFernFlowerDecompiler implements LoomDecompiler {
 		ExecResult result = ForkingJavaExec.javaexec(
 				project.getRootProject().getPlugins().hasPlugin(Constants.PLUGIN_ID) ? project.getRootProject() : project,
 				spec -> {
-					spec.setMain(fernFlowerExecutor().getName());
+					spec.getMainClass().set(fernFlowerExecutor().getName());
 					spec.jvmArgs("-Xms200m", "-Xmx3G");
 					spec.setArgs(args);
 					spec.setErrorOutput(System.err);

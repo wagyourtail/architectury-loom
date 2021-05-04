@@ -53,6 +53,7 @@ import org.jetbrains.annotations.ApiStatus;
 
 import net.fabricmc.loom.api.decompilers.LoomDecompiler;
 import net.fabricmc.loom.configuration.LoomDependencyManager;
+import net.fabricmc.loom.configuration.LoomProjectData;
 import net.fabricmc.loom.configuration.ide.RunConfig;
 import net.fabricmc.loom.configuration.ide.RunConfigSettings;
 import net.fabricmc.loom.configuration.launch.LaunchProviderSettings;
@@ -112,6 +113,9 @@ public class LoomGradleExtension {
 	})));
 	@ApiStatus.Experimental
 	public final List<Consumer<RunConfig>> settingsPostEdit = new ArrayList<>();
+
+	@ApiStatus.Internal
+	private final LoomProjectData projectData;
 
 	private NamedDomainObjectContainer<RunConfigSettings> runConfigs;
 	private NamedDomainObjectContainer<LaunchProviderSettings> launchConfigs;
@@ -225,6 +229,7 @@ public class LoomGradleExtension {
 		this.launchConfigs = project.container(LaunchProviderSettings.class,
 				baseName -> new LaunchProviderSettings(project, baseName));
 		this.log4jConfigs = project.files(getDefaultLog4jConfigFile());
+		projectData = new LoomProjectData(project);
 	}
 
 	/**
@@ -533,5 +538,10 @@ public class LoomGradleExtension {
 	@ApiStatus.Experimental
 	public NamedDomainObjectContainer<LaunchProviderSettings> getLaunchConfigs() {
 		return launchConfigs;
+	}
+
+	@ApiStatus.Internal
+	public LoomProjectData getProjectData() {
+		return projectData;
 	}
 }
