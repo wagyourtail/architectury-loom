@@ -19,7 +19,7 @@ targetCompatibility = 1.8
 
 group = "dev.architectury"
 archivesBaseName = project.name
-def baseVersion = '0.7.1'
+def baseVersion = '0.7.2'
 def runNumber = System.getenv("GITHUB_RUN_NUMBER") ?: "9999"
 
 def isSnapshot = System.getenv("PR_NUM") != null
