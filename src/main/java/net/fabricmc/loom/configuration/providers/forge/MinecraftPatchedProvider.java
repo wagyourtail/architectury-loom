@@ -152,6 +152,8 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 			patchId += "-fabric-mixin";
 		}
 
+		minecraftProvider.setJarSuffix(patchId);
+
 		File globalCache = getExtension().getUserCache();
 		File cache = usesProjectCache() ? getExtension().getProjectPersistentCache() : globalCache;
 		File globalDir = new File(globalCache, patchId);
@@ -463,6 +465,7 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 	}
 
 	private void patchJars(Logger logger) throws IOException {
+		Stopwatch stopwatch = Stopwatch.createStarted();
 		logger.lifecycle(":patching jars");
 
 		PatchProvider patchProvider = getExtension().getPatchProvider();
@@ -473,6 +476,8 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 			copyMissingClasses(environment.srgJar.apply(this), environment.patchedSrgJar.apply(this));
 			fixParameterAnnotation(environment.patchedSrgJar.apply(this));
 		});
+
+		logger.lifecycle(":patched jars in " + stopwatch.stop());
 	}
 
 	private void patchJars(File clean, File output, Path patches) throws IOException {
@@ -512,7 +517,7 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 	private void walkFileSystems(File source, File target, Predicate<Path> filter, Function<FileSystem, Iterable<Path>> toWalk, FsPathConsumer action)
 			throws IOException {
 		try (FileSystemUtil.FileSystemDelegate sourceFs = FileSystemUtil.getJarFileSystem(source, false);
-		     FileSystemUtil.FileSystemDelegate targetFs = FileSystemUtil.getJarFileSystem(target, false)) {
+					FileSystemUtil.FileSystemDelegate targetFs = FileSystemUtil.getJarFileSystem(target, false)) {
 			for (Path sourceDir : toWalk.apply(sourceFs.get())) {
 				Path dir = sourceDir.toAbsolutePath();
 				Files.walk(dir)
