@@ -59,6 +59,7 @@ public final class LoomTasks {
 
 		registerIDETasks(tasks);
 		registerRunTasks(tasks, project);
+		registerLaunchSettings(project);
 		registerDecompileTasks(tasks, project);
 	}
 
@@ -107,6 +108,17 @@ public final class LoomTasks {
 
 		extension.getRunConfigs().create("client", RunConfigSettings::client);
 		extension.getRunConfigs().create("server", RunConfigSettings::server);
+	}
+
+	private static void registerLaunchSettings(Project project) {
+		LoomGradleExtension extension = project.getExtensions().getByType(LoomGradleExtension.class);
+		Preconditions.checkArgument(extension.getRunConfigs().size() == 0, "Launch configurations must not be registered before loom");
+		extension.getLaunchConfigs().create("client");
+		extension.getLaunchConfigs().create("server");
+
+		if (extension.isForge()) {
+			extension.getLaunchConfigs().create("data");
+		}
 	}
 
 	private static void registerDecompileTasks(TaskContainer tasks, Project project) {
