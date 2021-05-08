@@ -112,7 +112,7 @@ public final class LoomTasks {
 
 	private static void registerLaunchSettings(Project project) {
 		LoomGradleExtension extension = project.getExtensions().getByType(LoomGradleExtension.class);
-		Preconditions.checkArgument(extension.getRunConfigs().size() == 0, "Launch configurations must not be registered before loom");
+		Preconditions.checkArgument(extension.getLaunchConfigs().size() == 0, "Launch configurations must not be registered before loom");
 		extension.getLaunchConfigs().create("client");
 		extension.getLaunchConfigs().create("server");
 

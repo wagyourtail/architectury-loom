@@ -42,8 +42,11 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Stopwatch;
 import com.google.common.net.UrlEscapers;
 import com.google.gson.JsonObject;
+import dev.architectury.mappingslayers.api.utils.MappingsModificationUtils;
+import dev.architectury.mappingslayers.api.utils.MappingsUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.tools.ant.util.StringUtils;
 import org.gradle.api.Project;
@@ -417,21 +420,21 @@ public class MappingsProvider extends DependencyProvider {
 			extractMappings(unmergedYarnJarFs, unmergedYarn);
 		}
 
+		Stopwatch stopwatch = Stopwatch.createStarted();
+		project.getLogger().info(":merging mappings");
 		Path invertedIntermediary = Paths.get(mappingsStepsDir.toString(), "inverted-intermediary.tiny");
 		reorderMappings(getIntermediaryTiny(), invertedIntermediary, "intermediary", "official");
 		Path unorderedMergedMappings = Paths.get(mappingsStepsDir.toString(), "unordered-merged.tiny");
-		project.getLogger().info(":merging");
 		mergeMappings(invertedIntermediary, unmergedYarn, unorderedMergedMappings);
 		reorderMappings(unorderedMergedMappings, tinyMappings.toPath(), "official", "intermediary", "named");
+		Files.deleteIfExists(invertedIntermediary);
+		Files.deleteIfExists(unorderedMergedMappings);
+		project.getLogger().info(":merged mappings in " + stopwatch.stop());
 	}
 
-	private void reorderMappings(Path oldMappings, Path newMappings, String... newOrder) {
-		Command command = new CommandReorderTinyV2();
-		String[] args = new String[2 + newOrder.length];
-		args[0] = oldMappings.toAbsolutePath().toString();
-		args[1] = newMappings.toAbsolutePath().toString();
-		System.arraycopy(newOrder, 0, args, 2, newOrder.length);
-		runCommand(command, args);
+	private void reorderMappings(Path oldMappings, Path newMappings, String... newOrder) throws IOException {
+		MappingsModificationUtils.modify(oldMappings, newMappings, tree ->
+				MappingsUtils.reorderNamespaces(tree, Arrays.asList(newOrder)));
 	}
 
 	private void mergeMappings(Path intermediaryMappings, Path yarnMappings, Path newMergedMappings) {

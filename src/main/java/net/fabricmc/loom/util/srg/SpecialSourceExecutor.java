@@ -40,7 +40,6 @@ import org.gradle.api.Project;
 import org.zeroturnaround.zip.ZipUtil;
 
 import net.fabricmc.loom.LoomGradleExtension;
-import net.fabricmc.loom.configuration.providers.mappings.MappingsProvider;
 
 public class SpecialSourceExecutor {
 	public static Path produceSrgJar(Project project, String side, File specialSourceJar, Path officialJar, Path srgPath)
