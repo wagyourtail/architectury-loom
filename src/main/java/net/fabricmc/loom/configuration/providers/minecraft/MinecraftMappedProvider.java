@@ -61,6 +61,7 @@ import net.fabricmc.loom.configuration.sources.ForgeSourcesRemapper;
 import net.fabricmc.loom.util.Constants;
 import net.fabricmc.loom.util.DownloadUtil;
 import net.fabricmc.loom.util.FileSystemUtil;
+import net.fabricmc.loom.util.OperatingSystem;
 import net.fabricmc.loom.util.ThreadingUtils;
 import net.fabricmc.loom.util.TinyRemapperMappingsHelper;
 import net.fabricmc.loom.util.srg.AtRemapper;
@@ -137,7 +138,7 @@ public class MinecraftMappedProvider extends DependencyProvider {
 		addDependencies(dependency, postPopulationScheduler);
 
 		getProject().afterEvaluate(project -> {
-			if (getExtension().isForge()) {
+			if (getExtension().isForge() && !OperatingSystem.isCIBuild()) {
 				try {
 					ForgeSourcesRemapper.addBaseForgeSources(project);
 				} catch (IOException e) {
