@@ -129,6 +129,11 @@ public class ModCompileRemapper {
 		File input = artifact.getFile();
 
 		try (ZipFile zipFile = new ZipFile(input)) {
+			if (zipFile.getEntry("architectury.common.marker") != null) {
+				logger.info("Found architectury common mod in " + config + ": {}", artifact.getId());
+				return true;
+			}
+
 			if (forge) {
 				if (zipFile.getEntry("META-INF/mods.toml") != null) {
 					logger.info("Found Forge mod in " + config + ": {}", artifact.getId());
