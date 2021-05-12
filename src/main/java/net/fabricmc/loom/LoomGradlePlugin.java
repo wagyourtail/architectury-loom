@@ -57,7 +57,7 @@ public class LoomGradlePlugin implements Plugin<Project> {
 			project.getLogger().lifecycle("Architectury Loom: " + loomVersion);
 		}
 
-		refreshDeps = project.getGradle().getStartParameter().isRefreshDependencies();
+		refreshDeps = project.getGradle().getStartParameter().isRefreshDependencies() || "true".equals(System.getProperty("loom.refresh"));
 
 		if (refreshDeps) {
 			MappingsCache.INSTANCE.invalidate();

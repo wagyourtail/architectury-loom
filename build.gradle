@@ -28,7 +28,7 @@ tasks.withType(JavaCompile).configureEach {
 
 group = "dev.architectury"
 archivesBaseName = project.name
-def baseVersion = '0.7.1'
+def baseVersion = '0.7.2'
 def runNumber = System.getenv("GITHUB_RUN_NUMBER") ?: "9999"
 
 def isSnapshot = System.getenv("PR_NUM") != null
@@ -83,6 +83,7 @@ dependencies {
 
 	// tinyfile management
 	implementation ('dev.architectury:tiny-remapper:1.0.0')
+	implementation ('dev.architectury:mappings-layers-core:1.1.6')
 	implementation ('net.fabricmc:tiny-mappings-parser:0.3.0+build.17')
 
 	implementation 'net.fabricmc:access-widener:1.0.0'

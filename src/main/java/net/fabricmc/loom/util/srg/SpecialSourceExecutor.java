@@ -40,10 +40,9 @@ import org.gradle.api.Project;
 import org.zeroturnaround.zip.ZipUtil;
 
 import net.fabricmc.loom.LoomGradleExtension;
-import net.fabricmc.loom.configuration.providers.mappings.MappingsProvider;
 
 public class SpecialSourceExecutor {
-	public static Path produceSrgJar(Project project, MappingsProvider provider, String side, File specialSourceJar, Path officialJar, Path srgPath)
+	public static Path produceSrgJar(Project project, String side, File specialSourceJar, Path officialJar, Path srgPath)
 			throws Exception {
 		Set<String> filter = Files.readAllLines(srgPath, StandardCharsets.UTF_8).stream()
 				.filter(s -> !s.startsWith("\t"))
