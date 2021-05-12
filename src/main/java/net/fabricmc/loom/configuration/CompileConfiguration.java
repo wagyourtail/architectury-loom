@@ -30,7 +30,6 @@ import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.plugins.JavaPluginConvention;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.bundling.AbstractArchiveTask;
-import org.gradle.api.tasks.bundling.Jar;
 import org.gradle.api.tasks.javadoc.Javadoc;
 
 import net.fabricmc.loom.LoomGradleExtension;
@@ -57,24 +56,11 @@ public final class CompileConfiguration {
 
 	public static void setupConfigurations(Project project) {
 		final ConfigurationContainer configurations = project.getConfigurations();
-		Configuration modCompileClasspathConfig = project.getConfigurations().maybeCreate(Constants.Configurations.MOD_COMPILE_CLASSPATH);
-		modCompileClasspathConfig.setTransitive(true);
-		Configuration modCompileClasspathMappedConfig = project.getConfigurations().maybeCreate(Constants.Configurations.MOD_COMPILE_CLASSPATH_MAPPED);
-		modCompileClasspathMappedConfig.setTransitive(false);
-
-		Configuration minecraftNamedConfig = project.getConfigurations().maybeCreate(Constants.Configurations.MINECRAFT_NAMED);
-		minecraftNamedConfig.setTransitive(false); // The launchers do not recurse dependencies
-		Configuration minecraftDependenciesConfig = project.getConfigurations().maybeCreate(Constants.Configurations.MINECRAFT_DEPENDENCIES);
-		minecraftDependenciesConfig.setTransitive(false);
-		Configuration loaderDependenciesConfig = project.getConfigurations().maybeCreate(Constants.Configurations.LOADER_DEPENDENCIES);
-		loaderDependenciesConfig.setTransitive(false);
-		Configuration minecraftConfig = project.getConfigurations().maybeCreate(Constants.Configurations.MINECRAFT);
-		minecraftConfig.setTransitive(false);
+		LoomProjectData data = project.getExtensions().getByType(LoomGradleExtension.class).getProjectData();
 
 		project.afterEvaluate(project1 -> {
 			if (project.getExtensions().getByType(LoomGradleExtension.class).shouldGenerateSrgTiny()) {
-				Configuration srg = project.getConfigurations().maybeCreate(Constants.Configurations.SRG);
-				srg.setTransitive(false);
+				data.createLazyConfiguration(Constants.Configurations.SRG).configure(configuration -> configuration.setTransitive(false));
 			}
 
 			if (project.getExtensions().getByType(LoomGradleExtension.class).isDataGenEnabled()) {
@@ -84,45 +70,28 @@ public final class CompileConfiguration {
 			}
 		});
 
-		if (project.getExtensions().getByType(LoomGradleExtension.class).isForge()) {
-			Configuration forgeConfig = project.getConfigurations().maybeCreate(Constants.Configurations.FORGE);
-			forgeConfig.setTransitive(false);
-			Configuration forgeUserdevConfig = project.getConfigurations().maybeCreate(Constants.Configurations.FORGE_USERDEV);
-			forgeUserdevConfig.setTransitive(false);
-			Configuration forgeInstallerConfig = project.getConfigurations().maybeCreate(Constants.Configurations.FORGE_INSTALLER);
-			forgeInstallerConfig.setTransitive(false);
-			Configuration forgeUniversalConfig = project.getConfigurations().maybeCreate(Constants.Configurations.FORGE_UNIVERSAL);
-			forgeUniversalConfig.setTransitive(false);
-			Configuration forgeDependencies = project.getConfigurations().maybeCreate(Constants.Configurations.FORGE_DEPENDENCIES);
-			forgeDependencies.setTransitive(false);
-			Configuration mcpConfig = project.getConfigurations().maybeCreate(Constants.Configurations.MCP_CONFIG);
-			mcpConfig.setTransitive(false);
-
-			extendsFrom(Constants.Configurations.MINECRAFT_DEPENDENCIES, Constants.Configurations.FORGE_DEPENDENCIES, project);
-		}
-
-		if (project.getExtensions().getByType(LoomGradleExtension.class).supportsInclude()) {
-			Configuration includeConfig = project.getConfigurations().maybeCreate(Constants.Configurations.INCLUDE);
-			includeConfig.setTransitive(false); // Dont get transitive deps
-		}
-
-		project.getConfigurations().maybeCreate(Constants.Configurations.MAPPING_CONSTANTS);
-		extendsFrom(JavaPlugin.COMPILE_ONLY_CONFIGURATION_NAME, Constants.Configurations.MAPPING_CONSTANTS, project);
-
-		project.getConfigurations().maybeCreate(Constants.Configurations.MAPPINGS);
-		project.getConfigurations().maybeCreate(Constants.Configurations.MAPPINGS_FINAL);
-		project.getConfigurations().maybeCreate(Constants.Configurations.LOOM_DEVELOPMENT_DEPENDENCIES);
-		project.getConfigurations().maybeCreate(Constants.Configurations.UNPICK_CLASSPATH);
-
-		LoomProjectData data = project.getExtensions().getByType(LoomGradleExtension.class).getProjectData();
-
 		data.createLazyConfiguration(Constants.Configurations.MOD_COMPILE_CLASSPATH).configure(configuration -> configuration.setTransitive(true));
 		data.createLazyConfiguration(Constants.Configurations.MOD_COMPILE_CLASSPATH_MAPPED).configure(configuration -> configuration.setTransitive(false));
 		data.createLazyConfiguration(Constants.Configurations.MINECRAFT_NAMED).configure(configuration -> configuration.setTransitive(false)); // The launchers do not recurse dependencies
 		data.createLazyConfiguration(Constants.Configurations.MINECRAFT_DEPENDENCIES).configure(configuration -> configuration.setTransitive(false));
 		data.createLazyConfiguration(Constants.Configurations.LOADER_DEPENDENCIES).configure(configuration -> configuration.setTransitive(false));
 		data.createLazyConfiguration(Constants.Configurations.MINECRAFT).configure(configuration -> configuration.setTransitive(false));
-		data.createLazyConfiguration(Constants.Configurations.INCLUDE).configure(configuration -> configuration.setTransitive(false)); // Dont get transitive deps
+
+		if (project.getExtensions().getByType(LoomGradleExtension.class).isForge()) {
+			data.createLazyConfiguration(Constants.Configurations.FORGE).configure(configuration -> configuration.setTransitive(false));
+			data.createLazyConfiguration(Constants.Configurations.FORGE_USERDEV).configure(configuration -> configuration.setTransitive(false));
+			data.createLazyConfiguration(Constants.Configurations.FORGE_INSTALLER).configure(configuration -> configuration.setTransitive(false));
+			data.createLazyConfiguration(Constants.Configurations.FORGE_UNIVERSAL).configure(configuration -> configuration.setTransitive(false));
+			data.createLazyConfiguration(Constants.Configurations.FORGE_DEPENDENCIES).configure(configuration -> configuration.setTransitive(false));
+			data.createLazyConfiguration(Constants.Configurations.MCP_CONFIG).configure(configuration -> configuration.setTransitive(false));
+
+			extendsFrom(Constants.Configurations.MINECRAFT_DEPENDENCIES, Constants.Configurations.FORGE_DEPENDENCIES, project);
+		}
+
+		if (project.getExtensions().getByType(LoomGradleExtension.class).supportsInclude()) {
+			data.createLazyConfiguration(Constants.Configurations.INCLUDE).configure(configuration -> configuration.setTransitive(false)); // Dont get transitive deps
+		}
+
 		data.createLazyConfiguration(Constants.Configurations.MAPPING_CONSTANTS);
 
 		extendsFrom(JavaPlugin.COMPILE_ONLY_CONFIGURATION_NAME, Constants.Configurations.MAPPING_CONSTANTS, project);
