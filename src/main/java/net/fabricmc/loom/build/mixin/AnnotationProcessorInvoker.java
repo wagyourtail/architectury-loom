@@ -71,9 +71,8 @@ public abstract class AnnotationProcessorInvoker<T extends Task> {
 	private void passMixinArguments(T task) {
 		try {
 			LoomGradleExtension extension = project.getExtensions().getByType(LoomGradleExtension.class);
-			File inMapFile = extension.getMappingsProvider().tinyMappings;
-			Map<String, String> args = new HashMap<String, String>() {{
-					put(Constants.MixinArguments.IN_MAP_FILE_NAMED_INTERMEDIARY, inMapFile.getCanonicalPath());
+			Map<String, String> args = new HashMap<>() {{
+					put(Constants.MixinArguments.IN_MAP_FILE_NAMED_INTERMEDIARY, extension.getMappingsProvider().tinyMappings.getCanonicalPath());
 					put(Constants.MixinArguments.OUT_MAP_FILE_NAMED_INTERMEDIARY, extension.getNextMixinMappings().getCanonicalPath());
 					put(Constants.MixinArguments.OUT_REFMAP_FILE, getRefmapDestination(task, extension));
 					put(Constants.MixinArguments.DEFAULT_OBFUSCATION_ENV, "named:intermediary");

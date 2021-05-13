@@ -45,7 +45,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import org.apache.commons.io.IOUtils;
 import org.gradle.api.Project;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.plugins.ide.eclipse.model.EclipseModel;
@@ -264,7 +263,7 @@ public class RunConfig {
 		String dummyConfig;
 
 		try (InputStream input = SetupIntelijRunConfigs.class.getClassLoader().getResourceAsStream(dummy)) {
-			dummyConfig = IOUtils.toString(input, StandardCharsets.UTF_8);
+			dummyConfig = new String(input.readAllBytes(), StandardCharsets.UTF_8);
 		}
 
 		dummyConfig = dummyConfig.replace("%NAME%", configName);

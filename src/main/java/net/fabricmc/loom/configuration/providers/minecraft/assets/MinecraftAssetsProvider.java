@@ -54,7 +54,7 @@ public class MinecraftAssetsProvider {
 		boolean offline = project.getGradle().getStartParameter().isOffline();
 
 		MinecraftVersionMeta versionInfo = minecraftProvider.getVersionInfo();
-		MinecraftVersionMeta.AssetIndex assetIndex = versionInfo.getAssetIndex();
+		MinecraftVersionMeta.AssetIndex assetIndex = versionInfo.assetIndex();
 
 		// get existing cache files
 		File assets = new File(extension.getUserCache(), "assets");
@@ -63,7 +63,7 @@ public class MinecraftAssetsProvider {
 			assets.mkdirs();
 		}
 
-		File assetsInfo = new File(assets, "indexes" + File.separator + assetIndex.getFabricId(minecraftProvider.getMinecraftVersion()) + ".json");
+		File assetsInfo = new File(assets, "indexes" + File.separator + assetIndex.fabricId(minecraftProvider.getMinecraftVersion()) + ".json");
 
 		project.getLogger().info(":downloading asset index");
 
@@ -76,7 +76,7 @@ public class MinecraftAssetsProvider {
 				throw new GradleException("Asset index not found at " + assetsInfo.getAbsolutePath());
 			}
 		} else {
-			HashedDownloadUtil.downloadIfInvalid(new URL(assetIndex.getUrl()), assetsInfo, assetIndex.getSha1(), project.getLogger(), false);
+			HashedDownloadUtil.downloadIfInvalid(new URL(assetIndex.url()), assetsInfo, assetIndex.sha1(), project.getLogger(), false);
 		}
 
 		ExecutorService executor = Executors.newFixedThreadPool(Math.min(16, Math.max(Runtime.getRuntime().availableProcessors() * 2, 1)));
@@ -85,19 +85,19 @@ public class MinecraftAssetsProvider {
 		AssetIndex index;
 
 		try (FileReader fileReader = new FileReader(assetsInfo)) {
-			index = LoomGradlePlugin.GSON.fromJson(fileReader, AssetIndex.class);
+			index = LoomGradlePlugin.OBJECT_MAPPER.readValue(fileReader, AssetIndex.class);
 		}
 
 		Stopwatch stopwatch = Stopwatch.createStarted();
 
-		Map<String, AssetObject> parent = index.getFileMap();
+		Map<String, AssetObject> parent = index.objects();
 
 		ProgressBar[] progressBar = {null};
 
 		try {
 			for (Map.Entry<String, AssetObject> entry : parent.entrySet()) {
 				AssetObject object = entry.getValue();
-				String sha1 = object.getHash();
+			String sha1 = object.hash();
 				String filename = "objects" + File.separator + sha1.substring(0, 2) + File.separator + sha1;
 				File file = new File(assets, filename);
 

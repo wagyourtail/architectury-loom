@@ -66,7 +66,7 @@ public class LaunchProvider extends DependencyProvider {
 				.property("client", "org.lwjgl.librarypath", getExtension().getNativesDirectory().getAbsolutePath())
 
 				.argument("client", "--assetIndex")
-				.argument("client", getExtension().getMinecraftProvider().getVersionInfo().getAssetIndex().getFabricId(getExtension().getMinecraftProvider().getMinecraftVersion()))
+				.argument("client", getExtension().getMinecraftProvider().getVersionInfo().assetIndex().fabricId(getExtension().getMinecraftProvider().getMinecraftVersion()))
 				.argument("client", "--assetsDir")
 				.argument("client", new File(getExtension().getUserCache(), "assets").getAbsolutePath());
 
@@ -168,7 +168,7 @@ public class LaunchProvider extends DependencyProvider {
 	private void writeRemapClassPath() {
 		List<String> inputConfigurations = new ArrayList<>();
 		inputConfigurations.add(Constants.Configurations.LOADER_DEPENDENCIES);
-		inputConfigurations.addAll(Constants.MOD_COMPILE_ENTRIES.stream().map(RemappedConfigurationEntry::getSourceConfiguration).collect(Collectors.toList()));
+		inputConfigurations.addAll(Constants.MOD_COMPILE_ENTRIES.stream().map(RemappedConfigurationEntry::sourceConfiguration).collect(Collectors.toList()));
 
 		List<File> remapClasspath = new ArrayList<>();
 
@@ -183,7 +183,7 @@ public class LaunchProvider extends DependencyProvider {
 				.collect(Collectors.joining(File.pathSeparator));
 
 		try {
-			Files.write(getRemapClasspathFile().toPath(), str.getBytes(StandardCharsets.UTF_8));
+			Files.writeString(getRemapClasspathFile().toPath(), str);
 		} catch (IOException e) {
 			throw new RuntimeException("Failed to generate remap classpath", e);
 		}

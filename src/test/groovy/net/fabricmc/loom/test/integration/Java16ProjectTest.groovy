@@ -22,8 +22,28 @@
  * SOFTWARE.
  */
 
-package net.fabricmc.loom.configuration.providers.minecraft.assets;
+package net.fabricmc.loom.test.integration
 
-@SuppressWarnings("unused")
-public record AssetObject(String hash, long size) {
+import net.fabricmc.loom.test.util.ProjectTestTrait
+import spock.lang.Specification
+import spock.lang.Unroll
+
+import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
+
+class Java16ProjectTest extends Specification implements ProjectTestTrait {
+	@Override
+	String name() {
+		"java16"
+	}
+
+	@Unroll
+	def "build (gradle #gradle)"() {
+		when:
+			def result = create("build", gradle)
+		then:
+			result.task(":build").outcome == SUCCESS
+		where:
+			gradle              | _
+			DEFAULT_GRADLE      | _
+	}
 }
