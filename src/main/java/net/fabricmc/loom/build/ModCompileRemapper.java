@@ -82,7 +82,7 @@ public class ModCompileRemapper {
 					String name = artifact.getModuleVersion().getId().getName();
 					String version = artifact.getModuleVersion().getId().getVersion();
 
-				if (!shouldRemapMod(logger, artifact, extension.isForge(), sourceConfig.getName())) {
+					if (!shouldRemapMod(logger, artifact, extension.isForge(), sourceConfig.getName())) {
 						addToRegularCompile(project, regularConfig, artifact);
 						continue;
 					}
@@ -95,7 +95,7 @@ public class ModCompileRemapper {
 
 					modDependencies.add(info);
 
-				String remappedLog = group + ":" + name + ":" + version + (artifact.getClassifier() == null ? "" : ":" + artifact.getClassifier()) + " (" + mappingsSuffix + ")" + (info.requiresRemapping() ? " requires remapping" : " already remapped in " + info.getRemappedOutput().getAbsolutePath());
+					String remappedLog = group + ":" + name + ":" + version + (artifact.getClassifier() == null ? "" : ":" + artifact.getClassifier()) + " (" + mappingsSuffix + ")" + (info.requiresRemapping() ? " requires remapping" : " already remapped in " + info.getRemappedOutput().getAbsolutePath());
 					project.getLogger().info(":providing " + remappedLog);
 
 					File remappedSources = info.getRemappedOutput("sources");
@@ -119,7 +119,7 @@ public class ModCompileRemapper {
 
 				// Add all of the remapped mods onto the config
 				for (ModDependencyInfo info : modDependencies) {
-				project.getLogger().info(":adding " + info.toString() + " into " + info.targetConfig.getName());
+					project.getLogger().info(":adding " + info.toString() + " into " + info.targetConfig.getName());
 					project.getDependencies().add(info.targetConfig.getName(), info.getRemappedNotation());
 				}
 			});

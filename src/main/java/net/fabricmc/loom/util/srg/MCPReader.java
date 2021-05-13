@@ -205,7 +205,7 @@ public class MCPReader {
 			}
 		}
 
-		try (FileSystem fs = FileSystems.newFileSystem(mcpJar, null)) {
+		try (FileSystem fs = FileSystems.newFileSystem(mcpJar, (ClassLoader) null)) {
 			Path fields = fs.getPath("fields.csv");
 			Path methods = fs.getPath("methods.csv");
 			Path params = fs.getPath("params.csv");

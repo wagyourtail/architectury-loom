@@ -44,7 +44,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import org.apache.logging.log4j.util.Strings;
 import org.gradle.api.logging.Logger;
 
 import net.fabricmc.loom.util.function.CollectionUtil;
@@ -109,7 +108,7 @@ public final class CoreModClassRemapper {
 
 		if (!lines.equals(output)) {
 			try (Writer writer = Files.newBufferedWriter(js, StandardCharsets.UTF_8, StandardOpenOption.WRITE)) {
-				writer.write(String.join(Strings.LINE_SEPARATOR, output));
+				writer.write(String.join("\n", output));
 			}
 		}
 	}

@@ -62,7 +62,7 @@ public final class MavenPublication {
 
 				Configuration compileModsConfig = p.getConfigurations().getByName(entry.sourceConfiguration());
 
-				p.getLogger().info("Processing maven publication for project [" + p.getName() + "] of " + entry.getSourceConfiguration());
+				p.getLogger().info("Processing maven publication for project [" + p.getName() + "] of " + entry.sourceConfiguration());
 				processEntry(p.getLogger(), entry, compileModsConfig, mavenPublish);
 			}
 		});

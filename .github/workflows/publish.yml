@@ -5,6 +5,7 @@ on:
     branches:
       - 'dev/0.6-forge'
       - 'dev/0.7-forge'
+      - 'dev/0.8'
 
 jobs:
   build:

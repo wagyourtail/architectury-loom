@@ -97,7 +97,7 @@ public class MinecraftAssetsProvider {
 		try {
 			for (Map.Entry<String, AssetObject> entry : parent.entrySet()) {
 				AssetObject object = entry.getValue();
-			String sha1 = object.hash();
+				String sha1 = object.hash();
 				String filename = "objects" + File.separator + sha1.substring(0, 2) + File.separator + sha1;
 				File file = new File(assets, filename);
 

@@ -11,7 +11,7 @@ plugins {
 	id 'jacoco'
 	id 'codenarc'
 	id "org.cadixdev.licenser" version "0.5.0"
-	id 'com.github.johnrengelman.shadow' version '4.0.4'
+	id 'com.github.johnrengelman.shadow' version '7.0.0'
 }
 
 sourceCompatibility = 16
@@ -129,6 +129,8 @@ dependencies {
 }
 
 task forgeInjectJar(type:  ShadowJar, dependsOn: [compileForgeInjectJava, processForgeInjectResources]) {
+	relocate 'net.fabricmc.mapping', 'net.fabricmc.loom.mapping'
+	relocate 'net.fabricmc.mappings', 'net.fabricmc.loom.mappings'
 	configurations = [project.configurations.forgeInjectShadow]
 	classifier = 'forgeinject'
 	from compileForgeInjectJava.outputs
@@ -142,7 +144,7 @@ jar {
 task mainJar(type: Jar, dependsOn: jar) {
 	dependsOn forgeInjectJar
 	
-	from zipTree(jar.archivePath)
+	from zipTree(jar.archiveFile)
 	from(forgeInjectJar.outputs) {
 		into "inject"
 		rename { "injection.jar" }

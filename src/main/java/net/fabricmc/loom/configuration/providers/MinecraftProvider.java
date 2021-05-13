@@ -61,8 +61,6 @@ public class MinecraftProvider extends DependencyProvider {
 	private File versionManifestJson;
 	private String jarSuffix = "";
 
-	Gson gson = new Gson();
-
 	public MinecraftProvider(Project project) {
 		super(project);
 	}
