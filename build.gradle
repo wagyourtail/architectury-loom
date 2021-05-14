@@ -165,6 +165,8 @@ task javadocJar(type: Jar, dependsOn: javadoc) {
 	from javadoc.destinationDir
 }
 
+tasks.shadowJar.enabled = false
+
 license {
 	header rootProject.file("HEADER")
 	include "**/*.java"
