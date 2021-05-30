@@ -345,3 +345,7 @@ task writeActionsTestMatrix() {
 tasks.named('wrapper') {
 	distributionType = Wrapper.DistributionType.ALL
 }
+
+tasks.withType(GenerateModuleMetadata) {
+	enabled = false
+}
