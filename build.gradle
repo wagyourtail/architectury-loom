@@ -57,8 +57,18 @@ repositories {
 	maven { url "https://maven.minecraftforge.net/" }
 }
 
+configurations {
+	bootstrap {
+		transitive false
+	}
+	compileClasspath.extendsFrom bootstrap
+	runtimeClasspath.extendsFrom bootstrap
+}
+
 dependencies {
 	implementation gradleApi()
+
+	bootstrap project(":bootstrap")
 
 	// libraries
 	implementation ('commons-io:commons-io:2.8.0')
@@ -93,7 +103,7 @@ dependencies {
 	implementation "dev.architectury:refmap-remapper:1.0.5"
 
 	// decompilers
-	implementation ('net.fabricmc:fabric-fernflower:1.4.0')
+	implementation ('net.fabricmc:fabric-fernflower:1.4.1')
 	implementation ('org.benf:cfr:0.151')
 
 	// source code remapping
@@ -153,6 +163,8 @@ task mainJar(type: Jar, dependsOn: jar) {
 	manifest {
 		attributes 'Implementation-Version': project.version + ' Build(' + buildNum + ')'
 	}
+
+	from configurations.bootstrap.collect { it.isDirectory() ? it : zipTree(it) }
 }
 
 task sourcesJar(type: Jar, dependsOn: classes) {
@@ -191,7 +203,7 @@ gradlePlugin {
 	plugins {
 		fabricLoom {
 			id = 'dev.architectury.loom'
-			implementationClass = 'net.fabricmc.loom.LoomGradlePlugin'
+			implementationClass = 'net.fabricmc.loom.bootstrap.LoomGradlePluginBootstrap'
 		}
 	}
 }
@@ -289,6 +301,21 @@ publishing {
 	}
 }
 
+// Need to tweak this file to pretend we are compatible with j8 so the bootstrap will run.
+tasks.withType(GenerateModuleMetadata) {
+	doLast {
+		def file = outputFile.get().asFile
+
+		def metadata = new groovy.json.JsonSlurper().parseText(file.text)
+
+		metadata.variants.each {
+			it.attributes["org.gradle.jvm.version"] = 8
+		}
+
+		file.text = groovy.json.JsonOutput.toJson(metadata)
+	}
+}
+
 // A task to output a json file with a list of all the test to run
 task writeActionsTestMatrix() {
 	doLast {
@@ -313,4 +340,8 @@ task writeActionsTestMatrix() {
 		output.parentFile.mkdir()
 		output.text = json
 	}
+}
+
+tasks.named('wrapper') {
+	distributionType = Wrapper.DistributionType.ALL
 }
