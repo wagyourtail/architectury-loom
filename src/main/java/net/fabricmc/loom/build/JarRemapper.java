@@ -70,6 +70,7 @@ public class JarRemapper {
 		LoggerFilter.replaceSystemOut();
 		TinyRemapper.Builder remapperBuilder = TinyRemapper.newRemapper();
 		remapperBuilder.logger(project.getLogger()::lifecycle);
+		remapperBuilder.logUnknownInvokeDynamic(false);
 		mappingProviders.forEach(remapperBuilder::withMappings);
 
 		if (remapOptions != null) {

@@ -90,7 +90,7 @@ dependencies {
 	}
 
 	// tinyfile management
-	implementation ('dev.architectury:tiny-remapper:1.0.0')
+	implementation ('dev.architectury:tiny-remapper:1.1.0')
 	implementation ('dev.architectury:mappings-layers-core:1.1.6')
 	implementation ('net.fabricmc:tiny-mappings-parser:0.3.0+build.17')
 

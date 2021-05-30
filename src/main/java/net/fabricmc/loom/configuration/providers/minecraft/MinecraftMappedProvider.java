@@ -253,6 +253,7 @@ public class MinecraftMappedProvider extends DependencyProvider {
 	public TinyRemapper getTinyRemapper() throws IOException {
 		TinyRemapper.Builder builder = TinyRemapper.newRemapper()
 				.renameInvalidLocals(true)
+				.logUnknownInvokeDynamic(false)
 				.ignoreConflicts(getExtension().isForge())
 				.cacheMappings(true)
 				.threads(Runtime.getRuntime().availableProcessors())

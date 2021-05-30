@@ -445,6 +445,7 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 
 			TinyRemapper remapper = TinyRemapper.newRemapper()
 					.logger(getProject().getLogger()::lifecycle)
+					.logUnknownInvokeDynamic(false)
 					.withMappings(TinyRemapperMappingsHelper.create(mappingsWithSrg, "srg", "official", true))
 					.withMappings(InnerClassRemapper.of(input, mappingsWithSrg, "srg", "official"))
 					.renameInvalidLocals(true)

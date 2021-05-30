@@ -157,6 +157,7 @@ public class ModProcessor {
 		LoggerFilter.replaceSystemOut();
 		TinyRemapper remapper = TinyRemapper.newRemapper()
 				.logger(project.getLogger()::lifecycle)
+				.logUnknownInvokeDynamic(false)
 				.withMappings(TinyRemapperMappingsHelper.create(mappings, fromM, toM, false))
 				.renameInvalidLocals(false)
 				.build();
