@@ -32,7 +32,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.UncheckedIOException;
-import java.lang.reflect.Field;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -41,10 +40,11 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -57,14 +57,12 @@ import com.google.gson.JsonParser;
 import de.oceanlabs.mcp.mcinjector.adaptors.ParameterAnnotationFixer;
 import dev.architectury.tinyremapper.OutputConsumerPath;
 import dev.architectury.tinyremapper.TinyRemapper;
-import net.minecraftforge.accesstransformer.AccessTransformerEngine;
-import net.minecraftforge.accesstransformer.TransformerProcessor;
-import net.minecraftforge.accesstransformer.parser.AccessTransformerList;
 import net.minecraftforge.binarypatcher.ConsoleTool;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.output.NullOutputStream;
 import org.gradle.api.Project;
+import org.gradle.api.logging.LogLevel;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.plugins.JavaPluginConvention;
 import org.gradle.api.tasks.SourceSet;
@@ -80,6 +78,7 @@ import net.fabricmc.loom.configuration.providers.MinecraftProvider;
 import net.fabricmc.loom.configuration.providers.minecraft.MinecraftMappedProvider;
 import net.fabricmc.loom.util.Checksum;
 import net.fabricmc.loom.util.Constants;
+import net.fabricmc.loom.util.DependencyDownloader;
 import net.fabricmc.loom.util.DownloadUtil;
 import net.fabricmc.loom.util.FileSystemUtil;
 import net.fabricmc.loom.util.JarUtil;
@@ -360,6 +359,9 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 	}
 
 	private void accessTransformForge(Logger logger) throws Exception {
+		var atDependency = Constants.Dependencies.ACCESS_TRANSFORMERS + Constants.Dependencies.Versions.ACCESS_TRANSFORMERS;
+		var classpath = DependencyDownloader.download(getProject(), atDependency);
+
 		for (Environment environment : Environment.values()) {
 			String side = environment.side();
 			logger.lifecycle(":access transforming minecraft (" + side + ")");
@@ -371,32 +373,32 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 			target.delete();
 			File at = File.createTempFile("at" + side, ".cfg");
 			JarUtil.extractFile(inputCopied, "META-INF/accesstransformer.cfg", at);
-			String[] args = new String[] {
-					"--inJar", inputCopied.getAbsolutePath(),
-					"--outJar", target.getAbsolutePath(),
-					"--atFile", at.getAbsolutePath()
-			};
+
+			List<String> args = new ArrayList<>();
+			args.add("--inJar");
+			args.add(inputCopied.getAbsolutePath());
+			args.add("--outJar");
+			args.add(target.getAbsolutePath());
+			args.add("--atFile");
+			args.add(at.getAbsolutePath());
 
 			if (usesProjectCache()) {
-				args = Arrays.copyOf(args, args.length + 2);
-				args[args.length - 2] = "--atFile";
-				args[args.length - 1] = projectAt.getAbsolutePath();
+				args.add("--atFile");
+				args.add(projectAt.getAbsolutePath());
 			}
 
-			resetAccessTransformerEngine();
-			TransformerProcessor.main(args);
+			getProject().javaexec(spec -> {
+				spec.setMain("net.minecraftforge.accesstransformer.TransformerProcessor");
+				spec.setArgs(args);
+				spec.setClasspath(classpath);
+
+				// if running with INFO or DEBUG logging
+				if (getProject().getGradle().getStartParameter().getLogLevel().compareTo(LogLevel.LIFECYCLE) < 0) {
+					spec.setStandardOutput(System.out);
+				}
+			}).rethrowFailure().assertNormalExitValue();
 			inputCopied.delete();
 		}
-	}
-
-	private void resetAccessTransformerEngine() throws Exception {
-		// Thank you Forge, I love you
-		Field field = AccessTransformerEngine.class.getDeclaredField("masterList");
-		field.setAccessible(true);
-		AccessTransformerList list = (AccessTransformerList) field.get(AccessTransformerEngine.INSTANCE);
-		field = AccessTransformerList.class.getDeclaredField("accessTransformers");
-		field.setAccessible(true);
-		((Map<?, ?>) field.get(list)).clear();
 	}
 
 	public enum Environment {
