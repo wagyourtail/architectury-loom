@@ -75,6 +75,15 @@ public class LoomRepositoryPlugin implements Plugin<PluginAware> {
 			repo.setName("Mojang");
 			repo.setUrl("https://libraries.minecraft.net/");
 		});
+		repositories.maven(repo -> {
+			repo.setName("Forge");
+			repo.setUrl("https://maven.minecraftforge.net/");
+
+			repo.metadataSources(sources -> {
+				sources.mavenPom();
+				sources.ignoreGradleMetadataRedirection();
+			});
+		});
 		repositories.mavenCentral();
 
 		// MinecraftMappedProvider.java
