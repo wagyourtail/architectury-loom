@@ -58,7 +58,6 @@ import de.oceanlabs.mcp.mcinjector.adaptors.ParameterAnnotationFixer;
 import dev.architectury.tinyremapper.OutputConsumerPath;
 import dev.architectury.tinyremapper.TinyRemapper;
 import net.minecraftforge.binarypatcher.ConsoleTool;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.output.NullOutputStream;
 import org.gradle.api.Project;
@@ -336,7 +335,7 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 		File injection = File.createTempFile("loom-injection", ".jar");
 
 		try (InputStream in = MinecraftProvider.class.getResourceAsStream("/inject/injection.jar")) {
-			FileUtils.copyInputStreamToFile(in, injection);
+			Files.copy(in, injection.toPath());
 		}
 
 		for (Environment environment : Environment.values()) {
@@ -359,16 +358,15 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 		logger.lifecycle(":access transforming minecraft");
 
 		File input = minecraftMergedPatchedSrgJar;
-		File inputCopied = File.createTempFile("at", ".jar");
-		FileUtils.copyFile(input, inputCopied);
 		File target = minecraftMergedPatchedSrgAtJar;
 		Files.deleteIfExists(target.toPath());
-		File at = File.createTempFile("at", ".cfg");
-		JarUtil.extractFile(inputCopied, "META-INF/accesstransformer.cfg", at);
+		File at = File.createTempFile("at-conf", ".cfg");
+		at.deleteOnExit();
+		JarUtil.extractFile(input, "META-INF/accesstransformer.cfg", at);
 
 		List<String> args = new ArrayList<>();
 		args.add("--inJar");
-		args.add(inputCopied.getAbsolutePath());
+		args.add(input.getAbsolutePath());
 		args.add("--outJar");
 		args.add(target.getAbsolutePath());
 		args.add("--atFile");
@@ -389,7 +387,6 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 				spec.setStandardOutput(System.out);
 			}
 		}).rethrowFailure().assertNormalExitValue();
-		inputCopied.delete();
 	}
 
 	public enum Environment {
@@ -485,14 +482,14 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 	private void mergeJars(Logger logger) throws IOException {
 		// FIXME: Hack here: There are no server-only classes so we can just copy the client JAR.
 		//   This will change if upstream Loom adds the possibility for separate projects/source sets per environment.
-		FileUtils.copyFile(minecraftClientPatchedSrgJar, minecraftMergedPatchedSrgJar);
+		Files.copy(minecraftClientPatchedSrgJar.toPath(), minecraftMergedPatchedSrgJar.toPath());
 
 		logger.lifecycle(":copying resources");
 
 		// Copy resources
 		MinecraftProvider minecraftProvider = getExtension().getMinecraftProvider();
-		copyNonClassFiles(minecraftProvider.minecraftClientJar, minecraftMergedPatchedJar);
-		copyNonClassFiles(minecraftProvider.minecraftServerJar, minecraftMergedPatchedJar);
+		copyNonClassFiles(minecraftProvider.minecraftClientJar, minecraftMergedPatchedSrgJar);
+		copyNonClassFiles(minecraftProvider.minecraftServerJar, minecraftMergedPatchedSrgJar);
 	}
 
 	private void walkFileSystems(File source, File target, Predicate<Path> filter, Function<FileSystem, Iterable<Path>> toWalk, FsPathConsumer action)
