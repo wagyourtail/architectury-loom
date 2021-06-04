@@ -91,7 +91,7 @@ dependencies {
 
 	// tinyfile management
 	implementation ('dev.architectury:tiny-remapper:1.1.0')
-	implementation ('dev.architectury:mappings-layers-core:1.1.6')
+	implementation ('dev.architectury:mappings-layers-core:1.2.7')
 	implementation ('net.fabricmc:tiny-mappings-parser:0.3.0+build.17')
 
 	implementation 'net.fabricmc:access-widener:1.0.0'
@@ -116,7 +116,7 @@ dependencies {
 	implementation ('net.minecraftforge:binarypatcher:1.1.1')
 	implementation ('org.cadixdev:lorenz:0.5.3')
 	implementation ('org.cadixdev:lorenz-asm:0.5.3')
-	implementation ('net.minecraftforge:accesstransformers:2.2.0')
+	implementation ('net.minecraftforge:accesstransformers:3.0.1')
 	implementation ('de.oceanlabs.mcp:mcinjector:3.8.0')
 	implementation ('com.opencsv:opencsv:5.4')
 
