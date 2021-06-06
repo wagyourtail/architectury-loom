@@ -86,8 +86,10 @@ public class MappingsProvider extends DependencyProvider {
 	public String mappingsName;
 	public String minecraftVersion;
 	public String mappingsVersion;
+	public String removeSuffix;
 
 	protected final Path mappingsDir;
+	protected Path mappingsVersionedDir;
 	private final Path mappingsStepsDir;
 	private Path intermediaryTiny;
 	private boolean hasRefreshed = false;
@@ -109,6 +111,28 @@ public class MappingsProvider extends DependencyProvider {
 		super(project);
 		mappingsDir = getExtension().getUserCache().toPath().resolve("mappings");
 		mappingsStepsDir = mappingsDir.resolve("steps");
+	}
+
+	public Path getMappingsVersionedDir() throws IOException {
+		if (mappingsVersionedDir == null) {
+			mappingsVersionedDir = mappingsDir.resolve(getExtension().getMinecraftProvider().getMinecraftVersion());
+
+			if (!Files.exists(mappingsVersionedDir)) {
+				Files.createDirectories(mappingsVersionedDir);
+			}
+		}
+
+		return mappingsVersionedDir;
+	}
+
+	public Path getMappedVersionedDir(String name) throws IOException {
+		Path dir = getMappingsVersionedDir().resolve(name);
+
+		if (!Files.exists(dir)) {
+			Files.createDirectories(dir);
+		}
+
+		return dir;
 	}
 
 	public void clean() throws IOException {
@@ -159,11 +183,12 @@ public class MappingsProvider extends DependencyProvider {
 			}
 
 			// We can save reading the zip file + header by checking the file name
-			isV2 = mappingsJar.getName().endsWith("-v2.jar");
+			isV2 = mappingsJar.getName().endsWith("-v2.jar") || mappingsJar.getName().endsWith("-mergedv2.jar");
 		} else {
 			isV2 = doesJarContainV2Mappings(mappingsJar.toPath());
 		}
 
+		removeSuffix = StringUtils.removeSuffix(mappingsJar.getName(), ".jar");
 		this.mappingsVersion = version + (isV2 ? "-v2" : "");
 
 		initFiles();
@@ -182,13 +207,13 @@ public class MappingsProvider extends DependencyProvider {
 			jarClassifier = jarClassifier + depStringSplit[3];
 		}
 
-		String removeSuffix = StringUtils.removeSuffix(mappingsJar.getName(), ".jar");
-		tinyMappings = mappingsDir.resolve(removeSuffix + ".tiny").toFile();
-		unpickDefinitionsFile = mappingsDir.resolve(removeSuffix + ".unpick").toFile();
+		Path mappedVersionedDir = getMappedVersionedDir(removeSuffix);
+		tinyMappings = mappedVersionedDir.resolve("mappings.tiny").toFile();
+		unpickDefinitionsFile = mappedVersionedDir.resolve("definitions.unpick").toFile();
 		tinyMappingsJar = new File(getExtension().getUserCache(), removeSuffix + "-" + jarClassifier + ".jar");
-		tinyMappingsWithSrg = mappingsDir.resolve(removeSuffix + "-srg.tiny");
-		mixinTinyMappingsWithSrg = mappingsDir.resolve(removeSuffix + "-mixin-srg.tiny").toFile();
-		srgToNamedSrg = mappingsDir.resolve(removeSuffix + "-srg-named.srg").toFile();
+		tinyMappingsWithSrg = mappedVersionedDir.resolve("mappings-srg.tiny");
+		mixinTinyMappingsWithSrg = mappedVersionedDir.resolve("mappings-mixin-srg.tiny").toFile();
+		srgToNamedSrg = mappedVersionedDir.resolve("mappings-srg-named.srg").toFile();
 
 		if (!tinyMappings.exists() || isRefreshDeps()) {
 			storeMappings(getProject(), minecraftProvider, mappingsJar.toPath(), postPopulationScheduler);
@@ -463,8 +488,12 @@ public class MappingsProvider extends DependencyProvider {
 		}
 	}
 
-	private void initFiles() {
-		baseTinyMappings = mappingsDir.resolve(mappingsName + "-tiny-" + minecraftVersion + "-" + mappingsVersion + "-base");
+	private void initFiles() throws IOException {
+		baseTinyMappings = getMappedVersionedDir(removeSuffix).resolve("mappings-base.tiny");
+
+		if (Files.exists(mappingsStepsDir)) {
+			Files.walkFileTree(mappingsStepsDir, new DeletingFileVisitor());
+		}
 	}
 
 	public void cleanFiles() {
@@ -505,13 +534,18 @@ public class MappingsProvider extends DependencyProvider {
 
 			intermediaryTiny = mappingsDir.resolve(String.format("intermediary-%s-v2.tiny", minecraftVersion));
 
-			if (!Files.exists(intermediaryTiny) || (isRefreshDeps() && !hasRefreshed)) {
+			if (isRefreshDeps() && !hasRefreshed) {
+				Files.deleteIfExists(intermediaryTiny);
+			}
+
+			if (!Files.exists(intermediaryTiny)) {
 				hasRefreshed = true;
+				intermediaryTiny = getMappingsVersionedDir().resolve("intermediary-v2.tiny");
 
 				// Download and extract intermediary
 				String encodedMinecraftVersion = UrlEscapers.urlFragmentEscaper().escape(minecraftVersion);
 				String intermediaryArtifactUrl = getExtension().getIntermediaryUrl().apply(encodedMinecraftVersion);
-				Path intermediaryJar = mappingsDir.resolve("v2-intermediary-" + minecraftVersion + ".jar");
+				Path intermediaryJar = getMappingsVersionedDir().resolve("intermediary-v2.jar");
 				DownloadUtil.downloadIfChanged(new URL(intermediaryArtifactUrl), intermediaryJar.toFile(), getProject().getLogger());
 
 				extractIntermediary(intermediaryJar, intermediaryTiny);

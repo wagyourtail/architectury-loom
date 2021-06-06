@@ -28,6 +28,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.io.UncheckedIOException;
 import java.io.Writer;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -126,10 +127,15 @@ public class MojangMappingsDependency extends AbstractModuleDependency implement
 
 	@Override
 	public Set<File> resolve() {
-		Path mappingsDir = extension.getMappingsProvider().getMappingsDir();
-		Path mappingsFile = mappingsDir.resolve(String.format("%s.%s-%s.tiny", GROUP, MODULE, getVersion()));
-		Path clientMappings = mappingsDir.resolve(String.format("%s.%s-%s-client.map", GROUP, MODULE, getVersion()));
-		Path serverMappings = mappingsDir.resolve(String.format("%s.%s-%s-server.map", GROUP, MODULE, getVersion()));
+		Path mappingsDir;
+		try {
+			mappingsDir = extension.getMappingsProvider().getMappedVersionedDir(String.format("mojang/%s.%s-%s", GROUP, MODULE, getVersion()));
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
+		Path mappingsFile = mappingsDir.resolve("mappings.tiny");
+		Path clientMappings = mappingsDir.resolve("client.map");
+		Path serverMappings = mappingsDir.resolve("server.map");
 
 		if (!Files.exists(mappingsFile) || LoomGradlePlugin.refreshDeps) {
 			MappingSet mappingSet;

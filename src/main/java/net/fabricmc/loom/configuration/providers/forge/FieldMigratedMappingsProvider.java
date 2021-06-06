@@ -105,7 +105,7 @@ public class FieldMigratedMappingsProvider extends MappingsProvider {
 	@Override
 	public void manipulateMappings(Path mappingsJar) throws IOException {
 		LoomGradleExtension extension = getExtension();
-		Path mappingsFolder = mappingsDir.resolve(extension.getMinecraftProvider().getMinecraftVersion() + "/forge-" + extension.getPatchProvider().forgeVersion);
+		Path mappingsFolder = getMappedVersionedDir(removeSuffix).resolve("forge/" + extension.getPatchProvider().forgeVersion);
 		this.rawTinyMappings = tinyMappings.toPath();
 		this.rawTinyMappingsWithSrg = tinyMappingsWithSrg;
 		String mappingsJarName = mappingsJar.getFileName().toString();
