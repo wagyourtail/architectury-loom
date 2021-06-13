@@ -1,4 +1,5 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import org.w3c.dom.Document
 
 plugins {
 	id 'java'
@@ -56,8 +57,8 @@ repositories {
 	maven { url "https://maven.architectury.dev/" }
 	maven {
 		url "https://maven.minecraftforge.net/"
-		content{
-			excludeGroupByRegex "org.eclipse.*"
+		content {
+			excludeGroupByRegex "org\\.eclipse\\.?.*"
 		}
 	}
 }
