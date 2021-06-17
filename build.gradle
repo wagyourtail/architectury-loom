@@ -1,4 +1,5 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import org.w3c.dom.Document
 
 plugins {
 	id 'java'
@@ -21,7 +22,6 @@ tasks.withType(JavaCompile).configureEach {
 	it.options.encoding = "UTF-8"
 	it.options.release = 16
 }
-
 
 group = "dev.architectury"
 archivesBaseName = project.name
@@ -50,14 +50,18 @@ sourceSets {
 	forgeInject
 }
 
+tasks.compileForgeInjectJava {
+	options.release = 8
+}
+
 repositories {
 	mavenCentral()
 	maven { url "https://maven.fabricmc.net/" }
 	maven { url "https://maven.architectury.dev/" }
 	maven {
 		url "https://maven.minecraftforge.net/"
-		content{
-			excludeGroupByRegex "org.eclipse.*"
+		content {
+			excludeGroupByRegex "org\\.eclipse\\.?.*"
 		}
 	}
 }

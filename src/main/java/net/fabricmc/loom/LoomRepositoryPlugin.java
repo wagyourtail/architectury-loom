@@ -79,6 +79,9 @@ public class LoomRepositoryPlugin implements Plugin<PluginAware> {
 			repo.setName("Forge");
 			repo.setUrl("https://maven.minecraftforge.net/");
 
+			repo.content(descriptor -> {
+				descriptor.excludeGroupByRegex("org\\.eclipse\\.?.*");
+			});
 			repo.metadataSources(sources -> {
 				sources.mavenPom();
 				sources.ignoreGradleMetadataRedirection();
