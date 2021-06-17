@@ -77,6 +77,7 @@ import org.zeroturnaround.zip.ZipUtil;
 
 import net.fabricmc.loom.configuration.DependencyProvider;
 import net.fabricmc.loom.configuration.providers.MinecraftProvider;
+import net.fabricmc.loom.configuration.providers.MinecraftProviderImpl;
 import net.fabricmc.loom.configuration.providers.minecraft.MinecraftMappedProvider;
 import net.fabricmc.loom.util.Checksum;
 import net.fabricmc.loom.util.Constants;
@@ -143,9 +144,9 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 			atDirty = mismatched;
 		}
 
-		MinecraftProvider minecraftProvider = getExtension().getMinecraftProvider();
+		MinecraftProviderImpl minecraftProvider = getExtension().getMinecraftProvider();
 		PatchProvider patchProvider = getExtension().getPatchProvider();
-		String minecraftVersion = minecraftProvider.getMinecraftVersion();
+		String minecraftVersion = minecraftProvider.minecraftVersion();
 		String patchId = "forge-" + patchProvider.forgeVersion;
 
 		if (getExtension().useFabricMixin) {
@@ -266,7 +267,7 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 	private void createSrgJars(Logger logger) throws Exception {
 		McpConfigProvider mcpProvider = getExtension().getMcpConfigProvider();
 
-		MinecraftProvider minecraftProvider = getExtension().getMinecraftProvider();
+		MinecraftProviderImpl minecraftProvider = getExtension().getMinecraftProvider();
 
 		String[] mappingsPath = {null};
 
@@ -510,7 +511,7 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 		logger.lifecycle(":copying resources");
 
 		// Copy resources
-		MinecraftProvider minecraftProvider = getExtension().getMinecraftProvider();
+		MinecraftProviderImpl minecraftProvider = getExtension().getMinecraftProvider();
 		copyNonClassFiles(minecraftProvider.minecraftClientJar, minecraftMergedPatchedJar);
 		copyNonClassFiles(minecraftProvider.minecraftServerJar, minecraftMergedPatchedJar);
 	}

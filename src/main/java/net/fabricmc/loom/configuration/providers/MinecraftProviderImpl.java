@@ -32,6 +32,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.function.Consumer;
 
+import com.google.common.base.Stopwatch;
 import com.google.common.io.Files;
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
@@ -54,10 +55,11 @@ public class MinecraftProviderImpl extends DependencyProvider implements Minecra
 	private MinecraftLibraryProvider libraryProvider;
 
 	private File minecraftJson;
-	private File minecraftClientJar;
-	private File minecraftServerJar;
+	public File minecraftClientJar;
+	public File minecraftServerJar;
 	private File minecraftMergedJar;
 	private File versionManifestJson;
+	private String jarSuffix = "";
 
 	public MinecraftProviderImpl(Project project) {
 		super(project);
@@ -66,6 +68,10 @@ public class MinecraftProviderImpl extends DependencyProvider implements Minecra
 	@Override
 	public void provide(DependencyInfo dependency, Consumer<Runnable> postPopulationScheduler) throws Exception {
 		minecraftVersion = dependency.getDependency().getVersion();
+
+		if (getExtension().shouldGenerateSrgTiny() && !getExtension().isForge()) {
+			addDependency("de.oceanlabs.mcp:mcp_config:" + minecraftVersion, Constants.Configurations.SRG);
+		}
 
 		boolean offline = getProject().getGradle().getStartParameter().isOffline();
 
@@ -116,6 +122,12 @@ public class MinecraftProviderImpl extends DependencyProvider implements Minecra
 		minecraftServerJar = new File(getExtension().getUserCache(), "minecraft-" + minecraftVersion + "-server.jar");
 		minecraftMergedJar = new File(getExtension().getUserCache(), "minecraft-" + minecraftVersion + "-merged.jar");
 		versionManifestJson = new File(getExtension().getUserCache(), "version_manifest.json");
+	}
+
+	public void deleteFiles() {
+		DownloadUtil.delete(minecraftClientJar);
+		DownloadUtil.delete(minecraftServerJar);
+		DownloadUtil.delete(minecraftMergedJar);
 	}
 
 	private void downloadMcJson(boolean offline) throws IOException {
@@ -217,11 +229,14 @@ public class MinecraftProviderImpl extends DependencyProvider implements Minecra
 
 	private void mergeJars(Logger logger) throws IOException {
 		logger.info(":merging jars");
+		Stopwatch stopwatch = Stopwatch.createStarted();
 
 		try (JarMerger jarMerger = new JarMerger(minecraftClientJar, minecraftServerJar, minecraftMergedJar)) {
 			jarMerger.enableSyntheticParamsOffset();
 			jarMerger.merge();
 		}
+
+		logger.info(":merged jars in " + stopwatch);
 	}
 
 	public File getMergedJar() {
@@ -240,6 +255,14 @@ public class MinecraftProviderImpl extends DependencyProvider implements Minecra
 
 	public MinecraftLibraryProvider getLibraryProvider() {
 		return libraryProvider;
+	}
+
+	public String getJarSuffix() {
+		return jarSuffix;
+	}
+
+	public void setJarSuffix(String jarSuffix) {
+		this.jarSuffix = jarSuffix;
 	}
 
 	@Override
