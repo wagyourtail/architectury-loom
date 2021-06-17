@@ -23,7 +23,6 @@ tasks.withType(JavaCompile).configureEach {
 	it.options.release = 16
 }
 
-
 group = "dev.architectury"
 archivesBaseName = project.name
 def baseVersion = '0.8.0'
@@ -49,6 +48,10 @@ configurations {
 
 sourceSets {
 	forgeInject
+}
+
+tasks.compileForgeInjectJava {
+	options.release = 8
 }
 
 repositories {
