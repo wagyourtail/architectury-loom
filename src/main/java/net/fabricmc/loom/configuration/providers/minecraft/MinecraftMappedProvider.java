@@ -54,8 +54,8 @@ import org.gradle.api.Project;
 import org.jetbrains.annotations.Nullable;
 
 import net.fabricmc.loom.configuration.DependencyProvider;
-import net.fabricmc.loom.configuration.providers.MinecraftProvider;
-import net.fabricmc.loom.configuration.providers.mappings.MappingsProvider;
+import net.fabricmc.loom.configuration.providers.MinecraftProviderImpl;
+import net.fabricmc.loom.configuration.providers.mappings.MappingsProviderImpl;
 import net.fabricmc.loom.configuration.providers.minecraft.tr.OutputRemappingHandler;
 import net.fabricmc.loom.configuration.sources.ForgeSourcesRemapper;
 import net.fabricmc.loom.util.Constants;
@@ -81,7 +81,7 @@ public class MinecraftMappedProvider extends DependencyProvider {
 	private File minecraftIntermediaryJar;
 	private File minecraftSrgJar;
 
-	private MinecraftProvider minecraftProvider;
+	private MinecraftProviderImpl minecraftProvider;
 
 	public MinecraftMappedProvider(Project project) {
 		super(project);
@@ -151,7 +151,7 @@ public class MinecraftMappedProvider extends DependencyProvider {
 	private void mapMinecraftJar() throws Exception {
 		String fromM = "official";
 
-		MappingsProvider mappingsProvider = getExtension().getMappingsProvider();
+		MappingsProviderImpl mappingsProvider = getExtension().getMappingsProvider();
 
 		Path input = inputJar.toPath();
 		Path outputMapped = minecraftMappedJar.toPath();
@@ -295,7 +295,7 @@ public class MinecraftMappedProvider extends DependencyProvider {
 				getProject().getDependencies().module("net.minecraft:minecraft:" + getJarVersionString("mapped")));
 	}
 
-	public void initFiles(MinecraftProvider minecraftProvider, MappingsProvider mappingsProvider) {
+	public void initFiles(MinecraftProviderImpl minecraftProvider, MappingsProviderImpl mappingsProvider) {
 		this.minecraftProvider = minecraftProvider;
 		minecraftIntermediaryJar = new File(getExtension().getUserCache(), "minecraft-" + getJarVersionString("intermediary") + ".jar");
 		minecraftSrgJar = !getExtension().isForge() ? null : new File(getExtension().getUserCache(), "minecraft-" + getJarVersionString("srg") + ".jar");
@@ -308,7 +308,7 @@ public class MinecraftMappedProvider extends DependencyProvider {
 	}
 
 	protected String getJarVersionString(String type) {
-		return String.format("%s-%s-%s-%s%s", minecraftProvider.getMinecraftVersion(), type, getExtension().getMappingsProvider().mappingsName, getExtension().getMappingsProvider().mappingsVersion, minecraftProvider.getJarSuffix());
+		return String.format("%s-%s-%s-%s%s", minecraftProvider.minecraftVersion(), type, getExtension().getMappingsProvider().mappingsName, getExtension().getMappingsProvider().mappingsVersion, minecraftProvider.getJarSuffix());
 	}
 
 	public File getIntermediaryJar() {
