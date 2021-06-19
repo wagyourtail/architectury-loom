@@ -290,6 +290,10 @@ publishing {
 			from components.java
 			artifact mainJar
 			artifact sourcesJar
+
+			pom.withXml {
+				patchPom(asNode())
+			}
 		}
 
 		maven(MavenPublication) { publication ->
