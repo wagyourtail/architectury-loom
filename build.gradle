@@ -76,7 +76,8 @@ configurations {
 
 configurations.all {
 	resolutionStrategy {
-		failOnNonReproducibleResolution()
+		// I am sorry, for now
+		// failOnNonReproducibleResolution()
 	}
 }
 
