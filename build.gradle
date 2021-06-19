@@ -154,7 +154,7 @@ dependencies {
 	implementation ('net.minecraftforge:binarypatcher:1.1.1')
 	implementation ('org.cadixdev:lorenz:0.5.3')
 	implementation ('org.cadixdev:lorenz-asm:0.5.3')
-	implementation ('net.minecraftforge:accesstransformers:2.2.0')
+	implementation ('net.minecraftforge:accesstransformers:3.0.1')
 	implementation ('de.oceanlabs.mcp:mcinjector:3.8.0')
 	implementation ('com.opencsv:opencsv:5.4')
 
