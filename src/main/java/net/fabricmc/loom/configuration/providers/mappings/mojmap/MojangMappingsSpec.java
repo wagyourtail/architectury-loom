@@ -24,14 +24,20 @@
 
 package net.fabricmc.loom.configuration.providers.mappings.mojmap;
 
+import java.util.function.BooleanSupplier;
+
 import net.fabricmc.loom.configuration.providers.mappings.MappingContext;
 import net.fabricmc.loom.configuration.providers.mappings.MappingsSpec;
 import net.fabricmc.loom.configuration.providers.minecraft.MinecraftVersionMeta;
 
-public record MojangMappingsSpec() implements MappingsSpec<MojangMappingLayer> {
+public record MojangMappingsSpec(BooleanSupplier silenceLicense) implements MappingsSpec<MojangMappingLayer> {
 	// Keys in dependency manifest
 	private static final String MANIFEST_CLIENT_MAPPINGS = "client_mappings";
 	private static final String MANIFEST_SERVER_MAPPINGS = "server_mappings";
+
+	public MojangMappingsSpec() {
+		this(() -> false);
+	}
 
 	@Override
 	public MojangMappingLayer createLayer(MappingContext context) {
@@ -45,7 +51,8 @@ public record MojangMappingsSpec() implements MappingsSpec<MojangMappingLayer> {
 				versionInfo.download(MANIFEST_CLIENT_MAPPINGS),
 				versionInfo.download(MANIFEST_SERVER_MAPPINGS),
 				context.workingDirectory("mojang"),
-				context.getLogger()
+				context.getLogger(),
+				silenceLicense()
 		);
 	}
 }

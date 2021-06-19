@@ -32,6 +32,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 
 import org.gradle.api.logging.Logger;
 
@@ -47,7 +48,8 @@ import net.fabricmc.mappingio.format.ProGuardReader;
 public record MojangMappingLayer(MinecraftVersionMeta.Download clientDownload,
 									MinecraftVersionMeta.Download serverDownload,
 									File workingDir,
-									Logger logger) implements MappingLayer {
+									Logger logger,
+									BooleanSupplier silenceLicense) implements MappingLayer {
 	@Override
 	public void visit(MappingVisitor mappingVisitor) throws IOException {
 		var clientMappings = new File(workingDir(), "client.txt");
@@ -55,7 +57,9 @@ public record MojangMappingLayer(MinecraftVersionMeta.Download clientDownload,
 
 		download(clientMappings, serverMappings);
 
-		printMappingsLicense(clientMappings.toPath());
+		if (!silenceLicense.getAsBoolean()) {
+			printMappingsLicense(clientMappings.toPath());
+		}
 
 		// Make official the source namespace
 		MappingSourceNsSwitch nsSwitch = new MappingSourceNsSwitch(mappingVisitor, MappingNamespace.OFFICIAL.stringValue());

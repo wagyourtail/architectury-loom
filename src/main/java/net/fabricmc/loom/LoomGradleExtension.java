@@ -227,7 +227,7 @@ public class LoomGradleExtension {
 	}
 
 	public Dependency layered(Action<LayeredMappingSpecBuilder> action) {
-		LayeredMappingSpecBuilder builder = new LayeredMappingSpecBuilder();
+		LayeredMappingSpecBuilder builder = new LayeredMappingSpecBuilder(this);
 		action.execute(builder);
 		LayeredMappingSpec builtSpec = builder.build();
 		return new LayeredMappingsDependency(new GradleMappingContext(project, "layers_" + builtSpec.getVersion().replace("+", "_").replace(".", "_")), builtSpec, builtSpec.getVersion());

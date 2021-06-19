@@ -77,7 +77,8 @@ configurations {
 
 configurations.all {
 	resolutionStrategy {
-		failOnNonReproducibleResolution()
+		// I am sorry modmuss
+//		failOnNonReproducibleResolution()
 	}
 }
 

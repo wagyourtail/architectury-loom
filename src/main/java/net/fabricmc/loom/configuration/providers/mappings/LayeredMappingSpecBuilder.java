@@ -29,16 +29,24 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.gradle.api.Action;
+import org.jetbrains.annotations.Nullable;
 
+import net.fabricmc.loom.LoomGradleExtension;
 import net.fabricmc.loom.configuration.providers.mappings.intermediary.IntermediaryMappingsSpec;
 import net.fabricmc.loom.configuration.providers.mappings.mojmap.MojangMappingsSpec;
 import net.fabricmc.loom.configuration.providers.mappings.parchment.ParchmentMappingsSpecBuilder;
 
 public class LayeredMappingSpecBuilder {
 	private final List<MappingsSpec<?>> layers = new LinkedList<>();
+	@Nullable
+	private final LoomGradleExtension extension;
+
+	public LayeredMappingSpecBuilder(LoomGradleExtension extension) {
+		this.extension = extension;
+	}
 
 	public LayeredMappingSpecBuilder officalMojangMappings() {
-		layers.add(new MojangMappingsSpec());
+		layers.add(new MojangMappingsSpec(() -> extension != null && extension.isSilentMojangMappingsLicenseEnabled()));
 		return this;
 	}
 
