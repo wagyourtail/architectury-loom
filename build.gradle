@@ -82,6 +82,12 @@ configurations.all {
 	}
 }
 
+configurations.all {
+	resolutionStrategy {
+		failOnNonReproducibleResolution()
+	}
+}
+
 dependencies {
 	implementation gradleApi()
 
