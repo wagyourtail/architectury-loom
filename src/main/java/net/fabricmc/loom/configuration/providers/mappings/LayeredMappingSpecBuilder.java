@@ -32,6 +32,7 @@ import org.gradle.api.Action;
 import org.jetbrains.annotations.Nullable;
 
 import net.fabricmc.loom.LoomGradleExtension;
+import net.fabricmc.loom.configuration.providers.mappings.crane.CraneMappingsSpec;
 import net.fabricmc.loom.configuration.providers.mappings.intermediary.IntermediaryMappingsSpec;
 import net.fabricmc.loom.configuration.providers.mappings.mojmap.MojangMappingsSpec;
 import net.fabricmc.loom.configuration.providers.mappings.parchment.ParchmentMappingsSpecBuilder;
@@ -59,6 +60,11 @@ public class LayeredMappingSpecBuilder {
 		var builder = ParchmentMappingsSpecBuilder.builder(mavenNotation);
 		action.execute(builder);
 		layers.add(builder.build());
+		return this;
+	}
+
+	public LayeredMappingSpecBuilder crane(String mavenNotation) {
+		layers.add(new CraneMappingsSpec(mavenNotation));
 		return this;
 	}
 
