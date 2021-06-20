@@ -279,7 +279,9 @@ def patchPom(groovy.util.Node node) {
 		// Patch all eclipse deps to use a strict version
 		if (groupId.startsWith("org.eclipse.")) {
 			def version = it.get("version").first().value().first()
-			it.get("version").first().value = new groovy.util.NodeList(["[$version]"])
+			if (!version.startsWith("[")) {
+				it.get("version").first().value = new groovy.util.NodeList(["[$version]"])
+			}
 		}
 	}
 }
