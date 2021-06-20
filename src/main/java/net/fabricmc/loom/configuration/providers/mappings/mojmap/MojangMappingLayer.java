@@ -49,7 +49,7 @@ public record MojangMappingLayer(MinecraftVersionMeta.Download clientDownload,
 									MinecraftVersionMeta.Download serverDownload,
 									File workingDir,
 									Logger logger,
-									BooleanSupplier silenceLicense) implements MappingLayer {
+									MojangMappingsSpec.SilenceLicenseOption silenceLicense) implements MappingLayer {
 	@Override
 	public void visit(MappingVisitor mappingVisitor) throws IOException {
 		var clientMappings = new File(workingDir(), "client.txt");
@@ -57,7 +57,7 @@ public record MojangMappingLayer(MinecraftVersionMeta.Download clientDownload,
 
 		download(clientMappings, serverMappings);
 
-		if (!silenceLicense.getAsBoolean()) {
+		if (!silenceLicense.isSilent()) {
 			printMappingsLicense(clientMappings.toPath());
 		}
 
