@@ -46,7 +46,7 @@ public class LayeredMappingSpecBuilder {
 		this.extension = extension;
 	}
 
-	public LayeredMappingSpecBuilder officalMojangMappings() {
+	public LayeredMappingSpecBuilder officialMojangMappings() {
 		layers.add(new MojangMappingsSpec(() -> extension != null && extension.isSilentMojangMappingsLicenseEnabled()));
 		return this;
 	}
