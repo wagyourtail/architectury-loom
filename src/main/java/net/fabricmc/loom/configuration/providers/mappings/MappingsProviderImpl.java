@@ -28,6 +28,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -37,6 +38,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -44,7 +46,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.net.UrlEscapers;
 import com.google.gson.JsonObject;
-import dev.architectury.mappingslayers.api.utils.MappingsModificationUtils;
 import dev.architectury.mappingslayers.api.utils.MappingsUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.tools.ant.util.StringUtils;
@@ -73,9 +74,13 @@ import net.fabricmc.loom.util.srg.SrgNamedWriter;
 import net.fabricmc.mapping.reader.v2.TinyMetadata;
 import net.fabricmc.mapping.reader.v2.TinyV2Factory;
 import net.fabricmc.mapping.tree.TinyTree;
+import net.fabricmc.mappingio.adapter.MappingNsCompleter;
+import net.fabricmc.mappingio.adapter.MappingSourceNsSwitch;
+import net.fabricmc.mappingio.format.Tiny2Reader;
+import net.fabricmc.mappingio.format.Tiny2Writer;
+import net.fabricmc.mappingio.tree.MemoryMappingTree;
 import net.fabricmc.stitch.Command;
 import net.fabricmc.stitch.commands.CommandProposeFieldNames;
-import net.fabricmc.stitch.commands.tinyv2.CommandMergeTinyV2;
 import net.fabricmc.stitch.commands.tinyv2.TinyFile;
 import net.fabricmc.stitch.commands.tinyv2.TinyV2Writer;
 
@@ -445,32 +450,28 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 
 		Stopwatch stopwatch = Stopwatch.createStarted();
 		project.getLogger().info(":merging mappings");
-		Path invertedIntermediary = Paths.get(mappingsStepsDir.toString(), "inverted-intermediary.tiny");
-		reorderMappings(getIntermediaryTiny(), invertedIntermediary, "intermediary", "official");
-		Path unorderedMergedMappings = Paths.get(mappingsStepsDir.toString(), "unordered-merged.tiny");
-		mergeMappings(invertedIntermediary, unmergedYarn, unorderedMergedMappings);
-		reorderMappings(unorderedMergedMappings, tinyMappings.toPath(), "official", "intermediary", "named");
-		Files.deleteIfExists(invertedIntermediary);
-		Files.deleteIfExists(unorderedMergedMappings);
-		project.getLogger().info(":merged mappings in " + stopwatch.stop());
-	}
+		MemoryMappingTree tree = new MemoryMappingTree();
+		MappingNsCompleter nsCompleter = new MappingNsCompleter(tree, Collections.singletonMap(MappingNamespace.NAMED.stringValue(), MappingNamespace.INTERMEDIARY.stringValue()), true);
 
-	private void reorderMappings(Path oldMappings, Path newMappings, String... newOrder) throws IOException {
-		MappingsModificationUtils.modify(oldMappings, newMappings, tree ->
-				MappingsUtils.reorderNamespaces(tree, Arrays.asList(newOrder)));
-	}
-
-	private void mergeMappings(Path intermediaryMappings, Path yarnMappings, Path newMergedMappings) {
-		try {
-			Command command = new CommandMergeTinyV2();
-			runCommand(command, intermediaryMappings.toAbsolutePath().toString(),
-							yarnMappings.toAbsolutePath().toString(),
-							newMergedMappings.toAbsolutePath().toString(),
-							"intermediary", "official");
-		} catch (Exception e) {
-			throw new RuntimeException("Could not merge mappings from " + intermediaryMappings.toString()
-							+ " with mappings from " + yarnMappings, e);
+		try (BufferedReader reader = Files.newBufferedReader(getIntermediaryTiny(), StandardCharsets.UTF_8)) {
+			Tiny2Reader.read(reader, nsCompleter);
 		}
+
+		MemoryMappingTree tempTree = new MemoryMappingTree();
+
+		MappingSourceNsSwitch sourceNsSwitch = new MappingSourceNsSwitch(tempTree, MappingNamespace.OFFICIAL.stringValue());
+		tree.accept(sourceNsSwitch);
+		tree = tempTree;
+
+		try (BufferedReader reader = Files.newBufferedReader(unmergedYarn, StandardCharsets.UTF_8)) {
+			Tiny2Reader.read(reader, tree);
+		}
+
+		try (Tiny2Writer writer = new Tiny2Writer(Files.newBufferedWriter(tinyMappings.toPath(), StandardCharsets.UTF_8), false)) {
+			tree.accept(writer);
+		}
+
+		project.getLogger().info(":merged mappings in " + stopwatch.stop());
 	}
 
 	private void suggestFieldNames(MinecraftProviderImpl minecraftProvider, Path oldMappings, Path newMappings) {
