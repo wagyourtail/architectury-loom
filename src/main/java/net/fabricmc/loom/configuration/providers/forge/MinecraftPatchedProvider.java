@@ -90,7 +90,7 @@ import net.fabricmc.loom.util.srg.SpecialSourceExecutor;
 import net.fabricmc.mapping.tree.TinyTree;
 
 public class MinecraftPatchedProvider extends DependencyProvider {
-	private static final String NAME_MAPPING_SERVICE_PATH = "/META-INF/services/cpw.mods.modlauncher.api.INameMappingService";
+	private static final String NAME_MAPPING_SERVICE_PATH = "/inject/META-INF/services/cpw.mods.modlauncher.api.INameMappingService";
 
 	// Step 1: Remap Minecraft to SRG
 	private File minecraftClientSrgJar;
