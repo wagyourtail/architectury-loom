@@ -35,7 +35,10 @@ repositories {
 }
 
 dependencies {
-	include ('net.fabricmc:tiny-mappings-parser:0.2.2.14')
+	// shadowed
+	include ('net.fabricmc:tiny-mappings-parser:0.3.0+build.17')
+
+	// guaranteed to be there at runtime
 	compileOnly ('cpw.mods:modlauncher:6.1.3')
 	compileOnly ('org.spongepowered:mixin:0.8.2')
 	compileOnly ('com.google.code.gson:gson:2.8.6')
@@ -59,7 +62,7 @@ assemble.dependsOn shadowJar
 license {
 	header rootProject.file("HEADER")
 	include "**/*.java"
-	exclude '**/loom/inject/mixin/MixinIntermediaryDevRemapper.java'
+	exclude '**/loom/forgeruntime/mixin/MixinIntermediaryDevRemapper.java'
 }
 
 checkstyle {
