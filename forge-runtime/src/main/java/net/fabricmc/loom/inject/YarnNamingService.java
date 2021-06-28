@@ -30,6 +30,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.AbstractMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiFunction;
@@ -56,7 +57,7 @@ public class YarnNamingService implements INameMappingService {
 
 	@Override
 	public Map.Entry<String, String> understanding() {
-		return new Pair<>("srg", "mcp");
+		return new AbstractMap.SimpleImmutableEntry<>("srg", "mcp");
 	}
 
 	@Override
