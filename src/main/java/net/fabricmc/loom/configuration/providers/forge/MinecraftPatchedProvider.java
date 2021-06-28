@@ -28,7 +28,6 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.UncheckedIOException;
@@ -76,7 +75,6 @@ import org.objectweb.asm.tree.ClassNode;
 import org.zeroturnaround.zip.ZipUtil;
 
 import net.fabricmc.loom.configuration.DependencyProvider;
-import net.fabricmc.loom.configuration.providers.MinecraftProvider;
 import net.fabricmc.loom.configuration.providers.MinecraftProviderImpl;
 import net.fabricmc.loom.configuration.providers.minecraft.MinecraftMappedProvider;
 import net.fabricmc.loom.util.Checksum;
@@ -92,6 +90,8 @@ import net.fabricmc.loom.util.srg.SpecialSourceExecutor;
 import net.fabricmc.mapping.tree.TinyTree;
 
 public class MinecraftPatchedProvider extends DependencyProvider {
+	private static final String NAME_MAPPING_SERVICE_PATH = "/META-INF/services/cpw.mods.modlauncher.api.INameMappingService";
+
 	// Step 1: Remap Minecraft to SRG
 	private File minecraftClientSrgJar;
 	private File minecraftServerSrgJar;
@@ -557,7 +557,13 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 	}
 
 	private void copyUserdevFiles(File source, File target) throws IOException {
-		walkFileSystems(source, target, file -> true, fs -> Collections.singleton(fs.getPath("inject")), (sourceFs, targetFs, sourcePath, targetPath) -> {
+		// Removes the Forge name mapping service definition so that our own is used.
+		// If there are multiple name mapping services with the same "understanding" pair
+		// (source -> target namespace pair), modlauncher throws a fit and will crash.
+		// To use our YarnNamingService instead of MCPNamingService, we have to remove this file.
+		Predicate<Path> filter = file -> !file.toString().equals(NAME_MAPPING_SERVICE_PATH);
+
+		walkFileSystems(source, target, filter, fs -> Collections.singleton(fs.getPath("inject")), (sourceFs, targetFs, sourcePath, targetPath) -> {
 			Path parent = targetPath.getParent();
 
 			if (parent != null) {
