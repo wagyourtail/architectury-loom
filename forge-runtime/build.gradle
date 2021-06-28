@@ -10,8 +10,8 @@ group = rootProject.group
 archivesBaseName = 'architectury-loom-forge-runtime'
 version = rootProject.version
 
-sourceCompatibility = 8
-targetCompatibility = 8
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
 
 configurations {
 	include
