@@ -73,6 +73,7 @@ checkstyle {
 publishing {
 	publications {
 		maven(MavenPublication) {
+			artifactId = 'architectury-loom-forge-runtime'
 			from components.java
 		}
 	}
