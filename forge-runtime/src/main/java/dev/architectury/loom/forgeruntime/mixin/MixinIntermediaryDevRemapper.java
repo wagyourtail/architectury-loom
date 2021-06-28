@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.fabricmc.loom.inject.mixin;
+package dev.architectury.loom.forgeruntime.mixin;
 
 import java.util.ArrayDeque;
 import java.util.Collection;

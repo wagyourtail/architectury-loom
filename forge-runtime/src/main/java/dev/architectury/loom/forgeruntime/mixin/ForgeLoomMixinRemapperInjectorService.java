@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-package net.fabricmc.loom.inject.mixin;
+package dev.architectury.loom.forgeruntime.mixin;
 
 import java.io.BufferedReader;
 import java.nio.file.Files;

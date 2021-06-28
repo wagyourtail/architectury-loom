@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-package net.fabricmc.loom.inject;
+package dev.architectury.loom.forgeruntime;
 
 import java.io.BufferedReader;
 import java.io.IOException;

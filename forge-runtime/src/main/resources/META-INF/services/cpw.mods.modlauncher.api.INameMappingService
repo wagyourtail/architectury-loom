@@ -1,1 +1,1 @@
-net.fabricmc.loom.inject.YarnNamingService
+dev.architectury.loom.forgeruntime.YarnNamingService

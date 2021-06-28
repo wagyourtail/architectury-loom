@@ -72,6 +72,7 @@ public class LaunchProvider extends DependencyProvider {
 
 		if (getExtension().isForge()) {
 			launchConfig
+					// Should match YarnNamingService.PATH_TO_MAPPINGS in forge-runtime
 					.property("fabric.yarnWithSrg.path", getExtension().getMappingsProvider().tinyMappingsWithSrg.toAbsolutePath().toString())
 
 					.argument("--fml.mcVersion")
