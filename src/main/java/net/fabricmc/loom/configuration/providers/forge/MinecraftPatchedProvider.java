@@ -339,25 +339,6 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 			copyAll(getExtension().getForgeUniversalProvider().getForge(), environment.patchedSrgJar.apply(this));
 			copyUserdevFiles(getExtension().getForgeUserdevProvider().getUserdevJar(), environment.patchedSrgJar.apply(this));
 		});
-
-		logger.lifecycle(":injecting loom classes into minecraft");
-		File injection = File.createTempFile("loom-injection", ".jar");
-
-		try (InputStream in = MinecraftProvider.class.getResourceAsStream("/inject/injection.jar")) {
-			FileUtils.copyInputStreamToFile(in, injection);
-		}
-
-		for (Environment environment : Environment.values()) {
-			String side = environment.side();
-			File target = environment.patchedSrgJar.apply(this);
-			walkFileSystems(injection, target, it -> {
-				if (it.getFileName().toString().equals("MANIFEST.MF")) {
-					return false;
-				}
-
-				return getExtension().useFabricMixin || !it.getFileName().toString().endsWith("cpw.mods.modlauncher.api.ITransformationService");
-			}, this::copyReplacing);
-		}
 	}
 
 	private void accessTransformForge(Logger logger) throws Exception {

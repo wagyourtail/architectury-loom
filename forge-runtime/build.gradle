@@ -1,0 +1,82 @@
+plugins {
+	id 'java'
+	id 'maven-publish'
+	id 'com.github.johnrengelman.shadow'
+	id 'org.cadixdev.licenser'
+}
+
+group = rootProject.group
+archivesBaseName = 'architectury-loom-forge-runtime'
+version = rootProject.version
+
+sourceCompatibility = 8
+targetCompatibility = 8
+
+configurations {
+	include
+	compileOnly.extendsFrom include
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.encoding = "UTF-8"
+	it.options.release = 8
+}
+
+repositories {
+	mavenCentral()
+	maven { url "https://maven.fabricmc.net/" }
+	maven {
+		url "https://maven.minecraftforge.net/"
+		content {
+			excludeGroupByRegex "org\\.eclipse\\.?.*"
+		}
+	}
+}
+
+dependencies {
+	include ('net.fabricmc:tiny-mappings-parser:0.2.2.14')
+	compileOnly ('cpw.mods:modlauncher:6.1.3')
+	compileOnly ('org.spongepowered:mixin:0.8.2')
+	compileOnly ('com.google.code.gson:gson:2.8.6')
+	compileOnly ('com.google.guava:guava:21.0')
+	compileOnly ('org.apache.logging.log4j:log4j-api:2.11.2')
+}
+
+jar {
+	archiveClassifier = "slim"
+}
+
+shadowJar {
+	archiveClassifier = ""
+	configurations = [project.configurations.include]
+	relocate "net.fabricmc.mapping", "dev.architectury.loom.forgeruntime.shadow.mapping"
+	relocate "net.fabricmc.mappings", "dev.architectury.loom.forgeruntime.shadow.mappings"
+}
+
+assemble.dependsOn shadowJar
+
+license {
+	header rootProject.file("HEADER")
+	include "**/*.java"
+	exclude '**/loom/inject/mixin/MixinIntermediaryDevRemapper.java'
+}
+
+publishing {
+	publications {
+		maven(MavenPublication) {
+			from components.java
+		}
+	}
+
+	repositories {
+		if (System.getenv("MAVEN_PASS") != null) {
+			maven {
+				url = "https://deploy.shedaniel.me/"
+				credentials {
+					username = "shedaniel"
+					password = System.getenv("MAVEN_PASS")
+				}
+			}
+		}
+	}
+}

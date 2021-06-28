@@ -25,7 +25,8 @@
 package mcp;
 
 /**
- * A dummy class, required for some Forge classes to load.
+ * A dummy class, required for some Forge classes to load
+ * because {@code MethodsReturnNonnullByDefault} in MCP has runtime retention.
  *
  * @deprecated Don't use this in your mods. JetBrains annotations are there for you.
  */
