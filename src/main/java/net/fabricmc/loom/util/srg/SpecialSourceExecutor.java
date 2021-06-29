@@ -24,7 +24,6 @@
 
 package net.fabricmc.loom.util.srg;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -37,12 +36,13 @@ import java.util.zip.ZipEntry;
 
 import org.apache.commons.io.IOUtils;
 import org.gradle.api.Project;
+import org.gradle.api.file.FileCollection;
 import org.zeroturnaround.zip.ZipUtil;
 
 import net.fabricmc.loom.LoomGradleExtension;
 
 public class SpecialSourceExecutor {
-	public static Path produceSrgJar(Project project, String side, File specialSourceJar, Path officialJar, Path srgPath)
+	public static Path produceSrgJar(Project project, String side, FileCollection specialSourceCp, Path officialJar, Path srgPath)
 			throws Exception {
 		Set<String> filter = Files.readAllLines(srgPath, StandardCharsets.UTF_8).stream()
 				.filter(s -> !s.startsWith("\t"))
@@ -80,7 +80,7 @@ public class SpecialSourceExecutor {
 
 		project.javaexec(spec -> {
 			spec.setArgs(Arrays.asList(args));
-			spec.setClasspath(project.files(specialSourceJar));
+			spec.setClasspath(specialSourceCp);
 			spec.workingDir(workingDir.toFile());
 			spec.setMain("net.md_5.specialsource.SpecialSource");
 			spec.setStandardOutput(System.out);
