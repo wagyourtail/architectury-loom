@@ -178,7 +178,7 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 		minecraftMergedPatchedJar = new File(projectDir, "merged-patched.jar");
 
 		if (isRefreshDeps() || Stream.of(getGlobalCaches()).anyMatch(Predicates.not(File::exists))
-						|| !isPatchedSrgJarUpdateToDate(minecraftClientPatchedSrgJar) || !isPatchedSrgJarUpdateToDate(minecraftServerPatchedSrgJar)) {
+						|| !isPatchedJarUpToDate(minecraftMergedPatchedJar)) {
 			cleanAllCache();
 		} else if (atDirty || Stream.of(getProjectCache()).anyMatch(Predicates.not(File::exists))) {
 			cleanProjectCache();
@@ -346,7 +346,7 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 		});
 	}
 
-	private boolean isPatchedSrgJarUpdateToDate(File jar) {
+	private boolean isPatchedJarUpToDate(File jar) {
 		if (!jar.exists()) return false;
 
 		boolean[] upToDate = {false};
