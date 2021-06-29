@@ -95,7 +95,7 @@ import net.fabricmc.mapping.tree.TinyTree;
 
 public class MinecraftPatchedProvider extends DependencyProvider {
 	private static final String LOOM_PATCH_VERSION_KEY = "Loom-Patch-Version";
-	private static final String CURRENT_LOOM_PATCH_VERSION = "2";
+	private static final String CURRENT_LOOM_PATCH_VERSION = "3";
 	private static final String NAME_MAPPING_SERVICE_PATH = "/inject/META-INF/services/cpw.mods.modlauncher.api.INameMappingService";
 
 	// Step 1: Remap Minecraft to SRG (global)
@@ -198,7 +198,8 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 				minecraftClientSrgJar,
 				minecraftServerSrgJar,
 				minecraftClientPatchedSrgJar,
-				minecraftServerPatchedSrgJar
+				minecraftServerPatchedSrgJar,
+				minecraftMergedPatchedSrgJar,
 		};
 	}
 
@@ -555,7 +556,12 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 	}
 
 	private void copyNonClassFiles(File source, File target) throws IOException {
-		walkFileSystems(source, target, it -> !it.toString().endsWith(".class"), this::copyReplacing);
+		Predicate<Path> filter = file -> {
+			String s = file.toString();
+			return !s.endsWith(".class") && !s.equalsIgnoreCase("/META-INF/MANIFEST.MF");
+		};
+
+		walkFileSystems(source, target, filter, this::copyReplacing);
 	}
 
 	private void copyReplacing(FileSystem sourceFs, FileSystem targetFs, Path sourcePath, Path targetPath) throws IOException {

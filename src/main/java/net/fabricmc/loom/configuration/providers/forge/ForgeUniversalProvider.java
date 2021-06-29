@@ -32,11 +32,9 @@ import org.gradle.api.Project;
 
 import net.fabricmc.loom.configuration.DependencyProvider;
 import net.fabricmc.loom.util.Constants;
-import net.fabricmc.loom.util.JarUtil;
 
 public class ForgeUniversalProvider extends DependencyProvider {
 	private File forge;
-	private File forgeManifest;
 
 	public ForgeUniversalProvider(Project project) {
 		super(project);
@@ -45,24 +43,15 @@ public class ForgeUniversalProvider extends DependencyProvider {
 	@Override
 	public void provide(DependencyInfo dependency, Consumer<Runnable> postPopulationScheduler) throws Exception {
 		forge = new File(getExtension().getProjectPersistentCache(), "forge-" + dependency.getDependency().getVersion() + "-universal.jar");
-		forgeManifest = new File(getExtension().getProjectPersistentCache(), "forge-" + dependency.getDependency().getVersion() + "-manifest.mf");
 
 		if (!forge.exists() || isRefreshDeps()) {
 			File dep = dependency.resolveFile().orElseThrow(() -> new RuntimeException("Could not resolve Forge"));
 			FileUtils.copyFile(dep, forge);
 		}
-
-		if (!forgeManifest.exists() || isRefreshDeps()) {
-			JarUtil.extractFile(forge, "META-INF/MANIFEST.MF", forgeManifest);
-		}
 	}
 
 	public File getForge() {
 		return forge;
-	}
-
-	public File getForgeManifest() {
-		return forgeManifest;
 	}
 
 	@Override

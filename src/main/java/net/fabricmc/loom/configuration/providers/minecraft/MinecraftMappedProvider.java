@@ -25,13 +25,7 @@
 package net.fabricmc.loom.configuration.providers.minecraft;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.URI;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -41,8 +35,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
-import java.util.jar.Attributes;
-import java.util.jar.Manifest;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
@@ -213,33 +205,6 @@ public class MinecraftMappedProvider extends DependencyProvider {
 
 			if (getExtension().isForge() && !"srg".equals(toM)) {
 				getProject().getLogger().info(":running forge finalising tasks");
-
-				// TODO: Relocate this to its own class
-				try (FileSystem fs = FileSystems.newFileSystem(URI.create("jar:" + output.toUri()), ImmutableMap.of("create", false))) {
-					Path manifestPath = fs.getPath("META-INF", "MANIFEST.MF");
-					Manifest minecraftManifest;
-					Manifest forgeManifest;
-
-					try (InputStream in = Files.newInputStream(manifestPath)) {
-						minecraftManifest = new Manifest(in);
-					}
-
-					try (InputStream in = new FileInputStream(getExtension().getForgeUniversalProvider().getForgeManifest())) {
-						forgeManifest = new Manifest(in);
-					}
-
-					for (Map.Entry<String, Attributes> forgeEntry : forgeManifest.getEntries().entrySet()) {
-						if (forgeEntry.getKey().endsWith("/")) {
-							minecraftManifest.getEntries().put(forgeEntry.getKey(), forgeEntry.getValue());
-						}
-					}
-
-					Files.delete(manifestPath);
-
-					try (OutputStream out = Files.newOutputStream(manifestPath)) {
-						minecraftManifest.write(out);
-					}
-				}
 
 				TinyTree yarnWithSrg = getExtension().getMappingsProvider().getMappingsWithSrg();
 				AtRemapper.remap(getProject().getLogger(), output, yarnWithSrg);
