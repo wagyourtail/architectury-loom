@@ -123,15 +123,18 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 	public void initFiles() throws IOException {
 		filesDirty = false;
 		projectAtHash = new File(getExtension().getProjectPersistentCache(), "at.sha256");
+		projectAt = getExtension().accessTransformer;
 
-		SourceSet main = getProject().getConvention().findPlugin(JavaPluginConvention.class).getSourceSets().getByName("main");
+		if (projectAt == null) {
+			SourceSet main = getProject().getConvention().findPlugin(JavaPluginConvention.class).getSourceSets().getByName("main");
 
-		for (File srcDir : main.getResources().getSrcDirs()) {
-			File projectAt = new File(srcDir, "META-INF/accesstransformer.cfg");
+			for (File srcDir : main.getResources().getSrcDirs()) {
+				File projectAt = new File(srcDir, "META-INF/accesstransformer.cfg");
 
-			if (projectAt.exists()) {
-				this.projectAt = projectAt;
-				break;
+				if (projectAt.exists()) {
+					this.projectAt = projectAt;
+					break;
+				}
 			}
 		}
 

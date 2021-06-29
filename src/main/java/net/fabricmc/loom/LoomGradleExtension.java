@@ -87,6 +87,7 @@ public class LoomGradleExtension {
 	public boolean remapMod = true;
 	public String customManifest = null;
 	public File accessWidener = null;
+	public File accessTransformer = null;
 	public Function<String, Object> intermediaryUrl = mcVer -> "https://maven.fabricmc.net/net/fabricmc/intermediary/" + mcVer + "/intermediary-" + mcVer + "-v2.jar";
 	public boolean shareCaches = false;
 	public List<String> mixinConfigs = new ArrayList<>(); // FORGE: Passed to Minecraft
@@ -278,6 +279,10 @@ public class LoomGradleExtension {
 
 	public void accessWidener(Object file) {
 		this.accessWidener = project.file(file);
+	}
+
+	public void accessTransformer(Object file) {
+		this.accessTransformer = project.file(file);
 	}
 
 	public File getUserCache() {
