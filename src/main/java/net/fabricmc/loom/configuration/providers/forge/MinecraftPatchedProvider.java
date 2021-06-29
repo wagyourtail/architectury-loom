@@ -402,6 +402,9 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 			// if running with INFO or DEBUG logging
 			if (getProject().getGradle().getStartParameter().getLogLevel().compareTo(LogLevel.LIFECYCLE) < 0) {
 				spec.setStandardOutput(System.out);
+			} else {
+				spec.setStandardOutput(NullOutputStream.NULL_OUTPUT_STREAM);
+				spec.setErrorOutput(NullOutputStream.NULL_OUTPUT_STREAM);
 			}
 		}).rethrowFailure().assertNormalExitValue();
 	}
