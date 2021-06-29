@@ -28,7 +28,9 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.UncheckedIOException;
 import java.lang.reflect.Field;
@@ -44,11 +46,15 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.jar.Attributes;
+import java.util.jar.Manifest;
 import java.util.stream.Stream;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
@@ -90,6 +96,8 @@ import net.fabricmc.loom.util.srg.SpecialSourceExecutor;
 import net.fabricmc.mapping.tree.TinyTree;
 
 public class MinecraftPatchedProvider extends DependencyProvider {
+	private static final String LOOM_PATCH_VERSION_KEY = "Loom-Patch-Version";
+	private static final String CURRENT_LOOM_PATCH_VERSION = "2";
 	private static final String NAME_MAPPING_SERVICE_PATH = "/inject/META-INF/services/cpw.mods.modlauncher.api.INameMappingService";
 
 	// Step 1: Remap Minecraft to SRG
@@ -110,12 +118,14 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 	@Nullable
 	private File projectAt = null;
 	private boolean atDirty = false;
+	private boolean filesDirty = false;
 
 	public MinecraftPatchedProvider(Project project) {
 		super(project);
 	}
 
 	public void initFiles() throws IOException {
+		filesDirty = false;
 		projectAtHash = new File(getExtension().getProjectPersistentCache(), "at.sha256");
 
 		SourceSet main = getProject().getConvention().findPlugin(JavaPluginConvention.class).getSourceSets().getByName("main");
@@ -172,7 +182,8 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 		minecraftServerPatchedOfficialJar = new File(projectDir, "server-patched.jar");
 		minecraftMergedPatchedJar = new File(projectDir, "merged-patched.jar");
 
-		if (isRefreshDeps() || Stream.of(getGlobalCaches()).anyMatch(Predicates.not(File::exists))) {
+		if (isRefreshDeps() || Stream.of(getGlobalCaches()).anyMatch(Predicates.not(File::exists))
+						|| !isPatchedSrgJarUpdateToDate(minecraftClientPatchedSrgJar) || !isPatchedSrgJarUpdateToDate(minecraftServerPatchedSrgJar)) {
 			cleanAllCache();
 		} else if (atDirty || Stream.of(getProjectCache()).anyMatch(Predicates.not(File::exists))) {
 			cleanProjectCache();
@@ -251,6 +262,7 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 			mergeJars(getProject().getLogger());
 		}
 
+		this.filesDirty = dirty;
 		this.dirty = false;
 	}
 
@@ -272,7 +284,7 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 		String[] mappingsPath = {null};
 
 		if (!ZipUtil.handle(mcpProvider.getMcp(), "config.json", (in, zipEntry) -> {
-			mappingsPath[0] = new JsonParser().parse(new InputStreamReader(in)).getAsJsonObject().get("data").getAsJsonObject().get("mappings").getAsString();
+			mappingsPath[0] = JsonParser.parseReader(new InputStreamReader(in)).getAsJsonObject().get("data").getAsJsonObject().get("mappings").getAsString();
 		})) {
 			throw new IllegalStateException("Failed to find 'config.json' in " + mcpProvider.getMcp().getAbsolutePath() + "!");
 		}
@@ -339,6 +351,28 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 			copyAll(getExtension().getForgeUniversalProvider().getForge(), environment.patchedSrgJar.apply(this));
 			copyUserdevFiles(getExtension().getForgeUserdevProvider().getUserdevJar(), environment.patchedSrgJar.apply(this));
 		});
+	}
+
+	private boolean isPatchedSrgJarUpdateToDate(File jar) {
+		if (!jar.exists()) return false;
+
+		boolean[] upToDate = {false};
+
+		if (!ZipUtil.handle(jar, "META-INF/MANIFEST.MF", (in, zipEntry) -> {
+			Manifest manifest = new Manifest(in);
+			Attributes attributes = manifest.getMainAttributes();
+			String value = attributes.getValue(LOOM_PATCH_VERSION_KEY);
+
+			if (Objects.equals(value, CURRENT_LOOM_PATCH_VERSION)) {
+				upToDate[0] = true;
+			} else {
+				getProject().getLogger().lifecycle(":forge patched jars not up to date. current version: " + value);
+			}
+		})) {
+			return false;
+		}
+
+		return upToDate[0];
 	}
 
 	private void accessTransformForge(Logger logger) throws Exception {
@@ -572,6 +606,22 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 
 			Files.copy(sourcePath, targetPath);
 		});
+
+		try (FileSystemUtil.FileSystemDelegate delegate = FileSystemUtil.getJarFileSystem(target, false)) {
+			Path manifestPath = delegate.get().getPath("META-INF/MANIFEST.MF");
+
+			Preconditions.checkArgument(Files.exists(manifestPath), "META-INF/MANIFEST.MF does not exist in patched srg jar!");
+			Manifest manifest = new Manifest();
+
+			try (InputStream stream = Files.newInputStream(manifestPath)) {
+				manifest.read(stream);
+				manifest.getMainAttributes().putValue(LOOM_PATCH_VERSION_KEY, CURRENT_LOOM_PATCH_VERSION);
+			}
+
+			try (OutputStream stream = Files.newOutputStream(manifestPath)) {
+				manifest.write(stream);
+			}
+		}
 	}
 
 	public File getMergedJar() {
@@ -583,7 +633,7 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 	}
 
 	public boolean isAtDirty() {
-		return atDirty;
+		return atDirty || filesDirty;
 	}
 
 	@Override
