@@ -26,6 +26,7 @@ package net.fabricmc.loom.util.srg;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -34,6 +35,12 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import dev.architectury.mappingslayers.api.mutable.MutableClassDef;
+import dev.architectury.mappingslayers.api.mutable.MutableFieldDef;
+import dev.architectury.mappingslayers.api.mutable.MutableMethodDef;
+import dev.architectury.mappingslayers.api.mutable.MutableTinyTree;
+import dev.architectury.mappingslayers.api.utils.MappingsUtils;
+import org.apache.commons.io.IOUtils;
 import org.cadixdev.lorenz.MappingSet;
 import org.cadixdev.lorenz.io.srg.tsrg.TSrgReader;
 import org.cadixdev.lorenz.model.ClassMapping;
@@ -74,12 +81,8 @@ public final class SrgMerger {
 	 *                          or if an element mentioned in the SRG file does not have tiny mappings
 	 */
 	public static void mergeSrg(Path srg, Path tiny, Path out, boolean lenient) throws IOException, MappingException {
-		MappingSet arr;
+		MappingSet arr = readSrg(srg);
 		TinyTree foss;
-
-		try (TSrgReader reader = new TSrgReader(Files.newBufferedReader(srg))) {
-			arr = reader.read();
-		}
 
 		try (BufferedReader reader = Files.newBufferedReader(tiny)) {
 			foss = TinyMappingFactory.loadWithDetection(reader);
@@ -102,6 +105,44 @@ public final class SrgMerger {
 
 		TinyFile file = new TinyFile(header, classes);
 		TinyV2Writer.write(file, out);
+	}
+
+	private static MappingSet readSrg(Path srg) throws IOException {
+		try (BufferedReader reader = Files.newBufferedReader(srg)) {
+			String content = IOUtils.toString(reader);
+
+			if (content.startsWith("tsrg2")) {
+				return readTsrg2(content);
+			} else {
+				try (TSrgReader srgReader = new TSrgReader(new StringReader(content))) {
+					return srgReader.read();
+				}
+			}
+		}
+	}
+
+	private static MappingSet readTsrg2(String content) {
+		MappingSet set = MappingSet.create();
+		MutableTinyTree tree = MappingsUtils.deserializeFromTsrg2(content);
+		int obfIndex = tree.getMetadata().index("obf");
+		int srgIndex = tree.getMetadata().index("srg");
+
+		for (MutableClassDef classDef : tree.getClassesMutable()) {
+			ClassMapping<?, ?> classMapping = set.getOrCreateClassMapping(classDef.getName(obfIndex));
+			classMapping.setDeobfuscatedName(classDef.getName(srgIndex));
+
+			for (MutableFieldDef fieldDef : classDef.getFieldsMutable()) {
+				FieldMapping fieldMapping = classMapping.getOrCreateFieldMapping(fieldDef.getName(obfIndex));
+				fieldMapping.setDeobfuscatedName(fieldDef.getName(srgIndex));
+			}
+
+			for (MutableMethodDef methodDef : classDef.getMethodsMutable()) {
+				MethodMapping methodMapping = classMapping.getOrCreateMethodMapping(methodDef.getName(obfIndex), methodDef.getDescriptor(obfIndex));
+				methodMapping.setDeobfuscatedName(methodDef.getName(srgIndex));
+			}
+		}
+
+		return set;
 	}
 
 	private static void classToTiny(TinyTree foss, List<String> namespaces, ClassMapping<?, ?> klass, Consumer<TinyClass> classConsumer, boolean lenient) {

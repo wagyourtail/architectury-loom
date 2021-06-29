@@ -64,7 +64,7 @@ import net.fabricmc.loom.LoomGradleExtension;
 import net.fabricmc.loom.LoomGradlePlugin;
 import net.fabricmc.loom.configuration.RemappedConfigurationEntry;
 import net.fabricmc.loom.configuration.processors.dependency.ModDependencyInfo;
-import net.fabricmc.loom.configuration.providers.mappings.MappingsProvider;
+import net.fabricmc.loom.configuration.providers.mappings.MappingsProviderImpl;
 import net.fabricmc.loom.configuration.providers.minecraft.MinecraftMappedProvider;
 import net.fabricmc.loom.util.Constants;
 import net.fabricmc.loom.util.LoggerFilter;
@@ -142,7 +142,7 @@ public class ModProcessor {
 		String toM = "named";
 
 		MinecraftMappedProvider mappedProvider = extension.getMinecraftMappedProvider();
-		MappingsProvider mappingsProvider = extension.getMappingsProvider();
+		MappingsProviderImpl mappingsProvider = extension.getMappingsProvider();
 
 		Path mc = extension.isForge() ? mappedProvider.getSrgJar().toPath() : mappedProvider.getIntermediaryJar().toPath();
 		Path[] mcDeps = project.getConfigurations().getByName(Constants.Configurations.LOADER_DEPENDENCIES).getFiles()
@@ -157,6 +157,7 @@ public class ModProcessor {
 		LoggerFilter.replaceSystemOut();
 		TinyRemapper remapper = TinyRemapper.newRemapper()
 				.logger(project.getLogger()::lifecycle)
+				.logUnknownInvokeDynamic(false)
 				.withMappings(TinyRemapperMappingsHelper.create(mappings, fromM, toM, false))
 				.renameInvalidLocals(false)
 				.build();

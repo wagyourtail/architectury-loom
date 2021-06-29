@@ -33,9 +33,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import org.gradle.api.plugins.PluginAware;
 
+import net.fabricmc.loom.bootstrap.BootstrappedPlugin;
 import net.fabricmc.loom.configuration.CompileConfiguration;
 import net.fabricmc.loom.configuration.FabricApiExtension;
 import net.fabricmc.loom.configuration.MavenPublication;
@@ -44,12 +45,20 @@ import net.fabricmc.loom.configuration.providers.mappings.MappingsCache;
 import net.fabricmc.loom.decompilers.DecompilerConfiguration;
 import net.fabricmc.loom.task.LoomTasks;
 
-public class LoomGradlePlugin implements Plugin<Project> {
+public class LoomGradlePlugin implements BootstrappedPlugin {
 	public static boolean refreshDeps;
 	public static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
 	@Override
+	public void apply(PluginAware target) {
+		target.getPlugins().apply(LoomRepositoryPlugin.class);
+
+		if (target instanceof Project project) {
+			apply(project);
+		}
+	}
+
 	public void apply(Project project) {
 		String loomVersion = LoomGradlePlugin.class.getPackage().getImplementationVersion();
 		Set<String> loggedVersions = new HashSet<>(Arrays.asList(System.getProperty("loom.printed.logged", "").split(",")));
@@ -58,6 +67,7 @@ public class LoomGradlePlugin implements Plugin<Project> {
 			loggedVersions.add(loomVersion);
 			System.setProperty("loom.printed.logged", String.join(",", loggedVersions));
 			project.getLogger().lifecycle("Architectury Loom: " + loomVersion);
+			project.getLogger().lifecycle("You are using an unstable version of Architectury Loom! Please report any issues found!");
 		}
 
 		refreshDeps = project.getGradle().getStartParameter().isRefreshDependencies() || "true".equals(System.getProperty("loom.refresh"));

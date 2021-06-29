@@ -30,6 +30,7 @@ import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.plugins.JavaPluginConvention;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.bundling.AbstractArchiveTask;
+import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.api.tasks.javadoc.Javadoc;
 
 import net.fabricmc.loom.LoomGradleExtension;
@@ -38,7 +39,7 @@ import net.fabricmc.loom.build.mixin.KaptApInvoker;
 import net.fabricmc.loom.build.mixin.ScalaApInvoker;
 import net.fabricmc.loom.configuration.ide.SetupIntelijRunConfigs;
 import net.fabricmc.loom.configuration.providers.LaunchProvider;
-import net.fabricmc.loom.configuration.providers.MinecraftProvider;
+import net.fabricmc.loom.configuration.providers.MinecraftProviderImpl;
 import net.fabricmc.loom.configuration.providers.forge.FieldMigratedMappingsProvider;
 import net.fabricmc.loom.configuration.providers.forge.ForgeProvider;
 import net.fabricmc.loom.configuration.providers.forge.ForgeUniversalProvider;
@@ -46,7 +47,7 @@ import net.fabricmc.loom.configuration.providers.forge.ForgeUserdevProvider;
 import net.fabricmc.loom.configuration.providers.forge.McpConfigProvider;
 import net.fabricmc.loom.configuration.providers.forge.PatchProvider;
 import net.fabricmc.loom.configuration.providers.forge.SrgProvider;
-import net.fabricmc.loom.configuration.providers.mappings.MappingsProvider;
+import net.fabricmc.loom.configuration.providers.mappings.MappingsProviderImpl;
 import net.fabricmc.loom.task.GenVsCodeProjectTask;
 import net.fabricmc.loom.util.Constants;
 
@@ -139,15 +140,18 @@ public final class CompileConfiguration {
 		Javadoc javadoc = (Javadoc) p.getTasks().getByName(JavaPlugin.JAVADOC_TASK_NAME);
 		javadoc.setClasspath(main.getOutput().plus(main.getCompileClasspath()));
 
+		p.getTasks().withType(JavaCompile.class).configureEach(compile -> {
+			// Fork the java compiler to ensure that it does not keep any files open.
+			compile.getOptions().setFork(true);
+		});
+
 		p.afterEvaluate(project -> {
 			LoomGradleExtension extension = project.getExtensions().getByType(LoomGradleExtension.class);
-
-			MavenConfiguration.setup(project);
 
 			LoomDependencyManager dependencyManager = new LoomDependencyManager();
 			extension.setDependencyManager(dependencyManager);
 
-			dependencyManager.addProvider(new MinecraftProvider(project));
+			dependencyManager.addProvider(new MinecraftProviderImpl(project));
 
 			if (extension.isForge()) {
 				dependencyManager.addProvider(new ForgeProvider(project));
@@ -164,7 +168,7 @@ public final class CompileConfiguration {
 				dependencyManager.addProvider(new ForgeUniversalProvider(project));
 			}
 
-			dependencyManager.addProvider(extension.isForge() ? new FieldMigratedMappingsProvider(project) : new MappingsProvider(project));
+			dependencyManager.addProvider(extension.isForge() ? new FieldMigratedMappingsProvider(project) : new MappingsProviderImpl(project));
 			dependencyManager.addProvider(new LaunchProvider(project));
 
 			dependencyManager.handleDependencies(project);

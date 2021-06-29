@@ -1,1 +1,3 @@
 rootProject.name = "architectury-loom"
+include "bootstrap"
+include "forge-runtime"

@@ -66,16 +66,17 @@ public class LaunchProvider extends DependencyProvider {
 				.property("client", "org.lwjgl.librarypath", getExtension().getNativesDirectory().getAbsolutePath())
 
 				.argument("client", "--assetIndex")
-				.argument("client", getExtension().getMinecraftProvider().getVersionInfo().assetIndex().fabricId(getExtension().getMinecraftProvider().getMinecraftVersion()))
+				.argument("client", getExtension().getMinecraftProvider().getVersionInfo().assetIndex().fabricId(getExtension().getMinecraftProvider().minecraftVersion()))
 				.argument("client", "--assetsDir")
 				.argument("client", new File(getExtension().getUserCache(), "assets").getAbsolutePath());
 
 		if (getExtension().isForge()) {
 			launchConfig
+					// Should match YarnNamingService.PATH_TO_MAPPINGS in forge-runtime
 					.property("fabric.yarnWithSrg.path", getExtension().getMappingsProvider().tinyMappingsWithSrg.toAbsolutePath().toString())
 
 					.argument("--fml.mcVersion")
-					.argument(getExtension().getMinecraftProvider().getMinecraftVersion())
+					.argument(getExtension().getMinecraftProvider().minecraftVersion())
 					.argument("--fml.forgeVersion")
 					.argument(getExtension().getForgeProvider().getVersion().getForgeVersion())
 
@@ -136,7 +137,8 @@ public class LaunchProvider extends DependencyProvider {
 		annotationDependency = addDependency(Constants.Dependencies.JETBRAINS_ANNOTATIONS + Constants.Dependencies.Versions.JETBRAINS_ANNOTATIONS, JavaPlugin.COMPILE_ONLY_CONFIGURATION_NAME);
 
 		if (getExtension().isForge()) {
-			addDependency(Constants.Dependencies.JAVAX_ANNOTATIONS + Constants.Dependencies.Versions.JAVAX_ANNOTATIONS, "compileOnly");
+			addDependency(Constants.Dependencies.FORGE_RUNTIME + Constants.Dependencies.Versions.FORGE_RUNTIME, JavaPlugin.RUNTIME_ONLY_CONFIGURATION_NAME);
+			addDependency(Constants.Dependencies.JAVAX_ANNOTATIONS + Constants.Dependencies.Versions.JAVAX_ANNOTATIONS, JavaPlugin.COMPILE_ONLY_CONFIGURATION_NAME);
 		}
 
 		postPopulationScheduler.accept(this::writeRemapClassPath);

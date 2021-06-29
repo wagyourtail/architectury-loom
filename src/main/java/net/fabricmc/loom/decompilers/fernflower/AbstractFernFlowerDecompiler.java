@@ -72,6 +72,7 @@ public abstract class AbstractFernFlowerDecompiler implements LoomDecompiler {
 				put(IFernflowerPreferences.REMOVE_SYNTHETIC, "1");
 				put(IFernflowerPreferences.LOG_LEVEL, "trace");
 				put(IFernflowerPreferences.THREADS, metaData.numberOfThreads());
+				put(IFernflowerPreferences.INDENT_STRING, "\t");
 			}};
 
 		List<String> args = new ArrayList<>();
@@ -106,7 +107,14 @@ public abstract class AbstractFernFlowerDecompiler implements LoomDecompiler {
 					spec.getMainClass().set(fernFlowerExecutor().getName());
 					spec.jvmArgs("-Xms200m", "-Xmx3G");
 					spec.setArgs(args);
-					spec.setErrorOutput(System.err);
+					spec.setErrorOutput(new ConsumingOutputStream(line -> {
+						if (line.startsWith("Inconsistent inner class entries")) {
+							// Suppress this
+							return;
+						}
+
+						System.err.println(line);
+					}));
 					spec.setStandardOutput(new ConsumingOutputStream(line -> {
 						if (line.startsWith("Listening for transport") || !line.contains("::")) {
 							System.out.println(line);

@@ -60,7 +60,7 @@ import net.fabricmc.loom.configuration.ide.RunConfigSettings;
 import net.fabricmc.loom.configuration.launch.LaunchProviderSettings;
 import net.fabricmc.loom.configuration.processors.JarProcessor;
 import net.fabricmc.loom.configuration.processors.JarProcessorManager;
-import net.fabricmc.loom.configuration.providers.MinecraftProvider;
+import net.fabricmc.loom.configuration.providers.MinecraftProviderImpl;
 import net.fabricmc.loom.configuration.providers.forge.FieldMigratedMappingsProvider;
 import net.fabricmc.loom.configuration.providers.forge.ForgeProvider;
 import net.fabricmc.loom.configuration.providers.forge.ForgeUniversalProvider;
@@ -68,9 +68,12 @@ import net.fabricmc.loom.configuration.providers.forge.ForgeUserdevProvider;
 import net.fabricmc.loom.configuration.providers.forge.McpConfigProvider;
 import net.fabricmc.loom.configuration.providers.forge.PatchProvider;
 import net.fabricmc.loom.configuration.providers.forge.SrgProvider;
-import net.fabricmc.loom.configuration.providers.mappings.MappingsProvider;
-import net.fabricmc.loom.configuration.providers.mappings.MojangMappingsDependency;
 import net.fabricmc.loom.configuration.providers.minecraft.MinecraftMappedProvider;
+import net.fabricmc.loom.configuration.providers.mappings.GradleMappingContext;
+import net.fabricmc.loom.configuration.providers.mappings.LayeredMappingSpec;
+import net.fabricmc.loom.configuration.providers.mappings.LayeredMappingSpecBuilder;
+import net.fabricmc.loom.configuration.providers.mappings.LayeredMappingsDependency;
+import net.fabricmc.loom.configuration.providers.mappings.MappingsProviderImpl;
 import net.fabricmc.loom.util.ModPlatform;
 import net.fabricmc.loom.util.function.LazyBool;
 
@@ -220,7 +223,14 @@ public class LoomGradleExtension {
 	}
 
 	public Dependency officialMojangMappings() {
-		return new MojangMappingsDependency(project, this);
+		return layered(LayeredMappingSpecBuilder::officialMojangMappings);
+	}
+
+	public Dependency layered(Action<LayeredMappingSpecBuilder> action) {
+		LayeredMappingSpecBuilder builder = new LayeredMappingSpecBuilder(this);
+		action.execute(builder);
+		LayeredMappingSpec builtSpec = builder.build();
+		return new LayeredMappingsDependency(new GradleMappingContext(project, "layers_" + builtSpec.getVersion().replace("+", "_").replace(".", "_")), builtSpec, builtSpec.getVersion());
 	}
 
 	public LoomGradleExtension(Project project) {
@@ -355,7 +365,7 @@ public class LoomGradleExtension {
 			return new File((String) project.property("fabric.loom.natives.dir"));
 		}
 
-		File natives = new File(getUserCache(), "natives/" + getMinecraftProvider().getMinecraftVersion());
+		File natives = new File(getUserCache(), "natives/" + getMinecraftProvider().minecraftVersion());
 
 		if (!natives.exists()) {
 			natives.mkdirs();
@@ -384,16 +394,16 @@ public class LoomGradleExtension {
 		return getDependencyManager().getProvider(PatchProvider.class);
 	}
 
-	public MinecraftProvider getMinecraftProvider() {
-		return getDependencyManager().getProvider(MinecraftProvider.class);
+	public MinecraftProviderImpl getMinecraftProvider() {
+		return getDependencyManager().getProvider(MinecraftProviderImpl.class);
 	}
 
 	public MinecraftMappedProvider getMinecraftMappedProvider() {
 		return getMappingsProvider().mappedProvider;
 	}
 
-	public MappingsProvider getMappingsProvider() {
-		return getDependencyManager().getProvider(isForge() ? FieldMigratedMappingsProvider.class : MappingsProvider.class);
+	public MappingsProviderImpl getMappingsProvider() {
+		return getDependencyManager().getProvider(isForge() ? FieldMigratedMappingsProvider.class : MappingsProviderImpl.class);
 	}
 
 	public McpConfigProvider getMcpConfigProvider() {
@@ -520,7 +530,7 @@ public class LoomGradleExtension {
 	// Creates a new file each time its called, this is then held onto later when remapping the output jar
 	// Required as now when using parallel builds the old single file could be written by another sourceset compile task
 	public synchronized File getNextMixinMappings() {
-		File mixinMapping = new File(getProjectBuildCache(), "mixin-map-" + getMinecraftProvider().getMinecraftVersion() + "-" + getMappingsProvider().mappingsVersion + "." + mixinMappings.size() + ".tiny");
+		File mixinMapping = new File(getProjectBuildCache(), "mixin-map-" + getMinecraftProvider().minecraftVersion() + "-" + getMappingsProvider().mappingsVersion + "." + mixinMappings.size() + ".tiny");
 		mixinMappings.add(mixinMapping);
 		return mixinMapping;
 	}

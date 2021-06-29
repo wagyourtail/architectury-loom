@@ -28,6 +28,7 @@ import java.io.IOException;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.UnknownTaskException;
@@ -153,7 +154,14 @@ public class RemapConfiguration {
 			remapSourcesJarTask.dependsOn(sourcesTask);
 
 			if (isDefaultRemap) {
-				remapSourcesJarTask.doLast(task -> project.getArtifacts().add("archives", remapSourcesJarTask.getOutput()));
+				// Do not use lambda here, see: https://github.com/gradle/gradle/pull/17087
+				//noinspection Convert2Lambda
+				remapSourcesJarTask.doLast(new Action<>() {
+					@Override
+					public void execute(Task task) {
+						project.getArtifacts().add("archives", remapSourcesJarTask.getOutput());
+					}
+				});
 			}
 
 			if (extension.isShareCaches()) {

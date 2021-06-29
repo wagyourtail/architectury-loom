@@ -45,7 +45,7 @@ import org.zeroturnaround.zip.ZipUtil;
 import net.fabricmc.loom.LoomGradleExtension;
 import net.fabricmc.loom.configuration.RemappedConfigurationEntry;
 import net.fabricmc.loom.configuration.providers.LaunchProvider;
-import net.fabricmc.loom.configuration.providers.mappings.MappingsProvider;
+import net.fabricmc.loom.configuration.providers.mappings.MappingsProviderImpl;
 import net.fabricmc.loom.configuration.providers.minecraft.tr.MercuryUtils;
 import net.fabricmc.lorenztiny.TinyMappingsReader;
 import net.fabricmc.mapping.tree.TinyTree;
@@ -175,7 +175,7 @@ public class SourceRemapper {
 		}
 
 		LoomGradleExtension extension = project.getExtensions().getByType(LoomGradleExtension.class);
-		MappingsProvider mappingsProvider = extension.getMappingsProvider();
+		MappingsProviderImpl mappingsProvider = extension.getMappingsProvider();
 
 		String intermediary = extension.isForge() ? "srg" : "intermediary";
 		int id = -1;

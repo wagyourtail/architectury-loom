@@ -31,13 +31,13 @@ import java.util.function.Consumer;
 import org.apache.commons.io.FileUtils;
 import org.gradle.api.Project;
 
-import net.fabricmc.loom.configuration.providers.MinecraftProvider;
-import net.fabricmc.loom.configuration.providers.mappings.MappingsProvider;
+import net.fabricmc.loom.configuration.providers.MinecraftProviderImpl;
+import net.fabricmc.loom.configuration.providers.mappings.MappingsProviderImpl;
 import net.fabricmc.loom.configuration.providers.minecraft.MinecraftMappedProvider;
 import net.fabricmc.loom.util.Constants;
 
 public class MinecraftProcessedProvider extends MinecraftMappedProvider {
-	public static final String PROJECT_MAPPED_CLASSIFIER = "projectmapped";
+	public final String projectMappedClassifier;
 
 	private File projectMappedJar;
 
@@ -46,6 +46,8 @@ public class MinecraftProcessedProvider extends MinecraftMappedProvider {
 	public MinecraftProcessedProvider(Project project, JarProcessorManager jarProcessorManager) {
 		super(project);
 		this.jarProcessorManager = jarProcessorManager;
+		this.projectMappedClassifier = "project-" + project.getPath().replace(':', '@')
+				+ "-mapped";
 	}
 
 	@Override
@@ -65,14 +67,12 @@ public class MinecraftProcessedProvider extends MinecraftMappedProvider {
 			jarProcessorManager.process(projectMappedJar);
 		}
 
-		getProject().getRepositories().flatDir(repository -> repository.dir(getJarDirectory(getExtension().getProjectPersistentCache(), PROJECT_MAPPED_CLASSIFIER)));
-
 		getProject().getDependencies().add(Constants.Configurations.MINECRAFT_NAMED,
-				getProject().getDependencies().module("net.minecraft:minecraft:" + getJarVersionString(PROJECT_MAPPED_CLASSIFIER)));
+				getProject().getDependencies().module("net.minecraft:minecraft:" + getJarVersionString(projectMappedClassifier)));
 	}
 
 	private void invalidateJars() {
-		File dir = getJarDirectory(getExtension().getUserCache(), PROJECT_MAPPED_CLASSIFIER);
+		File dir = getJarDirectory(getExtension().getUserCache(), projectMappedClassifier);
 
 		if (dir.exists()) {
 			getProject().getLogger().warn("Invalidating project jars");
@@ -86,10 +86,10 @@ public class MinecraftProcessedProvider extends MinecraftMappedProvider {
 	}
 
 	@Override
-	public void initFiles(MinecraftProvider minecraftProvider, MappingsProvider mappingsProvider) {
+	public void initFiles(MinecraftProviderImpl minecraftProvider, MappingsProviderImpl mappingsProvider) {
 		super.initFiles(minecraftProvider, mappingsProvider);
 
-		projectMappedJar = new File(getJarDirectory(getExtension().getProjectPersistentCache(), PROJECT_MAPPED_CLASSIFIER), "minecraft-" + getJarVersionString(PROJECT_MAPPED_CLASSIFIER) + ".jar");
+		projectMappedJar = new File(getJarDirectory(getExtension().getRootProjectPersistentCache(), projectMappedClassifier), "minecraft-" + getJarVersionString(projectMappedClassifier) + ".jar");
 	}
 
 	@Override

@@ -81,7 +81,7 @@ import net.fabricmc.loom.build.nesting.NestedDependencyProvider;
 import net.fabricmc.loom.build.nesting.NestedJarPathProvider;
 import net.fabricmc.loom.build.nesting.NestedJarProvider;
 import net.fabricmc.loom.configuration.accesswidener.AccessWidenerJarProcessor;
-import net.fabricmc.loom.configuration.providers.mappings.MappingsProvider;
+import net.fabricmc.loom.configuration.providers.mappings.MappingsProviderImpl;
 import net.fabricmc.loom.util.Constants;
 import net.fabricmc.loom.util.SourceRemapper;
 import net.fabricmc.loom.util.TinyRemapperMappingsHelper;
@@ -211,7 +211,7 @@ public class RemapJarTask extends Jar {
 			throw new FileNotFoundException(input.toString());
 		}
 
-		MappingsProvider mappingsProvider = extension.getMappingsProvider();
+		MappingsProviderImpl mappingsProvider = extension.getMappingsProvider();
 
 		String fromM = this.fromM.get();
 		String toM = this.toM.get();

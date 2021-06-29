@@ -28,7 +28,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -59,7 +58,7 @@ import org.objectweb.asm.Opcodes;
 
 import net.fabricmc.loom.LoomGradleExtension;
 import net.fabricmc.loom.LoomGradlePlugin;
-import net.fabricmc.loom.configuration.providers.mappings.MappingsProvider;
+import net.fabricmc.loom.configuration.providers.mappings.MappingsProviderImpl;
 import net.fabricmc.loom.util.FileSystemUtil;
 import net.fabricmc.loom.util.ThreadingUtils;
 import net.fabricmc.loom.util.srg.SrgMerger;
@@ -68,7 +67,7 @@ import net.fabricmc.mapping.tree.FieldDef;
 import net.fabricmc.mapping.tree.TinyMappingFactory;
 import net.fabricmc.mapping.tree.TinyTree;
 
-public class FieldMigratedMappingsProvider extends MappingsProvider {
+public class FieldMigratedMappingsProvider extends MappingsProviderImpl {
 	private List<Map.Entry<FieldMember, String>> migratedFields = new ArrayList<>();
 	public Path migratedFieldsCache;
 	public Path rawTinyMappings;
@@ -105,7 +104,7 @@ public class FieldMigratedMappingsProvider extends MappingsProvider {
 	@Override
 	public void manipulateMappings(Path mappingsJar) throws IOException {
 		LoomGradleExtension extension = getExtension();
-		Path mappingsFolder = mappingsDir.resolve(extension.getMinecraftProvider().getMinecraftVersion() + "/forge-" + extension.getPatchProvider().forgeVersion);
+		Path mappingsFolder = getMappedVersionedDir(removeSuffix).resolve("forge/" + extension.getPatchProvider().forgeVersion);
 		this.rawTinyMappings = tinyMappings.toPath();
 		this.rawTinyMappingsWithSrg = tinyMappingsWithSrg;
 		String mappingsJarName = mappingsJar.getFileName().toString();
@@ -143,7 +142,7 @@ public class FieldMigratedMappingsProvider extends MappingsProvider {
 			migratedFields.forEach(entry -> {
 				map.put(entry.getKey().owner + "#" + entry.getKey().field, entry.getValue());
 			});
-			Files.write(migratedFieldsCache, new Gson().toJson(map).getBytes(StandardCharsets.UTF_8));
+			Files.writeString(migratedFieldsCache, new Gson().toJson(map));
 			Files.deleteIfExists(tinyMappings.toPath());
 		}
 
@@ -174,7 +173,7 @@ public class FieldMigratedMappingsProvider extends MappingsProvider {
 				}
 			}
 
-			Files.write(tinyMappings.toPath(), MappingsUtils.serializeToString(mappings).getBytes(StandardCharsets.UTF_8), StandardOpenOption.CREATE);
+			Files.writeString(tinyMappings.toPath(), MappingsUtils.serializeToString(mappings), StandardOpenOption.CREATE);
 		}
 	}
 

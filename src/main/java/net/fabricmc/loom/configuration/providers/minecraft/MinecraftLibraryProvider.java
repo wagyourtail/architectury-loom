@@ -29,13 +29,13 @@ import java.io.File;
 import org.gradle.api.Project;
 
 import net.fabricmc.loom.LoomGradleExtension;
-import net.fabricmc.loom.configuration.providers.MinecraftProvider;
+import net.fabricmc.loom.configuration.providers.MinecraftProviderImpl;
 import net.fabricmc.loom.util.Constants;
 
 public class MinecraftLibraryProvider {
 	public File MINECRAFT_LIBS;
 
-	public void provide(MinecraftProvider minecraftProvider, Project project) {
+	public void provide(MinecraftProviderImpl minecraftProvider, Project project) {
 		MinecraftVersionMeta versionInfo = minecraftProvider.getVersionInfo();
 
 		initFiles(project, minecraftProvider);
@@ -47,7 +47,7 @@ public class MinecraftLibraryProvider {
 		}
 	}
 
-	private void initFiles(Project project, MinecraftProvider minecraftProvider) {
+	private void initFiles(Project project, MinecraftProviderImpl minecraftProvider) {
 		LoomGradleExtension extension = project.getExtensions().getByType(LoomGradleExtension.class);
 		MINECRAFT_LIBS = new File(extension.getUserCache(), "libraries");
 	}
