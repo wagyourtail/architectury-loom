@@ -22,31 +22,14 @@
  * SOFTWARE.
  */
 
-package net.fabricmc.loom.inject;
+package mcp;
 
-import java.util.Map;
-
-final class Pair<A, B> implements Map.Entry<A, B> {
-	private final A first;
-	private final B second;
-
-	Pair(A first, B second) {
-		this.first = first;
-		this.second = second;
-	}
-
-	@Override
-	public A getKey() {
-		return first;
-	}
-
-	@Override
-	public B getValue() {
-		return second;
-	}
-
-	@Override
-	public B setValue(B value) {
-		throw new UnsupportedOperationException("Pairs are immutable!");
-	}
+/**
+ * A dummy class, required for some Forge classes to load
+ * because {@code MethodsReturnNonnullByDefault} in MCP has runtime retention.
+ *
+ * @deprecated Don't use this in your mods. JetBrains annotations are there for you.
+ */
+@Deprecated
+public @interface MethodsReturnNonnullByDefault {
 }
