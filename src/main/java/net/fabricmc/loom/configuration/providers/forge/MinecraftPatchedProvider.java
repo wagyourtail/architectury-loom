@@ -251,11 +251,7 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 		}
 
 		if (dirty) {
-			remapPatchedJars(getProject().getLogger());
-		}
-
-		if (dirty || !minecraftMergedPatchedJar.exists()) {
-			mergeJars(getProject().getLogger());
+			remapPatchedJar(getProject().getLogger());
 		}
 
 		this.filesDirty = dirty;
@@ -431,7 +427,7 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 		}
 	}
 
-	private void remapPatchedJars(Logger logger) throws Exception {
+	private void remapPatchedJar(Logger logger) throws Exception {
 		Path[] libraries = MinecraftMappedProvider.getRemapClasspath(getProject());
 		logger.lifecycle(":remapping minecraft (TinyRemapper, srg -> official)");
 		TinyTree mappingsWithSrg = getExtension().getMappingsProvider().getMappingsWithSrg();
