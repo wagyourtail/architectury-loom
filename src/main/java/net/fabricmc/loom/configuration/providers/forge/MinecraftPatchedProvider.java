@@ -43,9 +43,11 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -57,6 +59,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.hash.Hashing;
+import com.google.common.io.ByteSource;
 import com.google.gson.JsonParser;
 import de.oceanlabs.mcp.mcinjector.adaptors.ParameterAnnotationFixer;
 import dev.architectury.tinyremapper.OutputConsumerPath;
@@ -70,7 +74,6 @@ import org.gradle.api.logging.LogLevel;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.plugins.JavaPluginConvention;
 import org.gradle.api.tasks.SourceSet;
-import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
@@ -80,7 +83,6 @@ import org.zeroturnaround.zip.ZipUtil;
 import net.fabricmc.loom.configuration.DependencyProvider;
 import net.fabricmc.loom.configuration.providers.MinecraftProviderImpl;
 import net.fabricmc.loom.configuration.providers.minecraft.MinecraftMappedProvider;
-import net.fabricmc.loom.util.Checksum;
 import net.fabricmc.loom.util.Constants;
 import net.fabricmc.loom.util.DependencyDownloader;
 import net.fabricmc.loom.util.FileSystemUtil;
@@ -111,8 +113,7 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 	private File minecraftMergedPatchedJar;
 
 	private File projectAtHash;
-	@Nullable
-	private File projectAt = null;
+	private Set<File> projectAts = new HashSet<>();
 	private boolean atDirty = false;
 	private boolean filesDirty = false;
 
@@ -123,16 +124,16 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 	public void initFiles() throws IOException {
 		filesDirty = false;
 		projectAtHash = new File(getExtension().getProjectPersistentCache(), "at.sha256");
-		projectAt = getExtension().accessTransformer;
+		projectAts = getExtension().accessTransformers;
 
-		if (projectAt == null) {
+		if (projectAts.isEmpty()) {
 			SourceSet main = getProject().getConvention().findPlugin(JavaPluginConvention.class).getSourceSets().getByName("main");
 
 			for (File srcDir : main.getResources().getSrcDirs()) {
 				File projectAt = new File(srcDir, "META-INF/accesstransformer.cfg");
 
 				if (projectAt.exists()) {
-					this.projectAt = projectAt;
+					this.projectAts.add(projectAt);
 					break;
 				}
 			}
@@ -140,10 +141,10 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 
 		if (isRefreshDeps() || !projectAtHash.exists()) {
 			writeAtHash();
-			atDirty = projectAt != null;
+			atDirty = !projectAts.isEmpty();
 		} else {
 			byte[] expected = com.google.common.io.Files.asByteSource(projectAtHash).read();
-			byte[] current = projectAt != null ? Checksum.sha256(projectAt) : Checksum.sha256("");
+			byte[] current = getProjectAtsHash();
 			boolean mismatched = !Arrays.equals(current, expected);
 
 			if (mismatched) {
@@ -185,6 +186,17 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 		} else if (atDirty || Stream.of(getProjectCache()).anyMatch(Predicates.not(File::exists))) {
 			cleanProjectCache();
 		}
+	}
+
+	private byte[] getProjectAtsHash() throws IOException {
+		if (projectAts.isEmpty()) return ByteSource.empty().hash(Hashing.sha256()).asBytes();
+		List<ByteSource> currentBytes = new ArrayList<>();
+
+		for (File projectAt : projectAts) {
+			currentBytes.add(com.google.common.io.Files.asByteSource(projectAt));
+		}
+
+		return ByteSource.concat(currentBytes).hash(Hashing.sha256()).asBytes();
 	}
 
 	public void cleanAllCache() {
@@ -263,11 +275,7 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 
 	private void writeAtHash() throws IOException {
 		try (FileOutputStream out = new FileOutputStream(projectAtHash)) {
-			if (projectAt != null) {
-				out.write(Checksum.sha256(projectAt));
-			} else {
-				out.write(Checksum.sha256(""));
-			}
+			out.write(getProjectAtsHash());
 		}
 	}
 
@@ -393,8 +401,10 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 		args.add(at.getAbsolutePath());
 
 		if (usesProjectCache()) {
-			args.add("--atFile");
-			args.add(projectAt.getAbsolutePath());
+			for (File projectAt : projectAts) {
+				args.add("--atFile");
+				args.add(projectAt.getAbsolutePath());
+			}
 		}
 
 		getProject().javaexec(spec -> {
@@ -619,7 +629,7 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 	}
 
 	public boolean usesProjectCache() {
-		return projectAt != null;
+		return !projectAts.isEmpty();
 	}
 
 	public boolean isAtDirty() {
