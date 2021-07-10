@@ -40,7 +40,6 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
 import org.gradle.api.Project;
-import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.plugins.JavaPlugin;
 
 import net.fabricmc.loom.configuration.DependencyProvider;
@@ -49,8 +48,6 @@ import net.fabricmc.loom.configuration.launch.LaunchProviderSettings;
 import net.fabricmc.loom.util.Constants;
 
 public class LaunchProvider extends DependencyProvider {
-	public Dependency annotationDependency;
-
 	public LaunchProvider(Project project) {
 		super(project);
 	}
@@ -134,7 +131,7 @@ public class LaunchProvider extends DependencyProvider {
 
 		addDependency(Constants.Dependencies.DEV_LAUNCH_INJECTOR + Constants.Dependencies.Versions.DEV_LAUNCH_INJECTOR, Constants.Configurations.LOOM_DEVELOPMENT_DEPENDENCIES);
 		addDependency(Constants.Dependencies.TERMINAL_CONSOLE_APPENDER + Constants.Dependencies.Versions.TERMINAL_CONSOLE_APPENDER, Constants.Configurations.LOOM_DEVELOPMENT_DEPENDENCIES);
-		annotationDependency = addDependency(Constants.Dependencies.JETBRAINS_ANNOTATIONS + Constants.Dependencies.Versions.JETBRAINS_ANNOTATIONS, JavaPlugin.COMPILE_ONLY_CONFIGURATION_NAME);
+		addDependency(Constants.Dependencies.JETBRAINS_ANNOTATIONS + Constants.Dependencies.Versions.JETBRAINS_ANNOTATIONS, JavaPlugin.COMPILE_ONLY_CONFIGURATION_NAME);
 
 		if (getExtension().isForge()) {
 			addDependency(Constants.Dependencies.FORGE_RUNTIME + Constants.Dependencies.Versions.FORGE_RUNTIME, JavaPlugin.RUNTIME_ONLY_CONFIGURATION_NAME);

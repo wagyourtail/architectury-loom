@@ -43,14 +43,11 @@ import org.cadixdev.lorenz.MappingSet;
 import org.cadixdev.mercury.Mercury;
 import org.cadixdev.mercury.remapper.MercuryRemapper;
 import org.gradle.api.Project;
-import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.artifacts.ResolvedArtifact;
-import org.gradle.api.plugins.JavaPlugin;
 import org.zeroturnaround.zip.ZipUtil;
 
 import net.fabricmc.loom.LoomGradleExtension;
 import net.fabricmc.loom.build.ModCompileRemapper;
-import net.fabricmc.loom.configuration.providers.LaunchProvider;
 import net.fabricmc.loom.configuration.providers.minecraft.MinecraftMappedProvider;
 import net.fabricmc.loom.task.GenerateSourcesTask;
 import net.fabricmc.loom.util.Constants;
@@ -178,9 +175,9 @@ public class ForgeSourcesRemapper {
 			mappings.getOrCreateClassMapping(entry.getKey()).setDeobfuscatedName(entry.getValue());
 		}
 
-		Dependency annotationDependency = extension.getDependencyManager().getProvider(LaunchProvider.class).annotationDependency;
-		Set<File> files = project.getConfigurations().getByName(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME)
-				.files(annotationDependency);
+		Set<File> files = project.getConfigurations()
+				.detachedConfiguration(project.getDependencies().create(Constants.Dependencies.JETBRAINS_ANNOTATIONS + Constants.Dependencies.Versions.JETBRAINS_ANNOTATIONS))
+				.resolve();
 
 		for (File file : files) {
 			mercury.getClassPath().add(file.toPath());
