@@ -1,11 +1,11 @@
 pluginManagement {
     plugins {
-        id 'fabric-loom'
+        id 'dev.architectury.loom'
     }
 }
 
 plugins {
-    id 'fabric-loom'
+    id 'dev.architectury.loom'
 }
 
 dependencyResolutionManagement {
