@@ -182,8 +182,7 @@ task javadocJar(type: Jar, dependsOn: javadoc) {
 spotless {
 	java {
 		licenseHeaderFile(rootProject.file("HEADER")).yearSeparator("-")
-		targetExclude("**/loom/util/DownloadUtil.java")
-		targetExclude("**/loom/util/FileSystemUtil.java")
+		targetExclude("**/loom/util/DownloadUtil.java", "**/loom/util/FileSystemUtil.java")
 	}
 
 	groovy {
