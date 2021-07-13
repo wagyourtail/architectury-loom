@@ -2,8 +2,8 @@ plugins {
 	id 'java'
 	id 'maven-publish'
 	id 'checkstyle'
-	id 'com.github.johnrengelman.shadow'
-	id 'org.cadixdev.licenser'
+	id 'com.github.johnrengelman.shadow' version '7.0.0'
+	id "com.diffplug.spotless"
 }
 
 group = rootProject.group
@@ -59,10 +59,11 @@ shadowJar {
 
 assemble.dependsOn shadowJar
 
-license {
-	header rootProject.file("HEADER")
-	include "**/*.java"
-	exclude '**/loom/forgeruntime/mixin/MixinIntermediaryDevRemapper.java'
+spotless {
+	java {
+		licenseHeaderFile(rootProject.file("HEADER")).yearSeparator("-")
+		targetExclude("**/loom/forgeruntime/mixin/MixinIntermediaryDevRemapper.java")
+	}
 }
 
 checkstyle {
