@@ -120,13 +120,15 @@ public class MinecraftMappedProvider extends DependencyProvider {
 				minecraftSrgJar.delete();
 			}
 
-			if (getForgeMappedJar().exists()) {
-				getForgeMappedJar().delete();
-			}
+			if (getExtension().isForge()) {
+				if (getForgeMappedJar().exists()) {
+					getForgeMappedJar().delete();
+				}
 
-			getForgeMappedJar().getParentFile().mkdirs();
-			getForgeIntermediaryJar().delete();
-			getForgeSrgJar().delete();
+				getForgeMappedJar().getParentFile().mkdirs();
+				getForgeIntermediaryJar().delete();
+				getForgeSrgJar().delete();
+			}
 
 			try {
 				TinyRemapper[] remapperArray = new TinyRemapper[] {null};
