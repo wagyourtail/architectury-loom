@@ -222,7 +222,7 @@ public class MinecraftMappedProvider extends DependencyProvider {
 
 	private void mapMinecraftJar(TinyRemapper[] remapperArray) throws Exception {
 		Path input = inputJar.toPath();
-		Path inputForge = inputForgeJar.toPath();
+		Path inputForge = inputForgeJar == null ? null : inputForgeJar.toPath();
 		Path outputMapped = minecraftMappedJar.toPath();
 		Path outputIntermediary = minecraftIntermediaryJar.toPath();
 		Path outputSrg = minecraftSrgJar == null ? null : minecraftSrgJar.toPath();
