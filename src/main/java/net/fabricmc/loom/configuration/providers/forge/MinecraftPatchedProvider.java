@@ -40,6 +40,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -664,7 +665,7 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 				}
 			}
 
-			try (OutputStream stream = Files.newOutputStream(manifestPath)) {
+			try (OutputStream stream = Files.newOutputStream(manifestPath, StandardOpenOption.CREATE)) {
 				manifest.write(stream);
 			}
 		}
