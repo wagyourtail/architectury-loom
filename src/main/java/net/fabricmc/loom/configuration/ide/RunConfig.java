@@ -269,7 +269,7 @@ public class RunConfig {
 	}
 
 	private static String getMainClass(String side, LoomGradleExtension extension, String defaultMainClass) {
-		JsonObject installerJson = extension.getInstallerData().installerJson();
+		JsonObject installerJson = extension.getInstallerData() == null ? null : extension.getInstallerData().installerJson();
 
 		if (installerJson != null && installerJson.has("mainClass")) {
 			JsonElement mainClassJson = installerJson.get("mainClass");
