@@ -61,7 +61,7 @@ public class SourceRemapper {
 	}
 
 	public static String intermediary(Project project) {
-		LoomGradleExtension extension = project.getExtensions().getByType(LoomGradleExtension.class);
+		LoomGradleExtension extension = LoomGradleExtension.get(project);;
 		return extension.isForge() ? "srg" : "intermediary";
 	}
 

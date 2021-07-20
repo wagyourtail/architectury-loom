@@ -52,9 +52,9 @@ public class ForgeUserdevProvider extends DependencyProvider {
 
 	@Override
 	public void provide(DependencyInfo dependency, Consumer<Runnable> postPopulationScheduler) throws Exception {
-		userdevJar = new File(getExtension().getProjectPersistentCache(), "forge-" + dependency.getDependency().getVersion() + "-userdev.jar");
+		userdevJar = new File(getDirectories().getProjectPersistentCache(), "forge-" + dependency.getDependency().getVersion() + "-userdev.jar");
 
-		Path configJson = getExtension()
+		Path configJson = getDirectories()
 				.getProjectPersistentCache()
 				.toPath()
 				.resolve("forge-config-" + dependency.getDependency().getVersion() + ".json");
@@ -80,7 +80,7 @@ public class ForgeUserdevProvider extends DependencyProvider {
 
 		for (JsonElement lib : json.get("libraries").getAsJsonArray()) {
 			if (lib.getAsString().startsWith("org.spongepowered:mixin:")) {
-				if (getExtension().useFabricMixin) {
+				if (getExtension().isUseFabricMixin()) {
 					addDependency("net.fabricmc:sponge-mixin:0.8.2+build.24", Constants.Configurations.FORGE_DEPENDENCIES);
 					continue;
 				}

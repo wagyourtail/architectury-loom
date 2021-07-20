@@ -28,6 +28,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Objects;
@@ -133,7 +135,7 @@ public class RunConfig {
 		if (extension.isForge()) {
 			List<String> modClasses = new ArrayList<>();
 
-			for (Supplier<SourceSet> sourceSetSupplier : extension.forgeLocalMods) {
+			for (Supplier<SourceSet> sourceSetSupplier : extension.getForgeLocalMods()) {
 				SourceSet sourceSet = sourceSetSupplier.get();
 				String sourceSetName = sourceSet.getName() + "_" + UUID.randomUUID().toString().replace("-", "").substring(0, 7);
 
@@ -214,7 +216,7 @@ public class RunConfig {
 		runConfig.programArgs = runConfig.programArgs.trim();
 		runConfig.vmArgs = runConfig.vmArgs.trim();
 
-		for (Consumer<RunConfig> consumer : extension.settingsPostEdit) {
+		for (Consumer<RunConfig> consumer : extension.getSettingsPostEdit()) {
 			consumer.accept(runConfig);
 		}
 

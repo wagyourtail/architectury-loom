@@ -127,8 +127,8 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 
 	public void initFiles() throws IOException {
 		filesDirty = false;
-		projectAtHash = new File(getExtension().getProjectPersistentCache(), "at.sha256");
-		projectAts = getExtension().accessTransformers;
+		projectAtHash = new File(getDirectories().getProjectPersistentCache(), "at.sha256");
+		projectAts = getExtension().getAccessTransformers();
 
 		if (projectAts.isEmpty()) {
 			SourceSet main = getProject().getConvention().findPlugin(JavaPluginConvention.class).getSourceSets().getByName("main");
@@ -163,14 +163,14 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 		String minecraftVersion = minecraftProvider.minecraftVersion();
 		String patchId = "forge-" + patchProvider.forgeVersion;
 
-		if (getExtension().useFabricMixin) {
+		if (getExtension().isUseFabricMixin()) {
 			patchId += "-fabric-mixin";
 		}
 
 		minecraftProvider.setJarSuffix(patchId);
 
-		File globalCache = getExtension().getUserCache();
-		File cache = usesProjectCache() ? getExtension().getProjectPersistentCache() : globalCache;
+		File globalCache = getDirectories().getUserCache();
+		File cache = usesProjectCache() ? getDirectories().getProjectPersistentCache() : globalCache;
 		File globalDir = new File(globalCache, patchId);
 		File projectDir = new File(cache, patchId);
 		globalDir.mkdirs();

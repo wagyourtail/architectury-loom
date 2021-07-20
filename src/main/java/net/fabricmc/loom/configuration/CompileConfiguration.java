@@ -61,11 +61,11 @@ public final class CompileConfiguration {
 		LoomGradleExtension extension = LoomGradleExtension.get(project);
 
 		project.afterEvaluate(project1 -> {
-			if (project.getExtensions().getByType(LoomGradleExtension.class).shouldGenerateSrgTiny()) {
+			if (extension.shouldGenerateSrgTiny()) {
 				extension.createLazyConfiguration(Constants.Configurations.SRG).configure(configuration -> configuration.setTransitive(false));
 			}
 
-			if (project.getExtensions().getByType(LoomGradleExtension.class).isDataGenEnabled()) {
+			if (extension.isDataGenEnabled()) {
 				project.getConvention().getPlugin(JavaPluginConvention.class).getSourceSets().getByName("main").resources(files -> {
 					files.srcDir(project.file("src/generated/resources"));
 				});
@@ -79,7 +79,7 @@ public final class CompileConfiguration {
 		extension.createLazyConfiguration(Constants.Configurations.LOADER_DEPENDENCIES).configure(configuration -> configuration.setTransitive(false));
 		extension.createLazyConfiguration(Constants.Configurations.MINECRAFT).configure(configuration -> configuration.setTransitive(false));
 
-		if (project.getExtensions().getByType(LoomGradleExtension.class).isForge()) {
+		if (extension.isForge()) {
 			extension.createLazyConfiguration(Constants.Configurations.FORGE).configure(configuration -> configuration.setTransitive(false));
 			extension.createLazyConfiguration(Constants.Configurations.FORGE_USERDEV).configure(configuration -> configuration.setTransitive(false));
 			extension.createLazyConfiguration(Constants.Configurations.FORGE_INSTALLER).configure(configuration -> configuration.setTransitive(false));
@@ -96,7 +96,7 @@ public final class CompileConfiguration {
 			extendsFrom(JavaPlugin.TEST_RUNTIME_CLASSPATH_CONFIGURATION_NAME, Constants.Configurations.FORGE_NAMED, project);
 		}
 
-		if (project.getExtensions().getByType(LoomGradleExtension.class).supportsInclude()) {
+		if (extension.supportsInclude()) {
 			extension.createLazyConfiguration(Constants.Configurations.INCLUDE).configure(configuration -> configuration.setTransitive(false)); // Dont get transitive deps
 		}
 

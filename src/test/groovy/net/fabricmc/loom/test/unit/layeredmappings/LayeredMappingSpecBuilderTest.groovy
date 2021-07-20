@@ -111,7 +111,7 @@ class LayeredMappingSpecBuilderTest extends Specification {
     }
 
     LayeredMappingSpec layeredAction(Action<LayeredMappingSpecBuilder> action) {
-        LayeredMappingSpecBuilder builder = new LayeredMappingSpecBuilder()
+        LayeredMappingSpecBuilder builder = new LayeredMappingSpecBuilder(null)
         action.execute(builder)
         return builder.build()
     }

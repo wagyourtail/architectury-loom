@@ -72,7 +72,7 @@ public class GenVsCodeProjectTask extends AbstractLoomTask {
 	}
 
 	public static void generate(Project project) {
-		LoomGradleExtension extension = project.getExtensions().getByType(LoomGradleExtension.class);
+		LoomGradleExtension extension = LoomGradleExtension.get(project);
 		File projectDir = project.getRootProject().file(".vscode");
 
 		if (!projectDir.exists()) {

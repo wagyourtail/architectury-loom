@@ -50,8 +50,8 @@ public class SpecialSourceExecutor {
 				.filter(s -> !s.startsWith("\t"))
 				.map(s -> s.split(" ")[0] + ".class")
 				.collect(Collectors.toSet());
-		LoomGradleExtension extension = project.getExtensions().getByType(LoomGradleExtension.class);
-		Path stripped = extension.getProjectBuildCache().toPath().resolve(officialJar.getFileName().toString().substring(0, officialJar.getFileName().toString().length() - 4) + "-filtered.jar");
+		LoomGradleExtension extension = LoomGradleExtension.get(project.getProject());
+		Path stripped = extension.getFiles().getProjectBuildCache().toPath().resolve(officialJar.getFileName().toString().substring(0, officialJar.getFileName().toString().length() - 4) + "-filtered.jar");
 		Files.deleteIfExists(stripped);
 
 		try (JarOutputStream output = new JarOutputStream(Files.newOutputStream(stripped))) {
@@ -64,7 +64,7 @@ public class SpecialSourceExecutor {
 			});
 		}
 
-		Path output = extension.getProjectBuildCache().toPath().resolve(officialJar.getFileName().toString().substring(0, officialJar.getFileName().toString().length() - 4) + "-srg-output.jar");
+		Path output = extension.getFiles().getProjectBuildCache().toPath().resolve(officialJar.getFileName().toString().substring(0, officialJar.getFileName().toString().length() - 4) + "-srg-output.jar");
 		Files.deleteIfExists(output);
 
 		String[] args = new String[] {

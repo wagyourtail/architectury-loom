@@ -40,6 +40,13 @@ import net.fabricmc.loom.configuration.InstallerData;
 import net.fabricmc.loom.configuration.LoomDependencyManager;
 import net.fabricmc.loom.configuration.processors.JarProcessorManager;
 import net.fabricmc.loom.configuration.providers.MinecraftProviderImpl;
+import net.fabricmc.loom.configuration.providers.forge.FieldMigratedMappingsProvider;
+import net.fabricmc.loom.configuration.providers.forge.ForgeProvider;
+import net.fabricmc.loom.configuration.providers.forge.ForgeUniversalProvider;
+import net.fabricmc.loom.configuration.providers.forge.ForgeUserdevProvider;
+import net.fabricmc.loom.configuration.providers.forge.McpConfigProvider;
+import net.fabricmc.loom.configuration.providers.forge.PatchProvider;
+import net.fabricmc.loom.configuration.providers.forge.SrgProvider;
 import net.fabricmc.loom.configuration.providers.mappings.MappingsProviderImpl;
 import net.fabricmc.loom.configuration.providers.minecraft.MinecraftMappedProvider;
 import net.fabricmc.loom.extension.LoomFiles;
@@ -80,7 +87,7 @@ public interface LoomGradleExtension extends LoomGradleExtensionAPI {
 	}
 
 	default MappingsProviderImpl getMappingsProvider() {
-		return getDependencyManager().getProvider(MappingsProviderImpl.class);
+		return getDependencyManager().getProvider(isForge() ? FieldMigratedMappingsProvider.class : MappingsProviderImpl.class);
 	}
 
 	default MinecraftMappedProvider getMinecraftMappedProvider() {
@@ -105,4 +112,31 @@ public interface LoomGradleExtension extends LoomGradleExtensionAPI {
 	}
 
 	MixinApExtension getMixinApExtension();
+
+	// ===================
+	//  Architectury Loom
+	// ===================
+	default PatchProvider getPatchProvider() {
+		return getDependencyManager().getProvider(PatchProvider.class);
+	}
+
+	default McpConfigProvider getMcpConfigProvider() {
+		return getDependencyManager().getProvider(McpConfigProvider.class);
+	}
+
+	default SrgProvider getSrgProvider() {
+		return getDependencyManager().getProvider(SrgProvider.class);
+	}
+
+	default ForgeUniversalProvider getForgeUniversalProvider() {
+		return getDependencyManager().getProvider(ForgeUniversalProvider.class);
+	}
+
+	default ForgeUserdevProvider getForgeUserdevProvider() {
+		return getDependencyManager().getProvider(ForgeUserdevProvider.class);
+	}
+
+	default ForgeProvider getForgeProvider() {
+		return getDependencyManager().getProvider(ForgeProvider.class);
+	}
 }

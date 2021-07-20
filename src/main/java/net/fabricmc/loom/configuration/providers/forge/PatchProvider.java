@@ -68,7 +68,7 @@ public class PatchProvider extends DependencyProvider {
 
 	private void init(String forgeVersion) {
 		this.forgeVersion = forgeVersion;
-		projectCacheFolder = getExtension().getProjectPersistentCache().toPath().resolve(forgeVersion);
+		projectCacheFolder = getDirectories().getProjectPersistentCache().toPath().resolve(forgeVersion);
 		clientPatches = projectCacheFolder.resolve("patches-client.lzma");
 		serverPatches = projectCacheFolder.resolve("patches-server.lzma");
 

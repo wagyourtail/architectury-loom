@@ -112,11 +112,13 @@ public class LoomGradleExtensionImpl extends LoomGradleExtensionApiImpl implemen
 
 	@Override
 	public MappingSet getOrCreateSrcMappingCache(int id, Supplier<MappingSet> factory) {
+		if (id < 0 || id >= srcMappingCache.length) return factory.get();
 		return srcMappingCache[id] != null ? srcMappingCache[id] : (srcMappingCache[id] = factory.get());
 	}
 
 	@Override
 	public Mercury getOrCreateSrcMercuryCache(int id, Supplier<Mercury> factory) {
+		if (id < 0 || id >= srcMercuryCache.length) return factory.get();
 		return srcMercuryCache[id] != null ? srcMercuryCache[id] : (srcMercuryCache[id] = factory.get());
 	}
 
@@ -166,5 +168,10 @@ public class LoomGradleExtensionImpl extends LoomGradleExtensionApiImpl implemen
 	@Override
 	public MixinApExtension getMixinApExtension() {
 		return this.mixinApExtension;
+	}
+
+	@Override
+	protected String getMinecraftVersion() {
+		return getMinecraftProvider().minecraftVersion();
 	}
 }

@@ -31,7 +31,7 @@ import java.util.List;
 import org.gradle.api.Action;
 import org.jetbrains.annotations.Nullable;
 
-import net.fabricmc.loom.LoomGradleExtension;
+import net.fabricmc.loom.api.LoomGradleExtensionAPI;
 import net.fabricmc.loom.configuration.providers.mappings.crane.CraneMappingsSpec;
 import net.fabricmc.loom.configuration.providers.mappings.intermediary.IntermediaryMappingsSpec;
 import net.fabricmc.loom.configuration.providers.mappings.mojmap.MojangMappingsSpec;
@@ -40,9 +40,9 @@ import net.fabricmc.loom.configuration.providers.mappings.parchment.ParchmentMap
 public class LayeredMappingSpecBuilder {
 	private final List<MappingsSpec<?>> layers = new LinkedList<>();
 	@Nullable
-	private final LoomGradleExtension extension;
+	private final LoomGradleExtensionAPI extension;
 
-	public LayeredMappingSpecBuilder(LoomGradleExtension extension) {
+	public LayeredMappingSpecBuilder(@Nullable LoomGradleExtensionAPI extension) {
 		this.extension = extension;
 	}
 

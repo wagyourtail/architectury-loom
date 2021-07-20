@@ -79,7 +79,7 @@ public class RemapConfiguration {
 
 		if (extension.isForge()) {
 			((Jar) jarTask).manifest(manifest -> {
-				manifest.attributes(ImmutableMap.of("MixinConfigs", String.join(",", extension.mixinConfigs)));
+				manifest.attributes(ImmutableMap.of("MixinConfigs", String.join(",", extension.getMixinConfigs())));
 			});
 		}
 

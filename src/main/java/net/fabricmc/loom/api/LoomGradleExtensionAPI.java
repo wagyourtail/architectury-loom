@@ -26,17 +26,25 @@ package net.fabricmc.loom.api;
 
 import java.io.File;
 import java.util.List;
+import java.util.Set;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import org.gradle.api.Action;
 import org.gradle.api.NamedDomainObjectContainer;
 import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.file.ConfigurableFileCollection;
+import org.gradle.api.provider.Property;
+import org.gradle.api.tasks.SourceSet;
 import org.jetbrains.annotations.ApiStatus;
 
 import net.fabricmc.loom.api.decompilers.LoomDecompiler;
+import net.fabricmc.loom.configuration.ide.RunConfig;
 import net.fabricmc.loom.configuration.ide.RunConfigSettings;
+import net.fabricmc.loom.configuration.launch.LaunchProviderSettings;
 import net.fabricmc.loom.configuration.processors.JarProcessor;
 import net.fabricmc.loom.configuration.providers.mappings.LayeredMappingSpecBuilder;
+import net.fabricmc.loom.util.ModPlatform;
 
 /**
  * This is the public api available exposed to build scripts.
@@ -88,4 +96,67 @@ public interface LoomGradleExtensionAPI {
 	void setCustomManifest(String customManifest);
 
 	String getCustomManifest();
+
+	// ===================
+	//  Architectury Loom
+	// ===================
+	void silentMojangMappingsLicense();
+
+	boolean isSilentMojangMappingsLicenseEnabled();
+
+	Property<ModPlatform> getPlatform();
+
+	default boolean isForge() {
+		return getPlatform().get() == ModPlatform.FORGE;
+	}
+
+	boolean supportsInclude();
+
+	void setGenerateSrgTiny(Boolean generateSrgTiny);
+
+	boolean shouldGenerateSrgTiny();
+
+	void launches(Action<NamedDomainObjectContainer<LaunchProviderSettings>> action);
+
+	NamedDomainObjectContainer<LaunchProviderSettings> getLaunchConfigs();
+
+	List<String> getDataGenMods();
+
+	default boolean isDataGenEnabled() {
+		return isForge() && !getDataGenMods().isEmpty();
+	}
+
+	void localMods(Action<SourceSetConsumer> action);
+
+	interface SourceSetConsumer {
+		void add(Object... sourceSets);
+	}
+
+	List<Supplier<SourceSet>> getForgeLocalMods();
+
+	void dataGen(Action<DataGenConsumer> action);
+
+	interface DataGenConsumer {
+		void mod(String... modIds);
+	}
+
+	default void addTaskBeforeRun(String task) {
+		this.getTasksBeforeRun().add(task);
+	}
+
+	List<String> getTasksBeforeRun();
+
+	void mixinConfig(String... config);
+
+	List<String> getMixinConfigs();
+
+	void accessTransformer(Object file);
+
+	Set<File> getAccessTransformers();
+
+	boolean isUseFabricMixin();
+
+	void setUseFabricMixin(boolean useFabricMixin);
+
+	List<Consumer<RunConfig>> getSettingsPostEdit();
 }

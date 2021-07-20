@@ -64,7 +64,7 @@ public class SrgProvider extends DependencyProvider {
 	}
 
 	private void init(String version) {
-		srg = new File(getExtension().getUserCache(), "srg-" + version + ".tsrg");
+		srg = new File(getDirectories().getUserCache(), "srg-" + version + ".tsrg");
 	}
 
 	public File getSrg() {

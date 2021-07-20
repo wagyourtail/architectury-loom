@@ -58,7 +58,7 @@ public class McpConfigProvider extends DependencyProvider {
 	}
 
 	private void init(String version) {
-		mcp = new File(getExtension().getUserCache(), "mcp-" + version + ".zip");
+		mcp = new File(getDirectories().getUserCache(), "mcp-" + version + ".zip");
 	}
 
 	public File getMcp() {

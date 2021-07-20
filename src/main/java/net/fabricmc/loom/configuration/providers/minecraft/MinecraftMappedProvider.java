@@ -159,7 +159,7 @@ public class MinecraftMappedProvider extends DependencyProvider {
 		addDependencies(dependency, postPopulationScheduler);
 
 		if (getExtension().isForge()) {
-			getProject().getRepositories().flatDir(repository -> repository.dir(new File(getJarDirectory(getExtension().getUserCache(), "mapped"), "forge")));
+			getProject().getRepositories().flatDir(repository -> repository.dir(new File(getJarDirectory(getDirectories().getUserCache(), "mapped"), "forge")));
 
 			getProject().getDependencies().add(Constants.Configurations.FORGE_NAMED,
 					getProject().getDependencies().module("net.minecraftforge-loom:forge:" + getJarVersionString("mapped")));
@@ -353,15 +353,15 @@ public class MinecraftMappedProvider extends DependencyProvider {
 	public void initFiles(MinecraftProviderImpl minecraftProvider, MappingsProviderImpl mappingsProvider) {
 		this.minecraftProvider = minecraftProvider;
 		minecraftIntermediaryJar = new File(getDirectories().getUserCache(), "minecraft-" + getJarVersionString("intermediary") + ".jar");
-		minecraftSrgJar = !getExtension().isForge() ? null : new File(getExtension().getUserCache(), "minecraft-" + getJarVersionString("srg") + ".jar");
+		minecraftSrgJar = !getExtension().isForge() ? null : new File(getDirectories().getUserCache(), "minecraft-" + getJarVersionString("srg") + ".jar");
 		minecraftMappedJar = new File(getJarDirectory(getDirectories().getUserCache(), "mapped"), "minecraft-" + getJarVersionString("mapped") + ".jar");
 		inputJar = getExtension().isForge() ? mappingsProvider.patchedProvider.getMergedJar() : minecraftProvider.getMergedJar();
 
 		if (getExtension().isForge()) {
 			inputForgeJar = mappingsProvider.patchedProvider.getForgeMergedJar();
-			forgeIntermediaryJar = new File(getExtension().getUserCache(), "forge-" + getJarVersionString("intermediary") + ".jar");
-			forgeSrgJar = new File(getExtension().getUserCache(), "forge-" + getJarVersionString("srg") + ".jar");
-			forgeMappedJar = new File(getJarDirectory(getExtension().getUserCache(), "mapped"), "forge/forge-" + getJarVersionString("mapped") + ".jar");
+			forgeIntermediaryJar = new File(getDirectories().getUserCache(), "forge-" + getJarVersionString("intermediary") + ".jar");
+			forgeSrgJar = new File(getDirectories().getUserCache(), "forge-" + getJarVersionString("srg") + ".jar");
+			forgeMappedJar = new File(getJarDirectory(getDirectories().getUserCache(), "mapped"), "forge/forge-" + getJarVersionString("mapped") + ".jar");
 		}
 	}
 

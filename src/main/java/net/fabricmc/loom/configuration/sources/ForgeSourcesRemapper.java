@@ -166,7 +166,7 @@ public class ForgeSourcesRemapper {
 	}
 
 	private static void remapForgeSourcesInner(Project project, Path tmpInput, Path tmpOutput) throws IOException {
-		LoomGradleExtension extension = project.getExtensions().getByType(LoomGradleExtension.class);
+		LoomGradleExtension extension = LoomGradleExtension.get(project);
 		Mercury mercury = SourceRemapper.createMercuryWithClassPath(project, false);
 
 		MappingSet mappings = new TinyMappingsReader(extension.getMappingsProvider().getMappingsWithSrg(), "srg", "named").read();
