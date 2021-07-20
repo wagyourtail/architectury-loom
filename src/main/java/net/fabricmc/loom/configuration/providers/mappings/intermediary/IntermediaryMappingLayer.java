@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Collections;
+import java.util.function.Supplier;
 
 import net.fabricmc.loom.configuration.providers.mappings.MappingLayer;
 import net.fabricmc.loom.configuration.providers.mappings.MappingNamespace;
@@ -37,7 +38,7 @@ import net.fabricmc.mappingio.MappingVisitor;
 import net.fabricmc.mappingio.adapter.MappingNsCompleter;
 import net.fabricmc.mappingio.format.Tiny2Reader;
 
-public record IntermediaryMappingLayer(File tinyFile) implements MappingLayer {
+public record IntermediaryMappingLayer(Supplier<File> tinyFile) implements MappingLayer {
 	@Override
 	public MappingNamespace getSourceNamespace() {
 		return MappingNamespace.OFFICIAL;
@@ -48,7 +49,7 @@ public record IntermediaryMappingLayer(File tinyFile) implements MappingLayer {
 		// Populate named with intermediary and add Add a "named" namespace
 		MappingNsCompleter nsCompleter = new MappingNsCompleter(mappingVisitor, Collections.singletonMap(MappingNamespace.NAMED.stringValue(), MappingNamespace.INTERMEDIARY.stringValue()), true);
 
-		try (BufferedReader reader = Files.newBufferedReader(tinyFile().toPath(), StandardCharsets.UTF_8)) {
+		try (BufferedReader reader = Files.newBufferedReader(tinyFile().get().toPath(), StandardCharsets.UTF_8)) {
 			Tiny2Reader.read(reader, nsCompleter);
 		}
 	}
