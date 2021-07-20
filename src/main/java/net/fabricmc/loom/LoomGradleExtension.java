@@ -74,6 +74,7 @@ import net.fabricmc.loom.configuration.providers.mappings.LayeredMappingSpec;
 import net.fabricmc.loom.configuration.providers.mappings.LayeredMappingSpecBuilder;
 import net.fabricmc.loom.configuration.providers.mappings.LayeredMappingsDependency;
 import net.fabricmc.loom.configuration.providers.mappings.MappingsProviderImpl;
+import net.fabricmc.loom.configuration.providers.minecraft.MinecraftVersionMeta;
 import net.fabricmc.loom.util.ModPlatform;
 import net.fabricmc.loom.util.function.LazyBool;
 
@@ -231,7 +232,10 @@ public class LoomGradleExtension {
 		LayeredMappingSpecBuilder builder = new LayeredMappingSpecBuilder(this);
 		action.execute(builder);
 		LayeredMappingSpec builtSpec = builder.build();
-		return new LayeredMappingsDependency(new GradleMappingContext(project, "layers_" + builtSpec.getVersion().replace("+", "_").replace(".", "_")), builtSpec, builtSpec.getVersion());
+		return new LayeredMappingsDependency(new GradleMappingContext(project, () -> {
+			MinecraftVersionMeta versionInfo = getMinecraftProvider().getVersionInfo();
+			return "layers/" + versionInfo.id() + "_" + builtSpec.getVersion().replace("+", "_").replace(".", "_");
+		}), builtSpec, builtSpec.getVersion());
 	}
 
 	public LoomGradleExtension(Project project) {

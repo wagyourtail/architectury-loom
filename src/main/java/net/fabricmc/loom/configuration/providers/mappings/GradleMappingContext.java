@@ -25,6 +25,7 @@
 package net.fabricmc.loom.configuration.providers.mappings;
 
 import java.io.File;
+import java.util.function.Supplier;
 
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
@@ -36,9 +37,9 @@ import net.fabricmc.loom.configuration.providers.MinecraftProvider;
 public class GradleMappingContext implements MappingContext {
 	private final Project project;
 	private final LoomGradleExtension extension;
-	private final String workingDirName;
+	private final Supplier<String> workingDirName;
 
-	public GradleMappingContext(Project project, String workingDirName) {
+	public GradleMappingContext(Project project, Supplier<String> workingDirName) {
 		this.project = project;
 		this.extension = project.getExtensions().getByType(LoomGradleExtension.class);
 		this.workingDirName = workingDirName;
@@ -62,7 +63,7 @@ public class GradleMappingContext implements MappingContext {
 
 	@Override
 	public File workingDirectory(String name) {
-		File tempDir = new File(mappingsProvider().getMappingsDir().toFile(), workingDirName);
+		File tempDir = new File(mappingsProvider().getMappingsDir().toFile(), workingDirName.get());
 		tempDir.mkdirs();
 		return new File(tempDir, name);
 	}
