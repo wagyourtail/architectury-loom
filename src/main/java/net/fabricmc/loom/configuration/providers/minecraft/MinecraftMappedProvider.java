@@ -159,6 +159,8 @@ public class MinecraftMappedProvider extends DependencyProvider {
 		addDependencies(dependency, postPopulationScheduler);
 
 		if (getExtension().isForge()) {
+			getProject().getRepositories().flatDir(repository -> repository.dir(new File(getJarDirectory(getExtension().getUserCache(), "mapped"), "forge")));
+
 			getProject().getDependencies().add(Constants.Configurations.FORGE_NAMED,
 					getProject().getDependencies().module("net.minecraftforge-loom:forge:" + getJarVersionString("mapped")));
 
@@ -245,7 +247,7 @@ public class MinecraftMappedProvider extends DependencyProvider {
 
 		assetsOut(input, vanillaAssets);
 
-		if ( getExtension().isForge()) {
+		if (getExtension().isForge()) {
 			assetsOut(inputForge, forgeAssets);
 		}
 
@@ -354,11 +356,12 @@ public class MinecraftMappedProvider extends DependencyProvider {
 		minecraftSrgJar = !getExtension().isForge() ? null : new File(getExtension().getUserCache(), "minecraft-" + getJarVersionString("srg") + ".jar");
 		minecraftMappedJar = new File(getJarDirectory(getExtension().getUserCache(), "mapped"), "minecraft-" + getJarVersionString("mapped") + ".jar");
 		inputJar = getExtension().isForge() ? mappingsProvider.patchedProvider.getMergedJar() : minecraftProvider.getMergedJar();
+
 		if (getExtension().isForge()) {
 			inputForgeJar = mappingsProvider.patchedProvider.getForgeMergedJar();
 			forgeIntermediaryJar = new File(getExtension().getUserCache(), "forge-" + getJarVersionString("intermediary") + ".jar");
 			forgeSrgJar = new File(getExtension().getUserCache(), "forge-" + getJarVersionString("srg") + ".jar");
-			forgeMappedJar = new File(getJarDirectory(getExtension().getUserCache(), "mapped"), "forge-" + getJarVersionString("mapped") + ".jar");
+			forgeMappedJar = new File(getJarDirectory(getExtension().getUserCache(), "mapped"), "forge/forge-" + getJarVersionString("mapped") + ".jar");
 		}
 	}
 
