@@ -292,22 +292,24 @@ public class RemapJarTask extends Jar {
 						Preconditions.checkArgument(replaced, "Failed to remap access widener");
 					}
 
-					// Add data to the manifest
-					boolean transformed = ZipUtil.transformEntries(data.output.toFile(), new ZipEntryTransformerEntry[]{
-							new ZipEntryTransformerEntry(MANIFEST_PATH, new StreamZipEntryTransformer() {
-								@Override
-								protected void transform(ZipEntry zipEntry, InputStream in, OutputStream out) throws IOException {
-									var manifest = new Manifest(in);
-									var manifestConfiguration = new JarManifestConfiguration(project);
+					if (!extension.isForge()) {
+						// Add data to the manifest
+						boolean transformed = ZipUtil.transformEntries(data.output.toFile(), new ZipEntryTransformerEntry[] {
+								new ZipEntryTransformerEntry(MANIFEST_PATH, new StreamZipEntryTransformer() {
+									@Override
+									protected void transform(ZipEntry zipEntry, InputStream in, OutputStream out) throws IOException {
+										var manifest = new Manifest(in);
+										var manifestConfiguration = new JarManifestConfiguration(project);
 
-									manifestConfiguration.configure(manifest);
-									manifest.getMainAttributes().putValue("Fabric-Mapping-Namespace", toM);
+										manifestConfiguration.configure(manifest);
+										manifest.getMainAttributes().putValue("Fabric-Mapping-Namespace", toM);
 
-									manifest.write(out);
-								}
-							})
-					});
-					Preconditions.checkArgument(transformed, "Failed to transform jar manifest");
+										manifest.write(out);
+									}
+								})
+						});
+						Preconditions.checkArgument(transformed, "Failed to transform jar manifest");
+					}
 
 					if (isReproducibleFileOrder() || !isPreserveFileTimestamps()) {
 						try {

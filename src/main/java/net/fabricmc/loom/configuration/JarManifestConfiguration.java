@@ -28,13 +28,13 @@ import java.util.Optional;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 
+import dev.architectury.tinyremapper.TinyRemapper;
 import org.gradle.api.Project;
 import org.gradle.util.GradleVersion;
 
 import net.fabricmc.loom.LoomGradleExtension;
 import net.fabricmc.loom.LoomGradlePlugin;
 import net.fabricmc.loom.util.Constants;
-import net.fabricmc.tinyremapper.TinyRemapper;
 
 public final record JarManifestConfiguration(Project project) {
 	public void configure(Manifest manifest) {
