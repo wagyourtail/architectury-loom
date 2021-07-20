@@ -59,13 +59,13 @@ public class LaunchProvider extends DependencyProvider {
 				.property("fabric.remapClasspathFile", getRemapClasspathFile().getAbsolutePath())
 				.property("log4j.configurationFile", getAllLog4JConfigFiles())
 
-				.property("client", "java.library.path", getExtension().getNativesDirectory().getAbsolutePath())
-				.property("client", "org.lwjgl.librarypath", getExtension().getNativesDirectory().getAbsolutePath())
+				.property("client", "java.library.path", getDirectories().getNativesDirectory(getExtension().getMinecraftProvider()).getAbsolutePath())
+				.property("client", "org.lwjgl.librarypath", getDirectories().getNativesDirectory(getExtension().getMinecraftProvider()).getAbsolutePath())
 
 				.argument("client", "--assetIndex")
 				.argument("client", getExtension().getMinecraftProvider().getVersionInfo().assetIndex().fabricId(getExtension().getMinecraftProvider().minecraftVersion()))
 				.argument("client", "--assetsDir")
-				.argument("client", new File(getExtension().getUserCache(), "assets").getAbsolutePath());
+				.argument("client", new File(getDirectories().getUserCache(), "assets").getAbsolutePath());
 
 		if (getExtension().isForge()) {
 			launchConfig
@@ -127,7 +127,7 @@ public class LaunchProvider extends DependencyProvider {
 		}
 
 		writeLog4jConfig();
-		FileUtils.writeStringToFile(getExtension().getDevLauncherConfig(), launchConfig.asString(), StandardCharsets.UTF_8);
+		FileUtils.writeStringToFile(getDirectories().getDevLauncherConfig(), launchConfig.asString(), StandardCharsets.UTF_8);
 
 		addDependency(Constants.Dependencies.DEV_LAUNCH_INJECTOR + Constants.Dependencies.Versions.DEV_LAUNCH_INJECTOR, Constants.Configurations.LOOM_DEVELOPMENT_DEPENDENCIES);
 		addDependency(Constants.Dependencies.TERMINAL_CONSOLE_APPENDER + Constants.Dependencies.Versions.TERMINAL_CONSOLE_APPENDER, Constants.Configurations.LOOM_DEVELOPMENT_DEPENDENCIES);
@@ -143,7 +143,7 @@ public class LaunchProvider extends DependencyProvider {
 	}
 
 	private File getLog4jConfigFile() {
-		return getExtension().getDefaultLog4jConfigFile();
+		return getDirectories().getDefaultLog4jConfigFile();
 	}
 
 	private String getAllLog4JConfigFiles() {
@@ -153,7 +153,7 @@ public class LaunchProvider extends DependencyProvider {
 	}
 
 	private File getRemapClasspathFile() {
-		return new File(getExtension().getDevLauncherConfig().getParentFile(), "remapClasspath.txt");
+		return new File(getDirectories().getDevLauncherConfig().getParentFile(), "remapClasspath.txt");
 	}
 
 	private void writeLog4jConfig() {

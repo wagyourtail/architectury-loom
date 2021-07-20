@@ -41,7 +41,7 @@ public class GradleMappingContext implements MappingContext {
 
 	public GradleMappingContext(Project project, Supplier<String> workingDirName) {
 		this.project = project;
-		this.extension = project.getExtensions().getByType(LoomGradleExtension.class);
+		this.extension = LoomGradleExtension.get(project);
 		this.workingDirName = workingDirName;
 	}
 

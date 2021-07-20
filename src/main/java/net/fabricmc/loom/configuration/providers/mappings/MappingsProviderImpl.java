@@ -113,7 +113,7 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 
 	public MappingsProviderImpl(Project project) {
 		super(project);
-		mappingsDir = getExtension().getUserCache().toPath().resolve("mappings");
+		mappingsDir = getDirectories().getUserCache().toPath().resolve("mappings");
 		mappingsStepsDir = mappingsDir.resolve("steps");
 	}
 
@@ -214,7 +214,7 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 		Path mappedVersionedDir = getMappedVersionedDir(removeSuffix);
 		tinyMappings = mappedVersionedDir.resolve("mappings.tiny").toFile();
 		unpickDefinitionsFile = mappedVersionedDir.resolve("definitions.unpick").toFile();
-		tinyMappingsJar = new File(getExtension().getUserCache(), removeSuffix + "-" + jarClassifier + ".jar");
+		tinyMappingsJar = new File(getDirectories().getUserCache(), removeSuffix + "-" + jarClassifier + ".jar");
 		tinyMappingsWithSrg = mappedVersionedDir.resolve("mappings-srg.tiny");
 		mixinTinyMappingsWithSrg = mappedVersionedDir.resolve("mappings-mixin-srg.tiny").toFile();
 		srgToNamedSrg = mappedVersionedDir.resolve("mappings-srg-named.srg").toFile();
@@ -277,7 +277,7 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 
 		LoomGradleExtension extension = getExtension();
 
-		if (extension.accessWidener != null) {
+		if (extension.getAccessWidener() != null) {
 			extension.addJarProcessor(new AccessWidenerJarProcessor(getProject()));
 		}
 
@@ -545,7 +545,7 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 
 				// Download and extract intermediary
 				String encodedMinecraftVersion = UrlEscapers.urlFragmentEscaper().escape(minecraftVersion);
-				String intermediaryArtifactUrl = getExtension().getIntermediaryUrl().apply(encodedMinecraftVersion);
+				String intermediaryArtifactUrl = getExtension().getIntermediaryUrl(encodedMinecraftVersion);
 				Path intermediaryJar = getMappingsVersionedDir().resolve("intermediary-v2.jar");
 				DownloadUtil.downloadIfChanged(new URL(intermediaryArtifactUrl), intermediaryJar.toFile(), getProject().getLogger());
 

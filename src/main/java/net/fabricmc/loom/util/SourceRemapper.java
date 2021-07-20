@@ -171,7 +171,7 @@ public class SourceRemapper {
 			return this.mercury;
 		}
 
-		LoomGradleExtension extension = project.getExtensions().getByType(LoomGradleExtension.class);
+		LoomGradleExtension extension = LoomGradleExtension.get(project);
 		MappingsProviderImpl mappingsProvider = extension.getMappingsProvider();
 
 		String intermediary = extension.isForge() ? "srg" : "intermediary";

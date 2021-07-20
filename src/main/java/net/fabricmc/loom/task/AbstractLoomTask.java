@@ -37,6 +37,6 @@ public abstract class AbstractLoomTask extends DefaultTask {
 
 	@Internal
 	protected LoomGradleExtension getExtension() {
-		return getProject().getExtensions().getByType(LoomGradleExtension.class);
+		return LoomGradleExtension.get(getProject());
 	}
 }

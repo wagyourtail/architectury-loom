@@ -59,6 +59,7 @@ public class MinecraftProviderImpl extends DependencyProvider implements Minecra
 	public File minecraftServerJar;
 	private File minecraftMergedJar;
 	private File versionManifestJson;
+	private File experimentalVersionsJson;
 	private String jarSuffix = "";
 
 	public MinecraftProviderImpl(Project project) {
@@ -117,17 +118,20 @@ public class MinecraftProviderImpl extends DependencyProvider implements Minecra
 	}
 
 	private void initFiles() {
-		minecraftJson = new File(getExtension().getUserCache(), "minecraft-" + minecraftVersion + "-info.json");
-		minecraftClientJar = new File(getExtension().getUserCache(), "minecraft-" + minecraftVersion + "-client.jar");
-		minecraftServerJar = new File(getExtension().getUserCache(), "minecraft-" + minecraftVersion + "-server.jar");
-		minecraftMergedJar = new File(getExtension().getUserCache(), "minecraft-" + minecraftVersion + "-merged.jar");
-		versionManifestJson = new File(getExtension().getUserCache(), "version_manifest.json");
+		minecraftJson = new File(getDirectories().getUserCache(), "minecraft-" + minecraftVersion + "-info.json");
+		minecraftClientJar = new File(getDirectories().getUserCache(), "minecraft-" + minecraftVersion + "-client.jar");
+		minecraftServerJar = new File(getDirectories().getUserCache(), "minecraft-" + minecraftVersion + "-server.jar");
+		minecraftMergedJar = new File(getDirectories().getUserCache(), "minecraft-" + minecraftVersion + "-merged.jar");
+		versionManifestJson = new File(getDirectories().getUserCache(), "version_manifest.json");
+		experimentalVersionsJson = new File(getDirectories().getUserCache(), "experimental_version_manifest.json");
 	}
 
 	public void deleteFiles() {
 		DownloadUtil.delete(minecraftClientJar);
 		DownloadUtil.delete(minecraftServerJar);
 		DownloadUtil.delete(minecraftMergedJar);
+		DownloadUtil.delete(versionManifestJson);
+		DownloadUtil.delete(experimentalVersionsJson);
 	}
 
 	private void downloadMcJson(boolean offline) throws IOException {
@@ -155,16 +159,20 @@ public class MinecraftProviderImpl extends DependencyProvider implements Minecra
 
 		Optional<ManifestVersion.Versions> optionalVersion = Optional.empty();
 
-		if (getExtension().customManifest != null) {
+		if (getExtension().getCustomManifest() != null) {
 			ManifestVersion.Versions customVersion = new ManifestVersion.Versions();
 			customVersion.id = minecraftVersion;
-			customVersion.url = getExtension().customManifest;
+			customVersion.url = getExtension().getCustomManifest();
 			optionalVersion = Optional.of(customVersion);
 			getProject().getLogger().lifecycle("Using custom minecraft manifest");
 		}
 
-		if (!optionalVersion.isPresent()) {
+		if (optionalVersion.isEmpty()) {
 			optionalVersion = mcManifest.versions().stream().filter(versions -> versions.id.equalsIgnoreCase(minecraftVersion)).findFirst();
+
+			if (optionalVersion.isEmpty()) {
+				optionalVersion = findExperimentalVersion(offline);
+			}
 		}
 
 		if (optionalVersion.isPresent()) {
@@ -194,8 +202,31 @@ public class MinecraftProviderImpl extends DependencyProvider implements Minecra
 		}
 	}
 
+	// This attempts to find the version from fabric's own fallback version manifest json.
+	private Optional<ManifestVersion.Versions> findExperimentalVersion(boolean offline) throws IOException {
+		if (offline) {
+			if (!experimentalVersionsJson.exists()) {
+				getProject().getLogger().warn("Skipping download of experimental versions jsons due to being offline.");
+				return Optional.empty();
+			}
+		} else {
+			DownloadUtil.downloadIfChanged(new URL(Constants.EXPERIMENTAL_VERSIONS), experimentalVersionsJson, getProject().getLogger());
+		}
+
+		String expVersionManifest = Files.asCharSource(experimentalVersionsJson, StandardCharsets.UTF_8).read();
+		ManifestVersion expManifest = LoomGradlePlugin.OBJECT_MAPPER.readValue(expVersionManifest, ManifestVersion.class);
+
+		var result = expManifest.versions().stream().filter(versions -> versions.id.equalsIgnoreCase(minecraftVersion)).findFirst();
+
+		if (result.isPresent()) {
+			getProject().getLogger().lifecycle("Using fallback experimental version {}", minecraftVersion);
+		}
+
+		return result;
+	}
+
 	private boolean hasRecentValidManifest() throws IOException {
-		if (getExtension().customManifest != null) {
+		if (getExtension().getCustomManifest() != null) {
 			return false;
 		}
 

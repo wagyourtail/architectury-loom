@@ -83,10 +83,6 @@ public class GenerateSourcesTask extends AbstractLoomTask {
 			Files.copy(linemappedJarDestination, runtimeJar, StandardCopyOption.REPLACE_EXISTING);
 			Files.delete(linemappedJarDestination);
 		}
-
-		if (getExtension().isForge()) {
-			ForgeSourcesRemapper.addForgeSources(getProject(), sourcesDestination);
-		}
 	}
 
 	private void remapLineNumbers(Path oldCompiledJar, Path linemap, Path linemappedJarDestination) throws IOException {
@@ -114,7 +110,7 @@ public class GenerateSourcesTask extends AbstractLoomTask {
 	}
 
 	public static File getMappedJarFileWithSuffix(Project project, String suffix, boolean forgeJar) {
-		LoomGradleExtension extension = project.getExtensions().getByType(LoomGradleExtension.class);
+		LoomGradleExtension extension = LoomGradleExtension.get(getProject());
 		MappingsProviderImpl mappingsProvider = extension.getMappingsProvider();
 		File mappedJar = forgeJar ? mappingsProvider.mappedProvider.getForgeMappedJar() : mappingsProvider.mappedProvider.getMappedJar();
 		String path = mappedJar.getAbsolutePath();

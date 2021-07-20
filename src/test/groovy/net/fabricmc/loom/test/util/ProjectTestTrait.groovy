@@ -29,7 +29,7 @@ import org.gradle.testkit.runner.GradleRunner
 
 trait ProjectTestTrait {
 	final static String DEFAULT_GRADLE = "7.0.1"
-	final static String PRE_RELEASE_GRADLE = "7.2-20210704221017+0000"
+	final static String PRE_RELEASE_GRADLE = "7.2-20210719222438+0000"
 
 	static File gradleHome = File.createTempDir()
 	File testProjectDir = File.createTempDir()
@@ -79,9 +79,17 @@ trait ProjectTestTrait {
 		gradleHome.deleteDir()
 	}
 
+	File buildGradle() {
+		return new File(testProjectDir, "build.gradle")
+	}
+
+	def filesReady() {
+	}
+
 	BuildResult create(String task, String gradleVersion = DEFAULT_GRADLE) {
 		System.setProperty("fabric.loom.test", "true")
 		copyInputFiles()
+		filesReady()
 
 		GradleRunner.create()
 			.withProjectDir(testProjectDir)

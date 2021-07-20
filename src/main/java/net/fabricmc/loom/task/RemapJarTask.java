@@ -137,7 +137,7 @@ public class RemapJarTask extends Jar {
 			jarRemapper = new JarRemapper();
 		}
 
-		scheduleRemap(singleRemap || getProject().getExtensions().getByType(LoomGradleExtension.class).isRootProject());
+		scheduleRemap(singleRemap || LoomGradleExtension.get(getProject()).isRootProject());
 
 		if (singleRemap) {
 			jarRemapper.remap(getProject());
@@ -212,7 +212,7 @@ public class RemapJarTask extends Jar {
 
 	public void scheduleRemap(boolean isMainRemapTask) throws Throwable {
 		Project project = getProject();
-		LoomGradleExtension extension = project.getExtensions().getByType(LoomGradleExtension.class);
+		LoomGradleExtension extension = LoomGradleExtension.get(getProject());
 		Path input = this.getInput().getAsFile().get().toPath();
 		Path output = this.getArchivePath().toPath();
 
@@ -248,7 +248,7 @@ public class RemapJarTask extends Jar {
 
 		jarRemapper.scheduleRemap(input, output)
 				.supplyAccessWidener((remapData, remapper) -> {
-					if (getRemapAccessWidener().getOrElse(false) && extension.accessWidener != null) {
+					if (getRemapAccessWidener().getOrElse(false) && extension.getAccessWidener() != null) {
 						AccessWidenerJarProcessor accessWidenerJarProcessor = extension.getJarProcessorManager().getByType(AccessWidenerJarProcessor.class);
 						byte[] data;
 
@@ -271,7 +271,7 @@ public class RemapJarTask extends Jar {
 						throw new RuntimeException("Failed to remap " + input + " to " + output + " - file missing!");
 					}
 
-					if (MixinRefmapHelper.addRefmapName(extension.getRefmapName(), output)) {
+					if (MixinRefmapHelper.addRefmapName(project, output)) {
 						project.getLogger().debug("Transformed mixin reference maps in output JAR!");
 					}
 

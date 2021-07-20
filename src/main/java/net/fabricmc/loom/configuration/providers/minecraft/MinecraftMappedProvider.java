@@ -352,9 +352,9 @@ public class MinecraftMappedProvider extends DependencyProvider {
 
 	public void initFiles(MinecraftProviderImpl minecraftProvider, MappingsProviderImpl mappingsProvider) {
 		this.minecraftProvider = minecraftProvider;
-		minecraftIntermediaryJar = new File(getExtension().getUserCache(), "minecraft-" + getJarVersionString("intermediary") + ".jar");
+		minecraftIntermediaryJar = new File(getDirectories().getUserCache(), "minecraft-" + getJarVersionString("intermediary") + ".jar");
 		minecraftSrgJar = !getExtension().isForge() ? null : new File(getExtension().getUserCache(), "minecraft-" + getJarVersionString("srg") + ".jar");
-		minecraftMappedJar = new File(getJarDirectory(getExtension().getUserCache(), "mapped"), "minecraft-" + getJarVersionString("mapped") + ".jar");
+		minecraftMappedJar = new File(getJarDirectory(getDirectories().getUserCache(), "mapped"), "minecraft-" + getJarVersionString("mapped") + ".jar");
 		inputJar = getExtension().isForge() ? mappingsProvider.patchedProvider.getMergedJar() : minecraftProvider.getMergedJar();
 
 		if (getExtension().isForge()) {
@@ -398,7 +398,7 @@ public class MinecraftMappedProvider extends DependencyProvider {
 	}
 
 	public File getUnpickedJar() {
-		return new File(getJarDirectory(getExtension().getUserCache(), "mapped"), "minecraft-" + getJarVersionString("unpicked") + ".jar");
+		return new File(getJarDirectory(getDirectories().getUserCache(), "mapped"), "minecraft-" + getJarVersionString("unpicked") + ".jar");
 	}
 
 	@Override
