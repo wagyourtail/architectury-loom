@@ -24,6 +24,8 @@
 
 package net.fabricmc.loom;
 
+import java.util.Objects;
+
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -49,6 +51,7 @@ public class LoomGradlePlugin implements BootstrappedPlugin {
 	public static boolean refreshDeps;
 	public static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+	public static final String LOOM_VERSION = Objects.requireNonNullElse(LoomGradlePlugin.class.getPackage().getImplementationVersion(), "0.0.0+unknown");
 
 	@Override
 	public void apply(PluginAware target) {
@@ -60,13 +63,12 @@ public class LoomGradlePlugin implements BootstrappedPlugin {
 	}
 
 	public void apply(Project project) {
-		String loomVersion = LoomGradlePlugin.class.getPackage().getImplementationVersion();
 		Set<String> loggedVersions = new HashSet<>(Arrays.asList(System.getProperty("loom.printed.logged", "").split(",")));
 
-		if (!loggedVersions.contains(loomVersion)) {
-			loggedVersions.add(loomVersion);
+		if (!loggedVersions.contains(LOOM_VERSION)) {
+			loggedVersions.add(LOOM_VERSION);
 			System.setProperty("loom.printed.logged", String.join(",", loggedVersions));
-			project.getLogger().lifecycle("Architectury Loom: " + loomVersion);
+			project.getLogger().lifecycle("Architectury Loom: " + LOOM_VERSION);
 			project.getLogger().lifecycle("You are using an unstable version of Architectury Loom! Please report any issues found!");
 		}
 
