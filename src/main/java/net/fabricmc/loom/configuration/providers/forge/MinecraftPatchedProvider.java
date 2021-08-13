@@ -275,6 +275,7 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 		}
 
 		Path input = minecraftMergedPatchedSrgAtJar.toPath();
+
 		if (dirty) {
 			remapPatchedJar(input, getProject().getLogger());
 		}
