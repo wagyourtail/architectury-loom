@@ -40,7 +40,6 @@ public class Constants {
 	public static final String EXPERIMENTAL_VERSIONS = "https://maven.fabricmc.net/net/minecraft/experimental_versions.json";
 
 	public static final String SYSTEM_ARCH = System.getProperty("os.arch").equals("64") ? "64" : "32";
-	public static final String TASK_CATEGORY = "loom";
 
 	public static final int ASM_VERSION = Opcodes.ASM9;
 
@@ -133,6 +132,14 @@ public class Constants {
 		public static final String KNOT_SERVER = "net.fabricmc.loader.launch.knot.KnotServer";
 
 		private Knot() {
+		}
+	}
+
+	public static final class TaskGroup {
+		public static final String FABRIC = "loom";
+		public static final String IDE = "ide";
+
+		private TaskGroup() {
 		}
 	}
 

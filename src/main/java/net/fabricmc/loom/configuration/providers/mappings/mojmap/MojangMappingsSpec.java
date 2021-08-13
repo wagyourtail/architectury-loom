@@ -78,6 +78,7 @@ public record MojangMappingsSpec(SilenceLicenseOption silenceLicense) implements
 		}
 
 		return new MojangMappingLayer(
+				context.minecraftVersion(),
 				versionInfo.download(MANIFEST_CLIENT_MAPPINGS),
 				versionInfo.download(MANIFEST_SERVER_MAPPINGS),
 				context.workingDirectory("mojang"),

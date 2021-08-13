@@ -50,12 +50,11 @@ import net.fabricmc.loom.configuration.providers.forge.SrgProvider;
 import net.fabricmc.loom.configuration.providers.mappings.MappingsProviderImpl;
 import net.fabricmc.loom.configuration.providers.minecraft.MinecraftMappedProvider;
 import net.fabricmc.loom.extension.LoomFiles;
-import net.fabricmc.loom.extension.LoomGradleExtensionImpl;
 import net.fabricmc.loom.extension.MixinApExtension;
 
 public interface LoomGradleExtension extends LoomGradleExtensionAPI {
 	static LoomGradleExtension get(Project project) {
-		return project.getExtensions().getByType(LoomGradleExtensionImpl.class);
+		return (LoomGradleExtension) project.getExtensions().getByName("loom");
 	}
 
 	LoomFiles getFiles();
@@ -100,8 +99,6 @@ public interface LoomGradleExtension extends LoomGradleExtensionAPI {
 
 	boolean isRootProject();
 
-	boolean isShareCaches();
-
 	default boolean ideSync() {
 		return Boolean.parseBoolean(System.getProperty("idea.sync.active", "false"));
 	}
@@ -111,7 +108,8 @@ public interface LoomGradleExtension extends LoomGradleExtensionAPI {
 		return String.format("https://maven.fabricmc.net/net/fabricmc/intermediary/%1$s/intermediary-%1$s-v2.jar", minecraftVersion);
 	}
 
-	MixinApExtension getMixinApExtension();
+	@Override
+	MixinApExtension getMixin();
 
 	// ===================
 	//  Architectury Loom

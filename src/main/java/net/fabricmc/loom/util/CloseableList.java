@@ -1,7 +1,7 @@
 /*
  * This file is part of fabric-loom, licensed under the MIT License (MIT).
  *
- * Copyright (c) 2016-2021 FabricMC
+ * Copyright (c) 2021 FabricMC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,31 +22,31 @@
  * SOFTWARE.
  */
 
-package net.fabricmc.loom.configuration.providers.mappings;
+package net.fabricmc.loom.util;
 
-import java.io.File;
+import java.io.Closeable;
+import java.io.IOException;
+import java.util.ArrayList;
 
-import org.gradle.api.logging.Logger;
+public class CloseableList<T extends Closeable> extends ArrayList<T> implements Closeable {
+	@Override
+	public void close() throws IOException {
+		IOException exception = null;
 
-import net.fabricmc.loom.configuration.providers.MinecraftProvider;
+		for (T t : this) {
+			try {
+				t.close();
+			} catch (IOException e) {
+				if (exception == null) {
+					exception = new IOException("Failed to close list");
+				}
 
-public interface MappingContext {
-	File mavenFile(String mavenNotation);
+				exception.addSuppressed(e);
+			}
+		}
 
-	MappingsProvider mappingsProvider();
-
-	MinecraftProvider minecraftProvider();
-
-	default String minecraftVersion() {
-		return minecraftProvider().minecraftVersion();
+		if (exception != null) {
+			throw exception;
+		}
 	}
-
-	File workingDirectory();
-
-	/**
-	 * Creates a temporary working dir to be used to store working files.
-	 */
-	File workingDirectory(String name);
-
-	Logger getLogger();
 }

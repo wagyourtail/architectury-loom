@@ -43,6 +43,7 @@ import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.objectweb.asm.commons.Remapper;
 
+import net.fabricmc.loom.util.CloseableList;
 import net.fabricmc.loom.util.LoggerFilter;
 import net.fabricmc.stitch.util.Pair;
 
@@ -101,31 +102,35 @@ public class JarRemapper {
 			}
 		}
 
-		List<OutputConsumerPath> outputConsumers = new ArrayList<>();
+		//noinspection MismatchedQueryAndUpdateOfCollection
+		try (CloseableList<OutputConsumerPath> outputConsumers = new CloseableList<>()) {
+			for (RemapData data : remapData) {
+				OutputConsumerPath outputConsumer;
+				project.getLogger().info(":remapper output -> " + data.output.getFileName().toString());
 
-		for (RemapData data : remapData) {
-			OutputConsumerPath outputConsumer;
-			project.getLogger().info(":remapper output -> " + data.output.getFileName().toString());
+				try {
+					Files.deleteIfExists(data.output);
+					outputConsumer = new OutputConsumerPath.Builder(data.output).build();
+				} catch (Exception e) {
+					throw new RuntimeException("Failed to create remapper output " + data.output.getFileName().toString(), e);
+				}
 
-			try {
-				Files.deleteIfExists(data.output);
-				outputConsumer = new OutputConsumerPath.Builder(data.output).build();
-			} catch (Exception e) {
-				throw new RuntimeException("Failed to create remapper output " + data.output.getFileName().toString(), e);
+				outputConsumers.add(outputConsumer);
+
+				outputConsumer.addNonClassFiles(data.input);
+
+				data.processAccessWidener(remapper.getRemapper());
+				remapper.apply(outputConsumer, data.tag);
 			}
 
-			outputConsumers.add(outputConsumer);
+			remapper.finish();
+		} catch (Exception e) {
+			for (RemapData data : remapData) {
+				// Cleanup bad outputs
+				Files.deleteIfExists(data.output);
+			}
 
-			outputConsumer.addNonClassFiles(data.input);
-
-			data.processAccessWidener(remapper.getRemapper());
-			remapper.apply(outputConsumer, data.tag);
-		}
-
-		remapper.finish();
-
-		for (OutputConsumerPath outputConsumer : outputConsumers) {
-			outputConsumer.close();
+			throw new IOException("Failed to remap %s files".formatted(remapData.size()), e);
 		}
 
 		remapData.forEach(RemapData::complete);

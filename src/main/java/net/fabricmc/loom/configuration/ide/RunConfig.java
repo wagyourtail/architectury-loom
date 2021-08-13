@@ -52,6 +52,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
 import net.fabricmc.loom.LoomGradleExtension;
+import net.fabricmc.loom.configuration.InstallerData;
 import net.fabricmc.loom.util.OperatingSystem;
 
 public class RunConfig {
@@ -269,7 +270,13 @@ public class RunConfig {
 	}
 
 	private static String getMainClass(String side, LoomGradleExtension extension, String defaultMainClass) {
-		JsonObject installerJson = extension.getInstallerData() == null ? null : extension.getInstallerData().installerJson();
+		InstallerData installerData = extension.getInstallerData() == null ? null : extension.getInstallerData();
+
+		if (installerData == null) {
+			return defaultMainClass;
+		}
+
+		JsonObject installerJson = installerData.installerJson();
 
 		if (installerJson != null && installerJson.has("mainClass")) {
 			JsonElement mainClassJson = installerJson.get("mainClass");
