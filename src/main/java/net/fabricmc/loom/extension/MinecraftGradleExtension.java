@@ -24,6 +24,12 @@
 
 package net.fabricmc.loom.extension;
 
+import java.io.File;
+import java.util.List;
+import java.util.Set;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+
 import org.gradle.api.Action;
 import org.gradle.api.NamedDomainObjectContainer;
 import org.gradle.api.artifacts.Dependency;
@@ -31,14 +37,18 @@ import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
+import org.gradle.api.tasks.SourceSet;
 
 import net.fabricmc.loom.api.LoomGradleExtensionAPI;
 import net.fabricmc.loom.api.MixinApExtensionAPI;
 import net.fabricmc.loom.api.decompilers.LoomDecompiler;
+import net.fabricmc.loom.configuration.ide.RunConfig;
 import net.fabricmc.loom.configuration.ide.RunConfigSettings;
+import net.fabricmc.loom.configuration.launch.LaunchProviderSettings;
 import net.fabricmc.loom.configuration.processors.JarProcessor;
 import net.fabricmc.loom.configuration.providers.mappings.LayeredMappingSpecBuilder;
 import net.fabricmc.loom.util.DeprecationHelper;
+import net.fabricmc.loom.util.ModPlatform;
 
 public class MinecraftGradleExtension implements LoomGradleExtensionAPI {
 	private final LoomGradleExtensionAPI parent;
@@ -130,5 +140,125 @@ public class MinecraftGradleExtension implements LoomGradleExtensionAPI {
 	public Property<String> getCustomMinecraftManifest() {
 		reportDeprecation();
 		return parent.getCustomMinecraftManifest();
+	}
+
+	@Override
+	public void silentMojangMappingsLicense() {
+		reportDeprecation();
+		parent.silentMojangMappingsLicense();
+	}
+
+	@Override
+	public boolean isSilentMojangMappingsLicenseEnabled() {
+		reportDeprecation();
+		return parent.isSilentMojangMappingsLicenseEnabled();
+	}
+
+	@Override
+	public Property<ModPlatform> getPlatform() {
+		reportDeprecation();
+		return parent.getPlatform();
+	}
+
+	@Override
+	public boolean supportsInclude() {
+		reportDeprecation();
+		return parent.supportsInclude();
+	}
+
+	@Override
+	public void setGenerateSrgTiny(Boolean generateSrgTiny) {
+		reportDeprecation();
+		parent.setGenerateSrgTiny(generateSrgTiny);
+	}
+
+	@Override
+	public boolean shouldGenerateSrgTiny() {
+		reportDeprecation();
+		return parent.shouldGenerateSrgTiny();
+	}
+
+	@Override
+	public void launches(Action<NamedDomainObjectContainer<LaunchProviderSettings>> action) {
+		reportDeprecation();
+		parent.launches(action);
+	}
+
+	@Override
+	public NamedDomainObjectContainer<LaunchProviderSettings> getLaunchConfigs() {
+		reportDeprecation();
+		return parent.getLaunchConfigs();
+	}
+
+	@Override
+	public List<String> getDataGenMods() {
+		reportDeprecation();
+		return parent.getDataGenMods();
+	}
+
+	@Override
+	public void localMods(Action<SourceSetConsumer> action) {
+		reportDeprecation();
+		parent.localMods(action);
+	}
+
+	@Override
+	public List<Supplier<SourceSet>> getForgeLocalMods() {
+		reportDeprecation();
+		return parent.getForgeLocalMods();
+	}
+
+	@Override
+	public void dataGen(Action<DataGenConsumer> action) {
+		reportDeprecation();
+		parent.dataGen(action);
+	}
+
+	@Override
+	public List<String> getTasksBeforeRun() {
+		reportDeprecation();
+		return parent.getTasksBeforeRun();
+	}
+
+	@Override
+	public void mixinConfig(String... config) {
+		reportDeprecation();
+		parent.mixinConfig(config);
+	}
+
+	@Override
+	public List<String> getMixinConfigs() {
+		reportDeprecation();
+		return parent.getMixinConfigs();
+	}
+
+	@Override
+	public void accessTransformer(Object file) {
+		reportDeprecation();
+		parent.accessTransformer(file);
+	}
+
+	@Override
+	public Set<File> getAccessTransformers() {
+		reportDeprecation();
+		return parent.getAccessTransformers();
+	}
+
+	@Override
+	public boolean isUseFabricMixin() {
+		reportDeprecation();
+		return parent.isUseFabricMixin();
+	}
+
+	@Override
+	public void setUseFabricMixin(boolean useFabricMixin) {
+		reportDeprecation();
+		parent.setUseFabricMixin(useFabricMixin);
+	}
+
+	@Override
+	public List<Consumer<RunConfig>> getSettingsPostEdit() {
+		reportDeprecation();
+		return parent.getSettingsPostEdit();
 	}
 }

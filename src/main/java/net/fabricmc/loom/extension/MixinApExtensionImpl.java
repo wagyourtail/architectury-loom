@@ -72,6 +72,11 @@ public class MixinApExtensionImpl extends MixinApExtensionApiImpl implements Mix
 
 	private String getDefaultMixinRefmapName() {
 		String defaultRefmapName = getProject().getConvention().getPlugin(BasePluginConvention.class).getArchivesBaseName() + "-refmap.json";
+
+		if (getProject().getRootProject() != getProject()) {
+			defaultRefmapName = getProject().getConvention().getPlugin(BasePluginConvention.class).getArchivesBaseName() + "-" + getProject().getPath().replaceFirst(":", "").replace(':', '_') + "-refmap.json";
+		}
+
 		getProject().getLogger().info("Could not find refmap definition, will be using default name: " + defaultRefmapName);
 		return defaultRefmapName;
 	}

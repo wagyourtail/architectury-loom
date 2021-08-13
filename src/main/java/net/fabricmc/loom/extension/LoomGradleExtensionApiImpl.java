@@ -24,6 +24,15 @@
 
 package net.fabricmc.loom.extension;
 
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -34,11 +43,9 @@ import org.gradle.api.Project;
 import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.RegularFileProperty;
-import org.gradle.api.plugins.BasePluginConvention;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.plugins.JavaPluginConvention;
-import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.SourceSet;
 
 import net.fabricmc.loom.api.LoomGradleExtensionAPI;
@@ -167,24 +174,6 @@ public abstract class LoomGradleExtensionApiImpl implements LoomGradleExtensionA
 	@Override
 	public Property<Boolean> getRemapArchives() {
 		return remapArchives;
-	}
-
-	@Override
-	public String getRefmapName() {
-		if (refmapName == null || refmapName.isEmpty()) {
-			String defaultRefmapName;
-
-			if (getProject().getRootProject() == getProject()) {
-				defaultRefmapName = getProject().getConvention().getPlugin(BasePluginConvention.class).getArchivesBaseName() + "-refmap.json";
-			} else {
-				defaultRefmapName = getProject().getConvention().getPlugin(BasePluginConvention.class).getArchivesBaseName() + "-" + getProject().getPath().replaceFirst(":", "").replace(':', '_') + "-refmap.json";
-			}
-
-			getProject().getLogger().info("Could not find refmap definition, will be using default name: " + defaultRefmapName);
-			refmapName = defaultRefmapName;
-		}
-
-		return refmapName;
 	}
 
 	@Override

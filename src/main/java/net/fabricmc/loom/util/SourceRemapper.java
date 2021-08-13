@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -51,7 +52,6 @@ import org.zeroturnaround.zip.ZipUtil;
 import net.fabricmc.loom.LoomGradleExtension;
 import net.fabricmc.loom.configuration.RemappedConfigurationEntry;
 import net.fabricmc.loom.configuration.providers.mappings.MappingsProviderImpl;
-import net.fabricmc.loom.configuration.providers.minecraft.tr.MercuryUtils;
 import net.fabricmc.lorenztiny.TinyMappingsReader;
 import net.fabricmc.mapping.tree.TinyTree;
 import net.fabricmc.stitch.util.StitchUtil;
@@ -114,13 +114,13 @@ public class SourceRemapper {
 		{
 			// We have to build the Mercury instances on the main thread as createMercuryRemapper resolves gradle stuff
 			// TODO refactor this a bit to not do that.
-			var mercuryQueue = new ConcurrentLinkedDeque<Mercury>();
+			Deque<Mercury> mercuryQueue = new ConcurrentLinkedDeque<>();
 
-			final var remapper = createMercuryRemapper();
-			final var inputClasspath = getInputClasspath(project);
+			final SourceProcessor remapper = createMercuryRemapper();
+			final Set<Path> inputClasspath = getInputClasspath(project);
 
 			for (int i = 0; i < threads; i++) {
-				Mercury mercury = createMercuryWithClassPath(project, toNamed);
+				Mercury mercury = createMercuryWithClassPath(project, to.equals("named"));
 				mercury.getProcessors().add(remapper);
 				mercury.getClassPath().addAll(inputClasspath);
 
@@ -277,17 +277,17 @@ public class SourceRemapper {
 	}
 
 	public static Mercury createMercuryWithClassPath(Project project, boolean toNamed) {
-		var mercury = new Mercury();
+		Mercury mercury = new Mercury();
 		mercury.setGracefulClasspathChecks(true);
 
-		var classpath = mercury.getClassPath();
+		List<Path> classpath = mercury.getClassPath();
 		classpath.addAll(getCompileClasspath(project, toNamed));
 
 		return mercury;
 	}
 
 	private static Set<Path> getCompileClasspath(Project project, boolean toNamed) {
-		var classpath = new HashSet<Path>();
+		Set<Path> classpath = new HashSet<>();
 
 		for (File file : project.getConfigurations().getByName(Constants.Configurations.LOADER_DEPENDENCIES).getFiles()) {
 			classpath.add(file.toPath());
@@ -311,7 +311,7 @@ public class SourceRemapper {
 	private static Set<Path> getInputClasspath(Project project) {
 		LoomGradleExtension extension = LoomGradleExtension.get(project);
 
-		var classpath = new HashSet<Path>();
+		Set<Path> classpath = new HashSet<Path>();
 
 		for (File file : extension.getUnmappedModCollection()) {
 			Path path = file.toPath();
@@ -323,6 +323,13 @@ public class SourceRemapper {
 
 		classpath.add(extension.getMinecraftMappedProvider().getMappedJar().toPath());
 		classpath.add(extension.getMinecraftMappedProvider().getIntermediaryJar().toPath());
+
+		if (extension.isForge()) {
+			classpath.add(extension.getMinecraftMappedProvider().getSrgJar().toPath());
+			classpath.add(extension.getMinecraftMappedProvider().getForgeMappedJar().toPath());
+			classpath.add(extension.getMinecraftMappedProvider().getForgeIntermediaryJar().toPath());
+			classpath.add(extension.getMinecraftMappedProvider().getForgeSrgJar().toPath());
+		}
 
 		Set<File> files = project.getConfigurations()
 				.detachedConfiguration(project.getDependencies().create(Constants.Dependencies.JETBRAINS_ANNOTATIONS + Constants.Dependencies.Versions.JETBRAINS_ANNOTATIONS))

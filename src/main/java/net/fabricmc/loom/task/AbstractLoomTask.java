@@ -32,7 +32,7 @@ import net.fabricmc.loom.util.Constants;
 
 public abstract class AbstractLoomTask extends DefaultTask {
 	public AbstractLoomTask() {
-		setGroup(Constants.TASK_CATEGORY);
+		setGroup(Constants.TaskGroup.FABRIC);
 	}
 
 	@Internal
