@@ -131,7 +131,7 @@ public class RunConfig {
 		runConfig.programArgs = "";
 
 		runConfig.mainClass = "net.fabricmc.devlaunchinjector.Main";
-		runConfig.vmArgs = "-XX:+ShowCodeDetailsInExceptionMessages -Dfabric.dli.config=" + encodeEscaped(extension.getFiles().getDevLauncherConfig().getAbsolutePath()) + " -Dfabric.dli.env=" + environment.toLowerCase();
+		runConfig.vmArgs = "-Dfabric.dli.config=" + encodeEscaped(extension.getFiles().getDevLauncherConfig().getAbsolutePath()) + " -Dfabric.dli.env=" + environment.toLowerCase();
 
 		if (extension.isForge()) {
 			List<String> modClasses = new ArrayList<>();
