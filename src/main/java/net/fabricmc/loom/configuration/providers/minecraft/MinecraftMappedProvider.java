@@ -353,15 +353,15 @@ public class MinecraftMappedProvider extends DependencyProvider {
 	public void initFiles(MinecraftProviderImpl minecraftProvider, MappingsProviderImpl mappingsProvider) {
 		this.minecraftProvider = minecraftProvider;
 		minecraftIntermediaryJar = new File(getExtension().getMappingsProvider().mappingsWorkingDir().toFile(), "minecraft-intermediary.jar");
-		minecraftSrgJar = !getExtension().isForge() ? null : new File(getDirectories().getUserCache(), "minecraft-" + getJarVersionString("srg") + ".jar");
+		minecraftSrgJar = !getExtension().isForge() ? null : new File(getExtension().getMappingsProvider().mappingsWorkingDir().toFile(), "minecraft-srg.jar");
 		minecraftMappedJar = new File(getExtension().getMappingsProvider().mappingsWorkingDir().toFile(), "minecraft-mapped.jar");
 		inputJar = getExtension().isForge() ? mappingsProvider.patchedProvider.getMergedJar() : minecraftProvider.getMergedJar();
 
 		if (getExtension().isForge()) {
 			inputForgeJar = mappingsProvider.patchedProvider.getForgeMergedJar();
-			forgeIntermediaryJar = new File(getDirectories().getUserCache(), "forge-" + getJarVersionString("intermediary") + ".jar");
-			forgeSrgJar = new File(getDirectories().getUserCache(), "forge-" + getJarVersionString("srg") + ".jar");
-			forgeMappedJar = new File(getJarDirectory(getDirectories().getUserCache(), "mapped"), "forge/forge-" + getJarVersionString("mapped") + ".jar");
+			forgeIntermediaryJar = new File(getExtension().getMappingsProvider().mappingsWorkingDir().toFile(), "forge-intermediary.jar");
+			forgeSrgJar = new File(getExtension().getMappingsProvider().mappingsWorkingDir().toFile(), "forge-srg.jar");
+			forgeMappedJar = new File(getExtension().getMappingsProvider().mappingsWorkingDir().toFile(), "forge/forge-mapped.jar");
 		}
 	}
 

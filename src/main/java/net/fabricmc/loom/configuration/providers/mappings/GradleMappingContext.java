@@ -64,7 +64,7 @@ public class GradleMappingContext implements MappingContext {
 	@Override
 	public File workingDirectory() {
 		if (workingDir == null) {
-			workingDir = new File(mappingsProvider().getMappingsDir().toFile(), "layered/" + minecraftProvider().minecraftVersion());
+			workingDir = new File(mappingsProvider().mappingsWorkingDir().toFile(), "layered/" + minecraftProvider().minecraftVersion());
 
 			if (workingDir.exists()) {
 				try {
@@ -80,7 +80,7 @@ public class GradleMappingContext implements MappingContext {
 
 	@Override
 	public File workingDirectory(String name) {
-		return new File(minecraftProvider().dir("layered/working_dir/" + workingDirName), name);
+		return new File(workingDirectory(), name);
 	}
 
 	@Override
