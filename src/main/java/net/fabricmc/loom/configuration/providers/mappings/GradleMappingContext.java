@@ -80,10 +80,7 @@ public class GradleMappingContext implements MappingContext {
 
 	@Override
 	public File workingDirectory(String name) {
-		File file = new File(workingDirectory(), name);
-		file.mkdirs();
-
-		return file;
+		return new File(minecraftProvider().dir("layered/working_dir/" + workingDirName), name);
 	}
 
 	@Override

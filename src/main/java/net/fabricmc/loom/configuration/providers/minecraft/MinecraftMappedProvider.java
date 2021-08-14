@@ -86,7 +86,7 @@ public class MinecraftMappedProvider extends DependencyProvider {
 
 	@Override
 	public void provide(DependencyInfo dependency, Consumer<Runnable> postPopulationScheduler) throws Exception {
-		if (!getExtension().getMappingsProvider().tinyMappings.exists()) {
+		if (Files.notExists(getExtension().getMappingsProvider().tinyMappings)) {
 			throw new RuntimeException("mappings file not found");
 		}
 
@@ -347,14 +347,14 @@ public class MinecraftMappedProvider extends DependencyProvider {
 
 	protected void addDependencies(DependencyInfo dependency, Consumer<Runnable> postPopulationScheduler) {
 		getProject().getDependencies().add(Constants.Configurations.MINECRAFT_NAMED,
-				getProject().getDependencies().module("net.minecraft:minecraft:" + getJarVersionString("mapped")));
+				getProject().getDependencies().module("net.minecraft:minecraft-mapped:" + getMinecraftProvider().minecraftVersion() + "/" + getExtension().getMappingsProvider().mappingsIdentifier()));
 	}
 
 	public void initFiles(MinecraftProviderImpl minecraftProvider, MappingsProviderImpl mappingsProvider) {
 		this.minecraftProvider = minecraftProvider;
-		minecraftIntermediaryJar = new File(getDirectories().getUserCache(), "minecraft-" + getJarVersionString("intermediary") + ".jar");
+		minecraftIntermediaryJar = new File(getExtension().getMappingsProvider().mappingsWorkingDir().toFile(), "minecraft-intermediary.jar");
 		minecraftSrgJar = !getExtension().isForge() ? null : new File(getDirectories().getUserCache(), "minecraft-" + getJarVersionString("srg") + ".jar");
-		minecraftMappedJar = new File(getJarDirectory(getDirectories().getUserCache(), "mapped"), "minecraft-" + getJarVersionString("mapped") + ".jar");
+		minecraftMappedJar = new File(getExtension().getMappingsProvider().mappingsWorkingDir().toFile(), "minecraft-mapped.jar");
 		inputJar = getExtension().isForge() ? mappingsProvider.patchedProvider.getMergedJar() : minecraftProvider.getMergedJar();
 
 		if (getExtension().isForge()) {
@@ -370,7 +370,7 @@ public class MinecraftMappedProvider extends DependencyProvider {
 	}
 
 	protected String getJarVersionString(String type) {
-		return String.format("%s-%s-%s-%s%s", minecraftProvider.minecraftVersion(), type, getExtension().getMappingsProvider().mappingsName, getExtension().getMappingsProvider().mappingsVersion, minecraftProvider.getJarSuffix());
+		return String.format("%s-%s%s", type, getExtension().getMappingsProvider().mappingsIdentifier(), minecraftProvider.getJarSuffix());
 	}
 
 	public File getIntermediaryJar() {
@@ -398,7 +398,7 @@ public class MinecraftMappedProvider extends DependencyProvider {
 	}
 
 	public File getUnpickedJar() {
-		return new File(getJarDirectory(getDirectories().getUserCache(), "mapped"), "minecraft-" + getJarVersionString("unpicked") + ".jar");
+		return new File(getExtension().getMappingsProvider().mappingsWorkingDir().toFile(), "minecraft-unpicked.jar");
 	}
 
 	@Override
