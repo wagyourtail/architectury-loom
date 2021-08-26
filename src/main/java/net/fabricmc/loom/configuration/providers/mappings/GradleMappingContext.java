@@ -38,11 +38,12 @@ import net.fabricmc.loom.configuration.providers.MinecraftProvider;
 public class GradleMappingContext implements MappingContext {
 	private final Project project;
 	private final LoomGradleExtension extension;
-	private File workingDir;
+	private final String workingDirName;
 
-	public GradleMappingContext(Project project) {
+	public GradleMappingContext(Project project, String workingDirName) {
 		this.project = project;
 		this.extension = LoomGradleExtension.get(project);
+		this.workingDirName = workingDirName;
 	}
 
 	@Override
@@ -62,25 +63,8 @@ public class GradleMappingContext implements MappingContext {
 	}
 
 	@Override
-	public File workingDirectory() {
-		if (workingDir == null) {
-			workingDir = new File(mappingsProvider().mappingsWorkingDir().toFile(), "layered/" + minecraftProvider().minecraftVersion());
-
-			if (workingDir.exists()) {
-				try {
-					FileUtils.deleteDirectory(workingDir);
-				} catch (IOException e) {
-					getLogger().warn("Failed to cleanup layered mappings working directory: {}", e.getMessage());
-				}
-			}
-		}
-
-		return workingDir;
-	}
-
-	@Override
 	public File workingDirectory(String name) {
-		return new File(workingDirectory(), name);
+		return new File(minecraftProvider().dir("layered/working_dir/" + workingDirName), name);
 	}
 
 	@Override

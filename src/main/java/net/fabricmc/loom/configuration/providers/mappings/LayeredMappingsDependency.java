@@ -54,11 +54,12 @@ public class LayeredMappingsDependency implements SelfResolvingDependency {
 
 	private final MappingContext mappingContext;
 	private final LayeredMappingSpec layeredMappingSpec;
-	private String version = null;
+	private final String version;
 
-	public LayeredMappingsDependency(MappingContext mappingContext, LayeredMappingSpec layeredMappingSpec) {
+	public LayeredMappingsDependency(MappingContext mappingContext, LayeredMappingSpec layeredMappingSpec, String version) {
 		this.mappingContext = mappingContext;
 		this.layeredMappingSpec = layeredMappingSpec;
+		this.version = version;
 	}
 
 	@Override
@@ -114,10 +115,6 @@ public class LayeredMappingsDependency implements SelfResolvingDependency {
 
 	@Override
 	public String getVersion() {
-		if (version == null) {
-			version = layeredMappingSpec.getVersion(mappingContext);
-		}
-
 		return version;
 	}
 
@@ -132,7 +129,7 @@ public class LayeredMappingsDependency implements SelfResolvingDependency {
 
 	@Override
 	public Dependency copy() {
-		return new LayeredMappingsDependency(mappingContext, layeredMappingSpec);
+		return new LayeredMappingsDependency(mappingContext, layeredMappingSpec, version);
 	}
 
 	@Override
