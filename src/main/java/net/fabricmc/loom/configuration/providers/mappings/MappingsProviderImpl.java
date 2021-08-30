@@ -27,6 +27,7 @@ package net.fabricmc.loom.configuration.providers.mappings;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
@@ -151,7 +152,7 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 		if (getExtension().shouldGenerateSrgTiny()) {
 			if (Files.notExists(tinyMappingsWithSrg) || isRefreshDeps()) {
 				// Merge tiny mappings with srg
-				SrgMerger.mergeSrg(getExtension().getSrgProvider().getSrg().toPath(), tinyMappings, tinyMappingsWithSrg, true);
+				SrgMerger.mergeSrg(this::getMojmapSrgFileIfPossible, getRawSrgFile(), tinyMappings, tinyMappingsWithSrg, true);
 			}
 		}
 
@@ -216,7 +217,27 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 		mappedProvider.provide(dependency, postPopulationScheduler);
 	}
 
-	public void manipulateMappings(Path mappingsJar) throws IOException { }
+	protected Path getRawSrgFile() throws IOException {
+		LoomGradleExtension extension = getExtension();
+
+		if (extension.isForgeAndOfficial()) {
+			return patchedProvider.getMergedMojangTsrg2(false);
+		}
+
+		return extension.getSrgProvider().getSrg().toPath();
+	}
+
+	protected Path getMojmapSrgFileIfPossible() {
+		try {
+			LoomGradleExtension extension = getExtension();
+			return MinecraftPatchedProvider.getMojmapTsrg2(extension);
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
+	}
+
+	public void manipulateMappings(Path mappingsJar) throws IOException {
+	}
 
 	private String getMappingsClassifier(DependencyInfo dependency, boolean isV2) {
 		String[] depStringSplit = dependency.getDepString().split(":");
@@ -248,7 +269,8 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 		}
 	}
 
-	private void storeMappings(Project project, MinecraftProviderImpl minecraftProvider, Path yarnJar, Consumer<Runnable> postPopulationScheduler) throws IOException {
+	private void storeMappings(Project project, MinecraftProviderImpl minecraftProvider, Path yarnJar, Consumer<Runnable> postPopulationScheduler)
+			throws IOException {
 		project.getLogger().info(":extracting " + yarnJar.getFileName());
 
 		if (isMCP(yarnJar)) {
@@ -298,7 +320,7 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 			provider.provide(DependencyInfo.create(getProject(), configuration.getDependencies().iterator().next(), configuration), postPopulationScheduler);
 		}
 
-		Path srgPath = provider.getSrg().toPath();
+		Path srgPath = getRawSrgFile();
 		TinyFile file = new MCPReader(intermediaryTinyPath, srgPath).read(mcpJar);
 		TinyV2Writer.write(file, tinyMappings);
 	}
@@ -426,20 +448,20 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 		try {
 			Command command = new CommandMergeTinyV2();
 			runCommand(command, intermediaryMappings.toAbsolutePath().toString(),
-							yarnMappings.toAbsolutePath().toString(),
-							newMergedMappings.toAbsolutePath().toString(),
-							"intermediary", "official");
+					yarnMappings.toAbsolutePath().toString(),
+					newMergedMappings.toAbsolutePath().toString(),
+					"intermediary", "official");
 		} catch (Exception e) {
 			throw new RuntimeException("Could not merge mappings from " + intermediaryMappings.toString()
-							+ " with mappings from " + yarnMappings, e);
+			                           + " with mappings from " + yarnMappings, e);
 		}
 	}
 
 	private void suggestFieldNames(MinecraftProviderImpl minecraftProvider, Path oldMappings, Path newMappings) {
 		Command command = new CommandProposeFieldNames();
 		runCommand(command, minecraftProvider.getMergedJar().getAbsolutePath(),
-						oldMappings.toAbsolutePath().toString(),
-						newMappings.toAbsolutePath().toString());
+				oldMappings.toAbsolutePath().toString(),
+				newMappings.toAbsolutePath().toString());
 	}
 
 	private void runCommand(Command command, String... args) {

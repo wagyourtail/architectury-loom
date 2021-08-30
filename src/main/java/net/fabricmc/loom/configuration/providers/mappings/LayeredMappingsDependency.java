@@ -35,8 +35,19 @@ import java.util.Collections;
 import java.util.Objects;
 import java.util.Set;
 
+import org.gradle.api.Action;
 import org.gradle.api.artifacts.Dependency;
+import org.gradle.api.artifacts.ExternalDependency;
+import org.gradle.api.artifacts.ExternalModuleDependency;
+import org.gradle.api.artifacts.ModuleIdentifier;
+import org.gradle.api.artifacts.ModuleVersionIdentifier;
+import org.gradle.api.artifacts.MutableVersionConstraint;
 import org.gradle.api.artifacts.SelfResolvingDependency;
+import org.gradle.api.artifacts.VersionConstraint;
+import org.gradle.api.internal.artifacts.DefaultModuleIdentifier;
+import org.gradle.api.internal.artifacts.ModuleVersionSelectorStrictSpec;
+import org.gradle.api.internal.artifacts.dependencies.AbstractModuleDependency;
+import org.gradle.api.internal.artifacts.dependencies.DefaultMutableVersionConstraint;
 import org.gradle.api.tasks.TaskDependency;
 import org.zeroturnaround.zip.ByteSource;
 import org.zeroturnaround.zip.ZipEntrySource;
@@ -48,7 +59,7 @@ import net.fabricmc.mappingio.adapter.MappingSourceNsSwitch;
 import net.fabricmc.mappingio.format.Tiny2Writer;
 import net.fabricmc.mappingio.tree.MemoryMappingTree;
 
-public class LayeredMappingsDependency implements SelfResolvingDependency {
+public class LayeredMappingsDependency extends AbstractModuleDependency implements SelfResolvingDependency, ExternalModuleDependency {
 	private static final String GROUP = "loom";
 	private static final String MODULE = "mappings";
 
@@ -57,6 +68,7 @@ public class LayeredMappingsDependency implements SelfResolvingDependency {
 	private final String version;
 
 	public LayeredMappingsDependency(MappingContext mappingContext, LayeredMappingSpec layeredMappingSpec, String version) {
+		super(null);
 		this.mappingContext = mappingContext;
 		this.layeredMappingSpec = layeredMappingSpec;
 		this.version = version;
@@ -119,6 +131,21 @@ public class LayeredMappingsDependency implements SelfResolvingDependency {
 	}
 
 	@Override
+	public VersionConstraint getVersionConstraint() {
+		return new DefaultMutableVersionConstraint(getVersion());
+	}
+
+	@Override
+	public boolean matchesStrictly(ModuleVersionIdentifier identifier) {
+		return new ModuleVersionSelectorStrictSpec(this).isSatisfiedBy(identifier);
+	}
+
+	@Override
+	public ModuleIdentifier getModule() {
+		return DefaultModuleIdentifier.newId(GROUP, MODULE);
+	}
+
+	@Override
 	public boolean contentEquals(Dependency dependency) {
 		if (dependency instanceof LayeredMappingsDependency layeredMappingsDependency) {
 			return Objects.equals(layeredMappingsDependency.getVersion(), this.getVersion());
@@ -128,8 +155,32 @@ public class LayeredMappingsDependency implements SelfResolvingDependency {
 	}
 
 	@Override
-	public Dependency copy() {
+	public boolean isChanging() {
+		return false;
+	}
+
+	@Override
+	public ExternalModuleDependency setChanging(boolean b) {
+		return this;
+	}
+
+	@Override
+	public boolean isForce() {
+		return false;
+	}
+
+	@Override
+	public ExternalDependency setForce(boolean b) {
+		return this;
+	}
+
+	@Override
+	public ExternalModuleDependency copy() {
 		return new LayeredMappingsDependency(mappingContext, layeredMappingSpec, version);
+	}
+
+	@Override
+	public void version(Action<? super MutableVersionConstraint> action) {
 	}
 
 	@Override

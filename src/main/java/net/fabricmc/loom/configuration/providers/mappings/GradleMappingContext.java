@@ -25,9 +25,7 @@
 package net.fabricmc.loom.configuration.providers.mappings;
 
 import java.io.File;
-import java.io.IOException;
 
-import org.apache.commons.io.FileUtils;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.logging.Logger;

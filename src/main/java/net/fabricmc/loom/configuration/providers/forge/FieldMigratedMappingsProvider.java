@@ -103,7 +103,7 @@ public class FieldMigratedMappingsProvider extends MappingsProviderImpl {
 
 	@Override
 	protected String createMappingsIdentifier(String mappingsName, String version, String classifier) {
-		return super.createMappingsIdentifier(mappingsName, version, classifier) + "-forge-" + getExtension().getPatchProvider().forgeVersion;
+		return super.createMappingsIdentifier(mappingsName, version, classifier) + "-forge-" + getExtension().getForgeProvider().getVersion().getCombined();
 	}
 
 	@Override
@@ -116,7 +116,7 @@ public class FieldMigratedMappingsProvider extends MappingsProviderImpl {
 		if (getExtension().shouldGenerateSrgTiny()) {
 			if (Files.notExists(rawTinyMappingsWithSrg) || isRefreshDeps()) {
 				// Merge tiny mappings with srg
-				SrgMerger.mergeSrg(getExtension().getSrgProvider().getSrg().toPath(), rawTinyMappings, rawTinyMappingsWithSrg, true);
+				SrgMerger.mergeSrg(this::getMojmapSrgFileIfPossible, getRawSrgFile(), rawTinyMappings, rawTinyMappingsWithSrg, true);
 			}
 		}
 

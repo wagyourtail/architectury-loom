@@ -55,10 +55,13 @@ public class ForgeProvider extends DependencyProvider {
 	}
 
 	public static final class ForgeVersion {
+		private final String combined;
 		private final String minecraftVersion;
 		private final String forgeVersion;
 
 		public ForgeVersion(String combined) {
+			this.combined = combined;
+
 			if (combined == null) {
 				this.minecraftVersion = "NO_VERSION";
 				this.forgeVersion = "NO_VERSION";
@@ -74,6 +77,10 @@ public class ForgeProvider extends DependencyProvider {
 				this.minecraftVersion = "NO_VERSION";
 				this.forgeVersion = combined;
 			}
+		}
+
+		public String getCombined() {
+			return combined;
 		}
 
 		public String getMinecraftVersion() {
