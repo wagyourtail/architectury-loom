@@ -62,7 +62,7 @@ public class MinecraftProviderImpl extends DependencyProvider implements Minecra
 	private File minecraftMergedJar;
 	private File versionManifestJson;
 	private File experimentalVersionsJson;
-	private String jarSuffix = "";
+	private String jarPrefix = "";
 
 	public MinecraftProviderImpl(Project project) {
 		super(project);
@@ -323,12 +323,12 @@ public class MinecraftProviderImpl extends DependencyProvider implements Minecra
 		return libraryProvider;
 	}
 
-	public String getJarSuffix() {
-		return jarSuffix;
+	public String getJarPrefix() {
+		return jarPrefix;
 	}
 
-	public void setJarSuffix(String jarSuffix) {
-		this.jarSuffix = jarSuffix;
+	public void setJarPrefix(String jarSuffix) {
+		this.jarPrefix = jarSuffix;
 	}
 
 	@Override

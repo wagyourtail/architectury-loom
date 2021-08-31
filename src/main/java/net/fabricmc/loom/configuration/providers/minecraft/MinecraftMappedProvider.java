@@ -159,8 +159,6 @@ public class MinecraftMappedProvider extends DependencyProvider {
 		addDependencies(dependency, postPopulationScheduler);
 
 		if (getExtension().isForgeAndNotOfficial()) {
-			getProject().getRepositories().flatDir(repository -> repository.dir(new File(getJarDirectory(getDirectories().getUserCache(), "mapped"), "forge")));
-
 			getProject().getDependencies().add(Constants.Configurations.FORGE_NAMED,
 					getProject().getDependencies().module("net.minecraftforge-loom:forge-mapped:" + getMinecraftProvider().minecraftVersion() + "/" + getExtension().getMappingsProvider().mappingsIdentifier() + "/forge"));
 		}
@@ -351,14 +349,14 @@ public class MinecraftMappedProvider extends DependencyProvider {
 
 	protected void addDependencies(DependencyInfo dependency, Consumer<Runnable> postPopulationScheduler) {
 		getProject().getDependencies().add(Constants.Configurations.MINECRAFT_NAMED,
-				getProject().getDependencies().module("net.minecraft:minecraft-mapped:" + getMinecraftProvider().minecraftVersion() + "/" + getExtension().getMappingsProvider().mappingsIdentifier()));
+				getProject().getDependencies().module("net.minecraft:" + minecraftProvider.getJarPrefix() + "minecraft-mapped:" + getMinecraftProvider().minecraftVersion() + "/" + getExtension().getMappingsProvider().mappingsIdentifier()));
 	}
 
 	public void initFiles(MinecraftProviderImpl minecraftProvider, MappingsProviderImpl mappingsProvider) {
 		this.minecraftProvider = minecraftProvider;
 		minecraftIntermediaryJar = new File(getExtension().getMappingsProvider().mappingsWorkingDir().toFile(), "minecraft-intermediary.jar");
 		minecraftSrgJar = !getExtension().isForge() ? null : new File(getExtension().getMappingsProvider().mappingsWorkingDir().toFile(), "minecraft-srg.jar");
-		minecraftMappedJar = new File(getExtension().getMappingsProvider().mappingsWorkingDir().toFile(), "minecraft-mapped.jar");
+		minecraftMappedJar = new File(getExtension().getMappingsProvider().mappingsWorkingDir().toFile(), minecraftProvider.getJarPrefix() + "minecraft-mapped.jar");
 		inputJar = getExtension().isForge() ? mappingsProvider.patchedProvider.getMergedJar() : minecraftProvider.getMergedJar();
 
 		if (getExtension().isForgeAndNotOfficial()) {
@@ -379,7 +377,7 @@ public class MinecraftMappedProvider extends DependencyProvider {
 	}
 
 	protected String getJarVersionString(String type) {
-		return String.format("%s-%s%s", type, getExtension().getMappingsProvider().mappingsIdentifier(), minecraftProvider.getJarSuffix());
+		return String.format("%s-%s%s", type, getExtension().getMappingsProvider().mappingsIdentifier(), minecraftProvider.getJarPrefix());
 	}
 
 	public File getIntermediaryJar() {

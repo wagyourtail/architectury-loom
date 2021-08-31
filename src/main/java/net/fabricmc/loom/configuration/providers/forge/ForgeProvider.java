@@ -24,6 +24,7 @@
 
 package net.fabricmc.loom.configuration.providers.forge;
 
+import java.io.File;
 import java.util.function.Consumer;
 
 import org.gradle.api.Project;
@@ -33,6 +34,8 @@ import net.fabricmc.loom.util.Constants;
 
 public class ForgeProvider extends DependencyProvider {
 	private ForgeVersion version = new ForgeVersion(null);
+	private File globalCache;
+	private File projectCache;
 
 	public ForgeProvider(Project project) {
 		super(project);
@@ -47,6 +50,24 @@ public class ForgeProvider extends DependencyProvider {
 
 	public ForgeVersion getVersion() {
 		return version;
+	}
+
+	public File getGlobalCache() {
+		if (globalCache == null) {
+			globalCache = getMinecraftProvider().dir("forge/" + version.getCombined());
+			globalCache.mkdirs();
+		}
+
+		return globalCache;
+	}
+
+	public File getProjectCache() {
+		if (projectCache == null) {
+			projectCache = new File(getDirectories().getProjectPersistentCache(), "forge/" + getExtension().getForgeProvider().getVersion().getCombined());
+			projectCache.mkdirs();
+		}
+
+		return projectCache;
 	}
 
 	@Override

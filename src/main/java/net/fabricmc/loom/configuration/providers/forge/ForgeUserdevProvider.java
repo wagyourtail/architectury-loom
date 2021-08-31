@@ -92,12 +92,8 @@ public class ForgeUserdevProvider extends DependencyProvider {
 			type.getAttributes().attribute(transformed, false);
 		}
 
-		userdevJar = new File(getDirectories().getProjectPersistentCache(), "forge-" + dependency.getDependency().getVersion() + "-userdev.jar");
-
-		Path configJson = getDirectories()
-				.getProjectPersistentCache()
-				.toPath()
-				.resolve("forge-config-" + dependency.getDependency().getVersion() + ".json");
+		userdevJar = new File(getExtension().getForgeProvider().getGlobalCache(), "forge-userdev.jar");
+		Path configJson = getExtension().getForgeProvider().getGlobalCache().toPath().resolve("forge-config.json");
 
 		if (!userdevJar.exists() || Files.notExists(configJson) || isRefreshDeps()) {
 			File resolved = dependency.resolveFile().orElseThrow(() -> new RuntimeException("Could not resolve Forge userdev"));
@@ -266,6 +262,8 @@ public class ForgeUserdevProvider extends DependencyProvider {
 				}
 
 				string = String.join(File.pathSeparator, modClasses);
+			} else if (key.equals("mcp_mappings")) {
+				string = "loom.stub";
 			} else if (json.has(key)) {
 				JsonElement element = json.get(key);
 
