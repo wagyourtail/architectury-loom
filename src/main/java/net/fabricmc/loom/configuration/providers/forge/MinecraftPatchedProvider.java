@@ -152,7 +152,7 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 			SourceSet main = getProject().getConvention().findPlugin(JavaPluginConvention.class).getSourceSets().getByName("main");
 
 			for (File srcDir : main.getResources().getSrcDirs()) {
-				File projectAt = new File(srcDir, "META-INF/accesstransformer.cfg");
+				File projectAt = new File(srcDir, Constants.Forge.ACCESS_TRANSFORMER_PATH);
 
 				if (projectAt.exists()) {
 					this.projectAts.add(projectAt);
@@ -373,8 +373,8 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 		}
 	}
 
-	private static void visitMojmap(MappingVisitor visitor, LoomGradleExtension extension) {
-		GradleMappingContext context = new GradleMappingContext(extension.getForgeProvider().getProject(), "tmp-mojmap");
+	private static void visitMojmap(MappingVisitor visitor, Project project) {
+		GradleMappingContext context = new GradleMappingContext(project, "tmp-mojmap");
 
 		try {
 			FileUtils.deleteDirectory(context.workingDirectory("/"));
@@ -391,12 +391,12 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 		}
 	}
 
-	public static Path getMojmapTsrg(LoomGradleExtension extension) throws IOException {
+	public static Path getMojmapTsrg(Project project, LoomGradleExtension extension) throws IOException {
 		Path path = extension.getMinecraftProvider().dir("forge").toPath().resolve("mojmap.tsrg");
 
 		if (Files.notExists(path)) {
 			try (BufferedWriter writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
-				Tsrg2Utils.writeTsrg(visitor -> visitMojmap(visitor, extension),
+				Tsrg2Utils.writeTsrg(visitor -> visitMojmap(visitor, project),
 						MappingNamespace.NAMED.stringValue(), false, writer);
 			}
 		}
@@ -404,12 +404,12 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 		return path;
 	}
 
-	public static Path getMojmapTsrg2(LoomGradleExtension extension) throws IOException {
+	public static Path getMojmapTsrg2(Project project, LoomGradleExtension extension) throws IOException {
 		Path path = extension.getMinecraftProvider().dir("forge").toPath().resolve("mojmap.tsrg2");
 
 		if (Files.notExists(path)) {
 			try (BufferedWriter writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
-				Tsrg2Utils.writeTsrg2(visitor -> visitMojmap(visitor, extension), writer);
+				Tsrg2Utils.writeTsrg2(visitor -> visitMojmap(visitor, project), writer);
 			}
 		}
 
@@ -426,7 +426,7 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 					"--left",
 					getExtension().getMcpConfigProvider().getMappings().toAbsolutePath().toString(),
 					"--right",
-					getMojmapTsrg(getExtension()).toAbsolutePath().toString(),
+					getMojmapTsrg(getProject(), getExtension()).toAbsolutePath().toString(),
 					"--classes",
 					"--output",
 					out.toAbsolutePath().toString()
@@ -585,7 +585,7 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 
 		for (File jar : ImmutableList.of(getForgeJar(), getForgeUserdevJar(), minecraftMergedPatchedSrgJar)) {
 			try (FileSystemUtil.FileSystemDelegate fs = FileSystemUtil.getJarFileSystem(jar, false)) {
-				Path atPath = fs.get().getPath("META-INF/accesstransformer.cfg");
+				Path atPath = fs.get().getPath(Constants.Forge.ACCESS_TRANSFORMER_PATH);
 
 				if (Files.exists(atPath)) {
 					File tmpFile = File.createTempFile("at-conf", ".cfg");

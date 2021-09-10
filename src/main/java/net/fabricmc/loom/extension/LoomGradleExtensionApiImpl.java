@@ -43,11 +43,12 @@ import org.gradle.api.Project;
 import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.RegularFileProperty;
+import org.gradle.api.plugins.JavaPluginConvention;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
-import org.gradle.api.plugins.JavaPluginConvention;
 import org.gradle.api.tasks.SourceSet;
 
+import net.fabricmc.loom.api.ForgeExtensionAPI;
 import net.fabricmc.loom.api.LoomGradleExtensionAPI;
 import net.fabricmc.loom.api.MixinApExtensionAPI;
 import net.fabricmc.loom.api.decompilers.LoomDecompiler;
@@ -257,10 +258,7 @@ public abstract class LoomGradleExtensionApiImpl implements LoomGradleExtensionA
 	@SuppressWarnings("Convert2Lambda")
 	@Override
 	public void localMods(Action<SourceSetConsumer> action) {
-		if (!isForge()) {
-			throw new UnsupportedOperationException("Not running with Forge support.");
-		}
-
+		ModPlatform.assertPlatform(this, ModPlatform.FORGE);
 		action.execute(new SourceSetConsumer() {
 			@Override
 			public void add(Object... sourceSets) {
@@ -283,10 +281,7 @@ public abstract class LoomGradleExtensionApiImpl implements LoomGradleExtensionA
 	@SuppressWarnings("Convert2Lambda")
 	@Override
 	public void dataGen(Action<DataGenConsumer> action) {
-		if (!isForge()) {
-			throw new UnsupportedOperationException("Not running with Forge support.");
-		}
-
+		ModPlatform.assertPlatform(this, ModPlatform.FORGE);
 		action.execute(new DataGenConsumer() {
 			@Override
 			public void mod(String... modIds) {
@@ -339,6 +334,11 @@ public abstract class LoomGradleExtensionApiImpl implements LoomGradleExtensionA
 		return settingsPostEdit;
 	}
 
+	@Override
+	public void forge(Action<ForgeExtensionAPI> action) {
+		action.execute(getForge());
+	}
+
 	// This is here to ensure that LoomGradleExtensionApiImpl compiles without any unimplemented methods
 	private final class EnsureCompile extends LoomGradleExtensionApiImpl {
 		private EnsureCompile() {
@@ -378,6 +378,11 @@ public abstract class LoomGradleExtensionApiImpl implements LoomGradleExtensionA
 
 		@Override
 		protected String getMinecraftVersion() {
+			throw new RuntimeException("Yeah... something is really wrong");
+		}
+
+		@Override
+		public ForgeExtensionAPI getForge() {
 			throw new RuntimeException("Yeah... something is really wrong");
 		}
 	}

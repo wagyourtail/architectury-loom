@@ -39,6 +39,7 @@ import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.SourceSet;
 
+import net.fabricmc.loom.api.ForgeExtensionAPI;
 import net.fabricmc.loom.api.LoomGradleExtensionAPI;
 import net.fabricmc.loom.api.MixinApExtensionAPI;
 import net.fabricmc.loom.api.decompilers.LoomDecompiler;
@@ -272,5 +273,17 @@ public class MinecraftGradleExtension implements LoomGradleExtensionAPI {
 	public List<Consumer<RunConfig>> getSettingsPostEdit() {
 		reportDeprecation();
 		return parent.getSettingsPostEdit();
+	}
+
+	@Override
+	public ForgeExtensionAPI getForge() {
+		reportDeprecation();
+		return parent.getForge();
+	}
+
+	@Override
+	public void forge(Action<ForgeExtensionAPI> action) {
+		reportDeprecation();
+		parent.forge(action);
 	}
 }

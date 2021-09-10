@@ -22,31 +22,29 @@
  * SOFTWARE.
  */
 
-package net.fabricmc.loom.util;
+package net.fabricmc.loom.test.integration.forge
 
-import java.util.Locale;
+import net.fabricmc.loom.test.util.ArchiveAssertionsTrait
+import net.fabricmc.loom.test.util.ProjectTestTrait
+import spock.lang.Specification
 
-import org.gradle.api.GradleException;
-import org.gradle.api.Project;
+import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 
-import net.fabricmc.loom.LoomGradleExtension;
-import net.fabricmc.loom.api.LoomGradleExtensionAPI;
+class Aw2AtTest extends Specification implements ProjectTestTrait, ArchiveAssertionsTrait {
+    @Override
+    String name() {
+        "forge/aw2At"
+    }
 
-public enum ModPlatform {
-	FABRIC,
-	FORGE;
+    def build() {
+        when:
+        def result = create("build", DEFAULT_GRADLE)
+        then:
+        result.task(":build").outcome == SUCCESS
+        getArchiveEntry("fabric-example-mod-1.0.0.jar", "META-INF/accesstransformer.cfg") == expected().replaceAll('\r', '')
+    }
 
-	public static void assertPlatform(Project project, ModPlatform platform) {
-		assertPlatform(LoomGradleExtension.get(project), platform);
-	}
-
-	public static void assertPlatform(LoomGradleExtensionAPI extension, ModPlatform platform) {
-		extension.getPlatform().finalizeValue();
-
-		if (extension.getPlatform().get() != platform) {
-			String msg = "Loom is not running on %s.%nYou can switch to it by adding 'loom.platform = %s' to your gradle.properties";
-			String name = platform.name().toLowerCase(Locale.ROOT);
-			throw new GradleException(String.format(msg, name, name));
-		}
-	}
+    String expected() {
+        return new File(testProjectDir, "expected.accesstransformer.cfg").text
+    }
 }
