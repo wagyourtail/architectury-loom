@@ -69,7 +69,7 @@ public final class MavenPublication {
 				PublishingExtension mavenPublish = p.getExtensions().findByType(PublishingExtension.class);
 
 				if (mavenPublish != null) {
-					p.getLogger().info("Processing maven publication for project [" + p.getName() + "] of " + entry.sourceConfiguration());
+					p.getLogger().info("Processing maven publication for project [" + p.getName() + "] of " + configurationName);
 					processEntry(project, scope, config, mavenPublish, reportedDeprecation);
 				}
 			});
@@ -118,11 +118,11 @@ public final class MavenPublication {
 
 					for (Dependency dependency : config.getAllDependencies()) {
 						if (foundArtifacts.contains(dependency.getGroup() + ":" + dependency.getName())) {
-							logger.info("Found inserted artifact " + dependency.getGroup() + ":" + dependency.getName());
+							project.getLogger().info("Found inserted artifact " + dependency.getGroup() + ":" + dependency.getName());
 							continue;
 						}
 
-						logger.info("Inserting artifact " + dependency.getGroup() + ":" + dependency.getName());
+						project.getLogger().info("Inserting artifact " + dependency.getGroup() + ":" + dependency.getName());
 
 						Node depNode = dependencies.appendNode("dependency");
 						depNode.appendNode("groupId", dependency.getGroup());

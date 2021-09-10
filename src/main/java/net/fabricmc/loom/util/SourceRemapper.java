@@ -29,13 +29,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Deque;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 
-import com.google.common.base.Stopwatch;
 import org.cadixdev.lorenz.MappingSet;
 import org.cadixdev.mercury.Mercury;
 import org.cadixdev.mercury.remapper.MercuryRemapper;
@@ -63,7 +60,7 @@ public class SourceRemapper {
 	}
 
 	public static String intermediary(Project project) {
-		LoomGradleExtension extension = LoomGradleExtension.get(project);;
+		LoomGradleExtension extension = LoomGradleExtension.get(project);
 		return extension.isForge() ? "srg" : "intermediary";
 	}
 
@@ -195,8 +192,8 @@ public class SourceRemapper {
 			}
 		});
 
-		Mercury mercury = extension.getOrCreateSrcMercuryCache(toNamed ? 1 : 0, () -> {
-			Mercury m = createMercuryWithClassPath(project, toNamed);
+		Mercury mercury = extension.getOrCreateSrcMercuryCache(id, () -> {
+			Mercury m = createMercuryWithClassPath(project, to.equals("named"));
 
 			for (File file : extension.getUnmappedModCollection()) {
 				Path path = file.toPath();
@@ -208,6 +205,16 @@ public class SourceRemapper {
 
 			m.getClassPath().add(extension.getMinecraftMappedProvider().getMappedJar().toPath());
 			m.getClassPath().add(extension.getMinecraftMappedProvider().getIntermediaryJar().toPath());
+
+			if (extension.isForge()) {
+				m.getClassPath().add(extension.getMinecraftMappedProvider().getSrgJar().toPath());
+
+				if (extension.isForgeAndNotOfficial()) {
+					m.getClassPath().add(extension.getMinecraftMappedProvider().getForgeMappedJar().toPath());
+					m.getClassPath().add(extension.getMinecraftMappedProvider().getForgeIntermediaryJar().toPath());
+					m.getClassPath().add(extension.getMinecraftMappedProvider().getForgeSrgJar().toPath());
+				}
+			}
 
 			Set<File> files = project.getConfigurations()
 					.detachedConfiguration(project.getDependencies().create(Constants.Dependencies.JETBRAINS_ANNOTATIONS + Constants.Dependencies.Versions.JETBRAINS_ANNOTATIONS))
@@ -258,23 +265,6 @@ public class SourceRemapper {
 					m.getClassPath().add(inputFile.toPath());
 				}
 			}
-
-		classpath.add(extension.getMinecraftMappedProvider().getMappedJar().toPath());
-		classpath.add(extension.getMinecraftMappedProvider().getIntermediaryJar().toPath());
-
-		if (extension.isForge()) {
-			classpath.add(extension.getMinecraftMappedProvider().getSrgJar().toPath());
-			classpath.add(extension.getMinecraftMappedProvider().getForgeMappedJar().toPath());
-			classpath.add(extension.getMinecraftMappedProvider().getForgeIntermediaryJar().toPath());
-			classpath.add(extension.getMinecraftMappedProvider().getForgeSrgJar().toPath());
-		}
-
-		Set<File> files = project.getConfigurations()
-				.detachedConfiguration(project.getDependencies().create(Constants.Dependencies.JETBRAINS_ANNOTATIONS + Constants.Dependencies.Versions.JETBRAINS_ANNOTATIONS))
-				.resolve();
-
-		for (File file : files) {
-			classpath.add(file.toPath());
 		}
 
 		return m;

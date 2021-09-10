@@ -25,23 +25,22 @@
 package net.fabricmc.loom.test.integration.forge
 
 import net.fabricmc.loom.test.util.ArchiveAssertionsTrait
-import net.fabricmc.loom.test.util.ProjectTestTrait
+import net.fabricmc.loom.test.util.GradleProjectTestTrait
 import spock.lang.Specification
 
 import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 
-class LegacyAw2AtTest extends Specification implements ProjectTestTrait, ArchiveAssertionsTrait {
-    @Override
-    String name() {
-        "forge/legacyAw2At"
-    }
-
+class LegacyAw2AtTest extends Specification implements GradleProjectTestTrait, ArchiveAssertionsTrait {
     def build() {
+		setup:
+			def gradle = gradleProject(project: "forge/legacyAw2At", version: version)
+
         when:
-        def result = create("build", DEFAULT_GRADLE)
+        	def result = gradle.run(task: "build")
+
         then:
-        result.task(":build").outcome == SUCCESS
-        getArchiveEntry("fabric-example-mod-1.0.0.jar", "META-INF/accesstransformer.cfg") == expected().replaceAll('\r', '')
+        	result.task(":build").outcome == SUCCESS
+        	getArchiveEntry("fabric-example-mod-1.0.0.jar", "META-INF/accesstransformer.cfg") == expected().replaceAll('\r', '')
     }
 
     String expected() {

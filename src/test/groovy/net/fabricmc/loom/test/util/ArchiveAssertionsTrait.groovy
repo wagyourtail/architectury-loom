@@ -1,7 +1,7 @@
 /*
  * This file is part of fabric-loom, licensed under the MIT License (MIT).
  *
- * Copyright (c) 2021 FabricMC
+ * Copyright (c) 2016-2021 FabricMC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,28 +22,25 @@
  * SOFTWARE.
  */
 
-package net.fabricmc.loom.test.integration.forge
+package net.fabricmc.loom.test.util
 
-import net.fabricmc.loom.test.util.ArchiveAssertionsTrait
-import net.fabricmc.loom.test.util.GradleProjectTestTrait
-import spock.lang.Specification
+import org.zeroturnaround.zip.ZipUtil
 
-import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
+trait ArchiveAssertionsTrait {
+	String getArchiveEntry(String name, String entry, String project = "") {
+		def file = getOutputFile(name, project)
 
-class Aw2AtTest extends Specification implements GradleProjectTestTrait, ArchiveAssertionsTrait {
-    def build() {
-		setup:
-			def gradle = gradleProject(project: "forge/aw2At", version: version)
+		def bytes = ZipUtil.unpackEntry(file, entry)
 
-		when:
-			def result = gradle.run(task: "build")
+		if (bytes == null) {
+			throw new FileNotFoundException("Could not find ${entry} in ${name}")
+		}
 
-		then:
-			result.task(":build").outcome == SUCCESS
-			getArchiveEntry("fabric-example-mod-1.0.0.jar", "META-INF/accesstransformer.cfg") == expected().replaceAll('\r', '')
-    }
+		new String(bytes as byte[])
+	}
 
-    String expected() {
-        return new File(testProjectDir, "expected.accesstransformer.cfg").text
-    }
+	boolean hasArchiveEntry(String name, String entry, String project = "") {
+		def file = getOutputFile(name, project)
+		ZipUtil.unpackEntry(file, entry) != null
+	}
 }

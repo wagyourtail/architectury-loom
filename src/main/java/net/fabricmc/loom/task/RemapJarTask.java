@@ -64,6 +64,7 @@ import dev.architectury.refmapremapper.remapper.SimpleReferenceRemapper;
 import dev.architectury.tinyremapper.IMappingProvider;
 import dev.architectury.tinyremapper.TinyRemapper;
 import dev.architectury.tinyremapper.TinyUtils;
+import dev.architectury.tinyremapper.extension.mixin.MixinExtension;
 import org.cadixdev.at.AccessTransformSet;
 import org.cadixdev.at.io.AccessTransformFormats;
 import org.gradle.api.Action;
@@ -108,9 +109,6 @@ import net.fabricmc.mapping.tree.FieldDef;
 import net.fabricmc.mapping.tree.MethodDef;
 import net.fabricmc.mapping.tree.TinyTree;
 import net.fabricmc.stitch.util.Pair;
-import net.fabricmc.tinyremapper.TinyRemapper;
-import net.fabricmc.tinyremapper.TinyUtils;
-import net.fabricmc.tinyremapper.extension.mixin.MixinExtension;
 
 public class RemapJarTask extends Jar {
 	private static final String MANIFEST_PATH = "META-INF/MANIFEST.MF";
@@ -296,14 +294,16 @@ public class RemapJarTask extends Jar {
 						if (MixinRefmapHelper.addRefmapName(project, output)) {
 							project.getLogger().debug("Transformed mixin reference maps in output JAR!");
 						}
-					}
 
-					if (!toM.equals("intermediary")) {
-						try {
-							remapRefmap(extension, output, "intermediary", toM);
-						} catch (IOException e) {
-							throw new RuntimeException("Failed to remap refmap jar", e);
+						if (!toM.equals("intermediary")) {
+							try {
+								remapRefmap(extension, output, "intermediary", toM);
+							} catch (IOException e) {
+								throw new RuntimeException("Failed to remap refmap jar", e);
+							}
 						}
+					} else if (extension.isForge()) {
+						throw new RuntimeException("Forge must have useLegacyMixinAp enabled");
 					}
 
 					if (getAddNestedDependencies().getOrElse(false)) {
@@ -346,7 +346,7 @@ public class RemapJarTask extends Jar {
 
 	private void remapRefmap(LoomGradleExtension extension, Path output, String from, String to) throws IOException {
 		try (FileSystem fs = FileSystems.newFileSystem(URI.create("jar:" + output.toUri()), ImmutableMap.of("create", false))) {
-			Path refmapPath = fs.getPath(extension.getRefmapName());
+			Path refmapPath = fs.getPath(extension.getMixin().getDefaultRefmapName().get());
 
 			if (Files.exists(refmapPath)) {
 				try (Reader refmapReader = Files.newBufferedReader(refmapPath, StandardCharsets.UTF_8)) {

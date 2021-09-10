@@ -70,7 +70,7 @@ public class MixinExtensionImpl extends MixinExtensionApiImpl implements MixinEx
 		String defaultRefmapName = project.getConvention().getPlugin(BasePluginConvention.class).getArchivesBaseName() + "-refmap.json";
 
 		if (project.getRootProject() != project) {
-			defaultRefmapName = project.getConvention().getPlugin(BasePluginConvention.class).getArchivesBaseName() + "-" + getProject().getPath().replaceFirst(":", "").replace(':', '_') + "-refmap.json";
+			defaultRefmapName = project.getConvention().getPlugin(BasePluginConvention.class).getArchivesBaseName() + "-" + project.getPath().replaceFirst(":", "").replace(':', '_') + "-refmap.json";
 		}
 
 		project.getLogger().info("Could not find refmap definition, will be using default name: " + defaultRefmapName);
