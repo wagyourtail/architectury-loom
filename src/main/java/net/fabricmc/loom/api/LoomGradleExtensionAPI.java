@@ -38,6 +38,7 @@ import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.SourceSet;
+import org.gradle.api.publish.maven.MavenPublication;
 import org.jetbrains.annotations.ApiStatus;
 
 import net.fabricmc.loom.api.decompilers.LoomDecompiler;
@@ -160,11 +161,11 @@ public interface LoomGradleExtensionAPI {
 
 	NamedDomainObjectContainer<RunConfigSettings> getRunConfigs();
 
-	@ApiStatus.Experimental
-	void mixin(Action<MixinApExtensionAPI> action);
+	void mixin(Action<MixinExtensionAPI> action);
 
 	@ApiStatus.Experimental
-	MixinApExtensionAPI getMixin();
+	// TODO: move this from LoomGradleExtensionAPI to LoomGradleExtension once getRefmapName & setRefmapName is removed.
+	MixinExtensionAPI getMixin();
 
 	Property<String> getCustomMinecraftManifest();
 
@@ -181,6 +182,35 @@ public interface LoomGradleExtensionAPI {
 		getDeprecationHelper().replaceWithInLoom0_11("customManifest", "customMinecraftManifest");
 		return getCustomMinecraftManifest().getOrNull();
 	}
+
+	/**
+	 * If true, Loom will replace the {@code -dev} jars in the {@code *Elements} configurations
+	 * with remapped outgoing variants.
+	 *
+	 * <p>Will only apply if {@link #getRemapArchives()} is also true.
+	 *
+	 * @return the property controlling the setup of remapped variants
+	 */
+	Property<Boolean> getSetupRemappedVariants();
+
+	/**
+	 * Disables the deprecated POM generation for a publication.
+	 * This is useful if you want to suppress deprecation warnings when you're not using software components.
+	 *
+	 * <p>Experimental API: Will be removed in Loom 0.12 together with the deprecated POM generation functionality.
+	 *
+	 * @param publication the maven publication
+	 */
+	@ApiStatus.Experimental
+	void disableDeprecatedPomGeneration(MavenPublication publication);
+
+	/**
+	 * Reads the mod version from the fabric.mod.json file located in the main sourcesets resources.
+	 * This is useful if you want to set the gradle version based of the version in the fabric.mod.json file.
+	 *
+	 * @return the version defined in the fabric.mod.json
+	 */
+	String getModVersion();
 
 	// ===================
 	//  Architectury Loom

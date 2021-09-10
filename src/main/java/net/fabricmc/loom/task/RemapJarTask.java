@@ -71,6 +71,7 @@ import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.RegularFileProperty;
+import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.SetProperty;
 import org.gradle.api.tasks.Input;
@@ -107,6 +108,9 @@ import net.fabricmc.mapping.tree.FieldDef;
 import net.fabricmc.mapping.tree.MethodDef;
 import net.fabricmc.mapping.tree.TinyTree;
 import net.fabricmc.stitch.util.Pair;
+import net.fabricmc.tinyremapper.TinyRemapper;
+import net.fabricmc.tinyremapper.TinyUtils;
+import net.fabricmc.tinyremapper.extension.mixin.MixinExtension;
 
 public class RemapJarTask extends Jar {
 	private static final String MANIFEST_PATH = "META-INF/MANIFEST.MF";
@@ -137,6 +141,10 @@ public class RemapJarTask extends Jar {
 		// false by default, I have no idea why I have to do it for this property and not the other one
 		remapAccessWidener.set(false);
 		addDefaultNestedDependencies.set(true);
+
+		if (!LoomGradleExtension.get(getProject()).getMixin().getUseLegacyMixinAp().get()) {
+			remapOptions.add(b -> b.extension(new MixinExtension()));
+		}
 	}
 
 	@TaskAction
@@ -284,8 +292,10 @@ public class RemapJarTask extends Jar {
 						throw new RuntimeException("Failed to remap " + input + " to " + output + " - file missing!");
 					}
 
-					if (MixinRefmapHelper.addRefmapName(project, output)) {
-						project.getLogger().debug("Transformed mixin reference maps in output JAR!");
+					if (extension.getMixin().getUseLegacyMixinAp().get()) {
+						if (MixinRefmapHelper.addRefmapName(project, output)) {
+							project.getLogger().debug("Transformed mixin reference maps in output JAR!");
+						}
 					}
 
 					if (!toM.equals("intermediary")) {
@@ -446,7 +456,7 @@ public class RemapJarTask extends Jar {
 		FileCollection files = this.classpath;
 
 		if (files == null) {
-			files = getProject().getConfigurations().getByName("compileClasspath");
+			files = getProject().getConfigurations().getByName(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME);
 		}
 
 		return files.getFiles().stream()

@@ -493,6 +493,8 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 			if (Files.exists(mappingsWorkingDir)) {
 				Files.walkFileTree(mappingsWorkingDir, new DeletingFileVisitor());
 			}
+
+			Files.createDirectories(mappingsWorkingDir);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

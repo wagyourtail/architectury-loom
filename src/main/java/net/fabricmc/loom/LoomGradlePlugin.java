@@ -83,12 +83,12 @@ public class LoomGradlePlugin implements BootstrappedPlugin {
 		}
 
 		// Apply default plugins
-		project.apply(ImmutableMap.of("plugin", "java"));
+		project.apply(ImmutableMap.of("plugin", "java-library"));
 		project.apply(ImmutableMap.of("plugin", "eclipse"));
 		project.apply(ImmutableMap.of("plugin", "idea"));
 
 		// Setup extensions, minecraft wraps loom
-		var extension = project.getExtensions().create(LoomGradleExtensionAPI.class, "loom", LoomGradleExtensionImpl.class, project, LoomFiles.create(project));
+		LoomGradleExtensionAPI extension = project.getExtensions().create(LoomGradleExtensionAPI.class, "loom", LoomGradleExtensionImpl.class, project, LoomFiles.create(project));
 		project.getExtensions().create(LoomGradleExtensionAPI.class, "minecraft", MinecraftGradleExtension.class, extension);
 		project.getExtensions().create("fabricApi", FabricApiExtension.class, project);
 

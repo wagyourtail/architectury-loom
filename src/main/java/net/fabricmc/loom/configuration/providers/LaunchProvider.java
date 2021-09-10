@@ -40,6 +40,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
 import org.gradle.api.Project;
+import org.gradle.api.logging.configuration.ConsoleOutput;
 import org.gradle.api.plugins.JavaPlugin;
 
 import net.fabricmc.loom.configuration.DependencyProvider;
@@ -120,10 +121,13 @@ public class LaunchProvider extends DependencyProvider {
 			}
 		}
 
-		//Enable ansi by default for idea and vscode
-		if (new File(getProject().getRootDir(), ".vscode").exists()
+		final boolean plainConsole = getProject().getGradle().getStartParameter().getConsoleOutput() == ConsoleOutput.Plain;
+		final boolean ansiSupportedIDE = new File(getProject().getRootDir(), ".vscode").exists()
 				|| new File(getProject().getRootDir(), ".idea").exists()
-				|| (Arrays.stream(getProject().getRootDir().listFiles()).anyMatch(file -> file.getName().endsWith(".iws")))) {
+				|| (Arrays.stream(getProject().getRootDir().listFiles()).anyMatch(file -> file.getName().endsWith(".iws")));
+
+		//Enable ansi by default for idea and vscode when gradle is not ran with plain console.
+		if (ansiSupportedIDE && !plainConsole) {
 			launchConfig.property("fabric.log.disableAnsi", "false");
 		}
 

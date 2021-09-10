@@ -46,14 +46,19 @@ import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.plugins.JavaPluginConvention;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
+import org.gradle.api.publish.maven.MavenPublication;
 import org.gradle.api.tasks.SourceSet;
 
+import net.fabricmc.loom.api.LoomGradleExtensionAPI;
+import net.fabricmc.loom.api.MixinExtensionAPI;
+import net.fabricmc.loom.api.decompilers.LoomDecompiler;
 import net.fabricmc.loom.api.ForgeExtensionAPI;
 import net.fabricmc.loom.api.LoomGradleExtensionAPI;
 import net.fabricmc.loom.api.MixinApExtensionAPI;
 import net.fabricmc.loom.api.decompilers.LoomDecompiler;
 import net.fabricmc.loom.configuration.ide.RunConfig;
 import net.fabricmc.loom.configuration.ide.RunConfigSettings;
+import net.fabricmc.loom.configuration.mods.ModVersionParser;
 import net.fabricmc.loom.configuration.launch.LaunchProviderSettings;
 import net.fabricmc.loom.configuration.processors.JarProcessor;
 import net.fabricmc.loom.configuration.providers.mappings.GradleMappingContext;
@@ -80,6 +85,9 @@ public abstract class LoomGradleExtensionApiImpl implements LoomGradleExtensionA
 	protected final Property<Boolean> shareCaches;
 	protected final Property<Boolean> remapArchives;
 	protected final Property<String> customManifest;
+	protected final Property<Boolean> setupRemappedVariants;
+
+	private final ModVersionParser versionParser;
 
 	private NamedDomainObjectContainer<RunConfigSettings> runConfigs;
 
@@ -114,6 +122,10 @@ public abstract class LoomGradleExtensionApiImpl implements LoomGradleExtensionA
 		this.remapArchives = project.getObjects().property(Boolean.class)
 				.convention(true);
 		this.customManifest = project.getObjects().property(String.class);
+		this.setupRemappedVariants = project.getObjects().property(Boolean.class)
+				.convention(true);
+
+		this.versionParser = new ModVersionParser(project);
 
 		this.deprecationHelper = new DeprecationHelper.ProjectBased(project);
 		this.platform = project.getObjects().property(ModPlatform.class).convention(project.provider(Suppliers.memoize(() -> {
@@ -193,7 +205,7 @@ public abstract class LoomGradleExtensionApiImpl implements LoomGradleExtensionA
 	}
 
 	@Override
-	public void mixin(Action<MixinApExtensionAPI> action) {
+	public void mixin(Action<MixinExtensionAPI> action) {
 		action.execute(getMixin());
 	}
 
@@ -202,9 +214,24 @@ public abstract class LoomGradleExtensionApiImpl implements LoomGradleExtensionA
 		return customManifest;
 	}
 
+	@Override
+	public Property<Boolean> getSetupRemappedVariants() {
+		return setupRemappedVariants;
+	}
+
+	@Override
+	public String getModVersion() {
+		return versionParser.getModVersion();
+	}
+
 	protected abstract Project getProject();
 
 	protected abstract LoomFiles getFiles();
+
+	@Override
+	public void disableDeprecatedPomGeneration(MavenPublication publication) {
+		net.fabricmc.loom.configuration.MavenPublication.excludePublication(publication);
+	}
 
 	@Override
 	public void silentMojangMappingsLicense() {
@@ -362,7 +389,7 @@ public abstract class LoomGradleExtensionApiImpl implements LoomGradleExtensionA
 		}
 
 		@Override
-		public MixinApExtension getMixin() {
+		public MixinExtension getMixin() {
 			throw new RuntimeException("Yeah... something is really wrong");
 		}
 

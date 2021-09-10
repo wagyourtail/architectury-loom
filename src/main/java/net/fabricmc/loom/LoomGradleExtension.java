@@ -50,7 +50,7 @@ import net.fabricmc.loom.configuration.providers.forge.SrgProvider;
 import net.fabricmc.loom.configuration.providers.mappings.MappingsProviderImpl;
 import net.fabricmc.loom.configuration.providers.minecraft.MinecraftMappedProvider;
 import net.fabricmc.loom.extension.LoomFiles;
-import net.fabricmc.loom.extension.MixinApExtension;
+import net.fabricmc.loom.extension.MixinExtension;
 
 public interface LoomGradleExtension extends LoomGradleExtensionAPI {
 	static LoomGradleExtension get(Project project) {
@@ -109,7 +109,7 @@ public interface LoomGradleExtension extends LoomGradleExtensionAPI {
 	}
 
 	@Override
-	MixinApExtension getMixin();
+	MixinExtension getMixin();
 
 	// ===================
 	//  Architectury Loom

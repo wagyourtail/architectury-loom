@@ -45,13 +45,15 @@ public class Constants {
 	public static final int ASM_VERSION = Opcodes.ASM9;
 
 	public static final List<RemappedConfigurationEntry> MOD_COMPILE_ENTRIES = ImmutableList.of(
-			new RemappedConfigurationEntry("modApi", JavaPlugin.API_CONFIGURATION_NAME, true, "compile"),
-			new RemappedConfigurationEntry("modImplementation", JavaPlugin.IMPLEMENTATION_CONFIGURATION_NAME, true, "runtime"),
-			new RemappedConfigurationEntry("modRuntime", JavaPlugin.RUNTIME_ONLY_CONFIGURATION_NAME, false, "", "modRuntimeOnly"),
-			new RemappedConfigurationEntry("modCompileOnly", JavaPlugin.COMPILE_ONLY_CONFIGURATION_NAME, true, ""),
-			new RemappedConfigurationEntry("modCompileOnlyApi", JavaPlugin.COMPILE_ONLY_CONFIGURATION_NAME, true, "compile"),
-			new RemappedConfigurationEntry("modRuntimeOnly", JavaPlugin.RUNTIME_ONLY_CONFIGURATION_NAME, false, "runtime")
+			new RemappedConfigurationEntry("modApi", JavaPlugin.API_CONFIGURATION_NAME, true, true, JavaPlugin.API_ELEMENTS_CONFIGURATION_NAME),
+			new RemappedConfigurationEntry("modImplementation", JavaPlugin.IMPLEMENTATION_CONFIGURATION_NAME, true, true, JavaPlugin.RUNTIME_ELEMENTS_CONFIGURATION_NAME),
+			new RemappedConfigurationEntry("modRuntime", JavaPlugin.RUNTIME_ONLY_CONFIGURATION_NAME, false, true, "", "modRuntimeOnly"),
+			new RemappedConfigurationEntry("modCompileOnly", JavaPlugin.COMPILE_ONLY_CONFIGURATION_NAME, true, false, ""),
+			new RemappedConfigurationEntry("modCompileOnlyApi", JavaPlugin.COMPILE_ONLY_API_CONFIGURATION_NAME, true, false, JavaPlugin.API_ELEMENTS_CONFIGURATION_NAME),
+			new RemappedConfigurationEntry("modRuntimeOnly", JavaPlugin.RUNTIME_ONLY_CONFIGURATION_NAME, false, true, JavaPlugin.RUNTIME_ELEMENTS_CONFIGURATION_NAME)
 	);
+
+	public static final String SOFTWARE_COMPONENT_NAME = "loom";
 
 	private Constants() {
 	}
@@ -108,10 +110,10 @@ public class Constants {
 		 * Constants for versions of dependencies.
 		 */
 		public static final class Versions {
-			public static final String MIXIN_COMPILE_EXTENSIONS = "0.4.4";
+			public static final String MIXIN_COMPILE_EXTENSIONS = "0.4.6";
 			public static final String DEV_LAUNCH_INJECTOR = "0.2.1+build.8";
 			public static final String TERMINAL_CONSOLE_APPENDER = "1.2.0";
-			public static final String JETBRAINS_ANNOTATIONS = "19.0.0";
+			public static final String JETBRAINS_ANNOTATIONS = "22.0.0";
 			public static final String JAVAX_ANNOTATIONS = "3.0.2";
 			public static final String FORGE_RUNTIME = "1.0.1";
 			public static final String ACCESS_TRANSFORMERS = "3.0.1";

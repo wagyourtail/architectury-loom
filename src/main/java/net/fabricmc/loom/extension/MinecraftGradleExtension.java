@@ -37,11 +37,12 @@ import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
+import org.gradle.api.publish.maven.MavenPublication;
 import org.gradle.api.tasks.SourceSet;
 
 import net.fabricmc.loom.api.ForgeExtensionAPI;
 import net.fabricmc.loom.api.LoomGradleExtensionAPI;
-import net.fabricmc.loom.api.MixinApExtensionAPI;
+import net.fabricmc.loom.api.MixinExtensionAPI;
 import net.fabricmc.loom.api.decompilers.LoomDecompiler;
 import net.fabricmc.loom.configuration.ide.RunConfig;
 import net.fabricmc.loom.configuration.ide.RunConfigSettings;
@@ -126,13 +127,13 @@ public class MinecraftGradleExtension implements LoomGradleExtensionAPI {
 	}
 
 	@Override
-	public void mixin(Action<MixinApExtensionAPI> action) {
+	public void mixin(Action<MixinExtensionAPI> action) {
 		reportDeprecation();
 		parent.mixin(action);
 	}
 
 	@Override
-	public MixinApExtensionAPI getMixin() {
+	public MixinExtensionAPI getMixin() {
 		reportDeprecation();
 		return parent.getMixin();
 	}
@@ -141,6 +142,24 @@ public class MinecraftGradleExtension implements LoomGradleExtensionAPI {
 	public Property<String> getCustomMinecraftManifest() {
 		reportDeprecation();
 		return parent.getCustomMinecraftManifest();
+	}
+
+	@Override
+	public Property<Boolean> getSetupRemappedVariants() {
+		reportDeprecation();
+		return parent.getSetupRemappedVariants();
+	}
+
+	@Override
+	public void disableDeprecatedPomGeneration(MavenPublication publication) {
+		reportDeprecation();
+		parent.disableDeprecatedPomGeneration(publication);
+	}
+
+	@Override
+	public String getModVersion() {
+		reportDeprecation();
+		throw new UnsupportedOperationException("Use loom extension");
 	}
 
 	@Override

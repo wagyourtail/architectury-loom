@@ -57,7 +57,7 @@ public class LayeredMappingSpecBuilder {
 	}
 
 	public LayeredMappingSpecBuilder parchment(String mavenNotation, Action<ParchmentMappingsSpecBuilder> action) {
-		var builder = ParchmentMappingsSpecBuilder.builder(mavenNotation);
+		ParchmentMappingsSpecBuilder builder = ParchmentMappingsSpecBuilder.builder(mavenNotation);
 		action.execute(builder);
 		layers.add(builder.build());
 		return this;

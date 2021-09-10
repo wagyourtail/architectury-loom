@@ -24,9 +24,14 @@
 
 package net.fabricmc.loom.configuration;
 
+import java.lang.reflect.Method;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.WeakHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import groovy.util.Node;
 import org.gradle.api.Project;
@@ -35,48 +40,70 @@ import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.artifacts.ExcludeRule;
 import org.gradle.api.artifacts.ModuleDependency;
 import org.gradle.api.logging.Logger;
+import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.publish.Publication;
 import org.gradle.api.publish.PublishingExtension;
 
-import net.fabricmc.loom.util.Constants;
+import net.fabricmc.loom.LoomGradleExtension;
+import net.fabricmc.loom.util.DeprecationHelper;
 import net.fabricmc.loom.util.GroovyXmlUtil;
 
 public final class MavenPublication {
+	private static final Map<String, String> CONFIGURATION_TO_SCOPE = Map.of(
+			JavaPlugin.API_ELEMENTS_CONFIGURATION_NAME, "compile",
+			JavaPlugin.RUNTIME_ELEMENTS_CONFIGURATION_NAME, "runtime"
+	);
+	private static final Set<Publication> EXCLUDED_PUBLICATIONS = Collections.newSetFromMap(new WeakHashMap<>());
+
 	private MavenPublication() {
 	}
 
 	public static void configure(Project project) {
 		project.afterEvaluate((p) -> {
-			// add modsCompile to maven-publish
-			PublishingExtension mavenPublish = p.getExtensions().findByType(PublishingExtension.class);
+			AtomicBoolean reportedDeprecation = new AtomicBoolean(false);
 
-			if (mavenPublish == null) {
-				p.getLogger().info("No maven publications for project [" + p.getName() + "], skipping configuration.");
-				return;
-			}
+			CONFIGURATION_TO_SCOPE.forEach((configurationName, scope) -> {
+				Configuration config = p.getConfigurations().getByName(configurationName);
 
-			for (RemappedConfigurationEntry entry : Constants.MOD_COMPILE_ENTRIES) {
-				if (!entry.hasMavenScope()) {
-					continue;
+				// add modsCompile to maven-publish
+				PublishingExtension mavenPublish = p.getExtensions().findByType(PublishingExtension.class);
+
+				if (mavenPublish != null) {
+					p.getLogger().info("Processing maven publication for project [" + p.getName() + "] of " + entry.sourceConfiguration());
+					processEntry(project, scope, config, mavenPublish, reportedDeprecation);
 				}
-
-				Configuration compileModsConfig = p.getConfigurations().getByName(entry.sourceConfiguration());
-
-				p.getLogger().info("Processing maven publication for project [" + p.getName() + "] of " + entry.sourceConfiguration());
-				processEntry(p.getLogger(), entry, compileModsConfig, mavenPublish);
-			}
+			});
 		});
 	}
 
-	private static void processEntry(Logger logger, RemappedConfigurationEntry entry, Configuration compileModsConfig, PublishingExtension mavenPublish) {
+	private static boolean hasSoftwareComponent(Publication publication) {
+		try {
+			Method getComponent = publication.getClass().getMethod("getComponent");
+			return getComponent.invoke(publication) != null;
+		} catch (ReflectiveOperationException e) {
+			// our hacks have broken!
+			return false;
+		}
+	}
+
+	// TODO: Remove this in Loom 0.12
+	private static void processEntry(Project project, String scope, Configuration config, PublishingExtension mavenPublish, AtomicBoolean reportedDeprecation) {
 		mavenPublish.publications((publications) -> {
 			for (Publication publication : publications) {
-				if (!(publication instanceof org.gradle.api.publish.maven.MavenPublication)) {
+				if (!(publication instanceof org.gradle.api.publish.maven.MavenPublication mavenPublication)) {
 					continue;
 				}
 
-				logger.info("Processing maven publication [" + publication.getName() + "]");
-				((org.gradle.api.publish.maven.MavenPublication) publication).pom((pom) -> pom.withXml((xml) -> {
+				if (hasSoftwareComponent(publication) || EXCLUDED_PUBLICATIONS.contains(publication)) {
+					continue;
+				} else if (!reportedDeprecation.get()) {
+					DeprecationHelper deprecationHelper = LoomGradleExtension.get(project).getDeprecationHelper();
+					deprecationHelper.warn("Loom is applying dependency data manually to publications instead of using a software component (from(components[\"java\"])). This is deprecated and will be removed in Loom 0.12.");
+					reportedDeprecation.set(true);
+				}
+
+				project.getLogger().info("Processing maven publication [" + publication.getName() + "]");
+				mavenPublication.pom((pom) -> pom.withXml((xml) -> {
 					Node dependencies = GroovyXmlUtil.getOrCreateNode(xml.asNode(), "dependencies");
 					Set<String> foundArtifacts = new HashSet<>();
 
@@ -89,7 +116,7 @@ public final class MavenPublication {
 						}
 					});
 
-					for (Dependency dependency : compileModsConfig.getAllDependencies()) {
+					for (Dependency dependency : config.getAllDependencies()) {
 						if (foundArtifacts.contains(dependency.getGroup() + ":" + dependency.getName())) {
 							logger.info("Found inserted artifact " + dependency.getGroup() + ":" + dependency.getName());
 							continue;
@@ -101,7 +128,7 @@ public final class MavenPublication {
 						depNode.appendNode("groupId", dependency.getGroup());
 						depNode.appendNode("artifactId", dependency.getName());
 						depNode.appendNode("version", dependency.getVersion());
-						depNode.appendNode("scope", entry.mavenScope());
+						depNode.appendNode("scope", scope);
 
 						if (!(dependency instanceof ModuleDependency)) {
 							continue;
@@ -124,5 +151,9 @@ public final class MavenPublication {
 				}));
 			}
 		});
+	}
+
+	public static void excludePublication(Publication publication) {
+		EXCLUDED_PUBLICATIONS.add(publication);
 	}
 }

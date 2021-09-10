@@ -25,14 +25,12 @@
 package net.fabricmc.loom.configuration;
 
 import org.gradle.api.Project;
-import org.gradle.api.artifacts.ConfigurationContainer;
 import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.plugins.JavaPluginConvention;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.javadoc.Javadoc;
 import org.gradle.jvm.tasks.Jar;
 
-import net.fabricmc.loom.extension.MixinApExtension;
 import net.fabricmc.loom.LoomGradleExtension;
 import net.fabricmc.loom.build.mixin.JavaApInvoker;
 import net.fabricmc.loom.build.mixin.KaptApInvoker;
@@ -48,6 +46,7 @@ import net.fabricmc.loom.configuration.providers.forge.McpConfigProvider;
 import net.fabricmc.loom.configuration.providers.forge.PatchProvider;
 import net.fabricmc.loom.configuration.providers.forge.SrgProvider;
 import net.fabricmc.loom.configuration.providers.mappings.MappingsProviderImpl;
+import net.fabricmc.loom.extension.MixinExtension;
 import net.fabricmc.loom.task.GenVsCodeProjectTask;
 import net.fabricmc.loom.util.Constants;
 
@@ -56,7 +55,6 @@ public final class CompileConfiguration {
 	}
 
 	public static void setupConfigurations(Project project) {
-		final ConfigurationContainer configurations = project.getConfigurations();
 		LoomGradleExtension extension = LoomGradleExtension.get(project);
 
 		project.afterEvaluate(project1 -> {
@@ -121,11 +119,18 @@ public final class CompileConfiguration {
 			extension.createLazyConfiguration(entry.getRemappedConfiguration())
 					.configure(configuration -> configuration.setTransitive(false));
 
-			extendsFrom(entry.getTargetConfiguration(configurations), entry.getRemappedConfiguration(), project);
-
-			if (entry.isOnModCompileClasspath()) {
+			if (entry.compileClasspath()) {
 				extendsFrom(Constants.Configurations.MOD_COMPILE_CLASSPATH, entry.sourceConfiguration(), project);
 				extendsFrom(Constants.Configurations.MOD_COMPILE_CLASSPATH_MAPPED, entry.getRemappedConfiguration(), project);
+				extendsFrom(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME, entry.getRemappedConfiguration(), project);
+			}
+
+			if (entry.runtimeClasspath()) {
+				extendsFrom(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME, entry.getRemappedConfiguration(), project);
+			}
+
+			if (entry.hasConsumerConfiguration()) {
+				extendsFrom(entry.consumerConfiguration(), entry.sourceConfiguration(), project);
 			}
 		}
 
@@ -137,7 +142,7 @@ public final class CompileConfiguration {
 		extendsFrom(Constants.Configurations.LOADER_DEPENDENCIES, Constants.Configurations.MINECRAFT_DEPENDENCIES, project);
 		extendsFrom(Constants.Configurations.MINECRAFT_NAMED, Constants.Configurations.LOADER_DEPENDENCIES, project);
 
-		extendsFrom(JavaPlugin.IMPLEMENTATION_CONFIGURATION_NAME, Constants.Configurations.MAPPINGS_FINAL, project);
+		extendsFrom(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME, Constants.Configurations.MAPPINGS_FINAL, project);
 
 		extendsFrom(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME, Constants.Configurations.LOOM_DEVELOPMENT_DEPENDENCIES, project);
 		extendsFrom(JavaPlugin.TEST_RUNTIME_CLASSPATH_CONFIGURATION_NAME, Constants.Configurations.LOOM_DEVELOPMENT_DEPENDENCIES, project);
@@ -195,31 +200,39 @@ public final class CompileConfiguration {
 				extension.getUnmappedModCollection().from(jarTask);
 			}
 
-			// Disable some things used by log4j via the mixin AP that prevent it from being garbage collected
-			System.setProperty("log4j2.disable.jmx", "true");
-			System.setProperty("log4j.shutdownHookEnabled", "false");
-			System.setProperty("log4j.skipJansi", "true");
+			MixinExtension mixin = LoomGradleExtension.get(project).getMixin();
 
-			project.getLogger().info("Configuring compiler arguments for Java");
-			MixinApExtension mixinApExtension = LoomGradleExtension.get(project).getMixin();
-			mixinApExtension.init();
-
-			new JavaApInvoker(project).configureMixin();
-
-			if (project.getPluginManager().hasPlugin("scala")) {
-				project.getLogger().info("Configuring compiler arguments for Scala");
-				new ScalaApInvoker(project).configureMixin();
-			}
-
-			if (project.getPluginManager().hasPlugin("org.jetbrains.kotlin.kapt")) {
-				project.getLogger().info("Configuring compiler arguments for Kapt plugin");
-				new KaptApInvoker(project).configureMixin();
+			if (mixin.getUseLegacyMixinAp().get()) {
+				setupMixinAp(project, mixin);
 			}
 		});
 
 		if (p.getPluginManager().hasPlugin("org.jetbrains.kotlin.kapt")) {
 			// If loom is applied after kapt, then kapt will use the AP arguments too early for loom to pass the arguments we need for mixin.
 			throw new IllegalArgumentException("fabric-loom must be applied BEFORE kapt in the plugins { } block.");
+		}
+	}
+
+	private static void setupMixinAp(Project project, MixinExtension mixin) {
+		mixin.init();
+
+		// Disable some things used by log4j via the mixin AP that prevent it from being garbage collected
+		System.setProperty("log4j2.disable.jmx", "true");
+		System.setProperty("log4j.shutdownHookEnabled", "false");
+		System.setProperty("log4j.skipJansi", "true");
+
+		project.getLogger().info("Configuring compiler arguments for Java");
+
+		new JavaApInvoker(project).configureMixin();
+
+		if (project.getPluginManager().hasPlugin("scala")) {
+			project.getLogger().info("Configuring compiler arguments for Scala");
+			new ScalaApInvoker(project).configureMixin();
+		}
+
+		if (project.getPluginManager().hasPlugin("org.jetbrains.kotlin.kapt")) {
+			project.getLogger().info("Configuring compiler arguments for Kapt plugin");
+			new KaptApInvoker(project).configureMixin();
 		}
 	}
 
