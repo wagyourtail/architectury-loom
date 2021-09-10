@@ -568,8 +568,8 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 
 	private void accessTransformForge(Logger logger) throws Exception {
 		List<File> toDelete = new ArrayList<>();
-		var atDependency = Constants.Dependencies.ACCESS_TRANSFORMERS + Constants.Dependencies.Versions.ACCESS_TRANSFORMERS;
-		var classpath = DependencyDownloader.download(getProject(), atDependency);
+		String atDependency = Constants.Dependencies.ACCESS_TRANSFORMERS + Constants.Dependencies.Versions.ACCESS_TRANSFORMERS;
+		FileCollection classpath = DependencyDownloader.download(getProject(), atDependency);
 
 		logger.lifecycle(":access transforming minecraft");
 

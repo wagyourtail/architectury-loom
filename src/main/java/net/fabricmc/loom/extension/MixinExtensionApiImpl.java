@@ -36,7 +36,6 @@ import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.util.PatternSet;
 
 import net.fabricmc.loom.LoomGradleExtension;
-import net.fabricmc.loom.api.LoomGradleExtensionAPI;
 import net.fabricmc.loom.api.MixinExtensionAPI;
 
 public abstract class MixinExtensionApiImpl implements MixinExtensionAPI {
