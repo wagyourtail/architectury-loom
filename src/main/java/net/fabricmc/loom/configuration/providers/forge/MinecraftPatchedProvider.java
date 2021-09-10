@@ -488,7 +488,7 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 
 		try (FileSystem fs = FileSystems.newFileSystem(new URI("jar:" + jarFile.toURI()), ImmutableMap.of("create", false))) {
 			ThreadingUtils.TaskCompleter completer = ThreadingUtils.taskCompleter();
-			Pattern vignetteParameters = Pattern.compile("p_\\d+_");
+			Pattern vignetteParameters = Pattern.compile("p_[0-9a-zA-Z]+_(?:[0-9a-zA-Z]+_)?");
 
 			for (Path file : (Iterable<? extends Path>) Files.walk(fs.getPath("/"))::iterator) {
 				if (!file.toString().endsWith(".class")) continue;
@@ -697,11 +697,10 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 
 		ThreadingUtils.run(Environment.values(), environment -> {
 			copyMissingClasses(environment.srgJar.apply(this), environment.patchedSrgJar.apply(this));
+			deleteParameterNames(environment.patchedSrgJar.apply(this));
 
 			if (getExtension().isForgeAndNotOfficial()) {
 				fixParameterAnnotation(environment.patchedSrgJar.apply(this));
-			} else {
-				deleteParameterNames(environment.patchedSrgJar.apply(this));
 			}
 		});
 
