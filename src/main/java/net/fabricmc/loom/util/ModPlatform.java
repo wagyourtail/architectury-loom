@@ -41,8 +41,6 @@ public enum ModPlatform {
 	}
 
 	public static void assertPlatform(LoomGradleExtensionAPI extension, ModPlatform platform) {
-		extension.getPlatform().finalizeValue();
-
 		if (extension.getPlatform().get() != platform) {
 			String msg = "Loom is not running on %s.%nYou can switch to it by adding 'loom.platform = %s' to your gradle.properties";
 			String name = platform.name().toLowerCase(Locale.ROOT);

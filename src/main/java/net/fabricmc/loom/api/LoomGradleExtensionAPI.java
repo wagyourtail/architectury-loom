@@ -37,6 +37,7 @@ import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
+import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.publish.maven.MavenPublication;
 import org.jetbrains.annotations.ApiStatus;
@@ -219,7 +220,7 @@ public interface LoomGradleExtensionAPI {
 
 	boolean isSilentMojangMappingsLicenseEnabled();
 
-	Property<ModPlatform> getPlatform();
+	Provider<ModPlatform> getPlatform();
 
 	default boolean isForge() {
 		return getPlatform().get() == ModPlatform.FORGE;

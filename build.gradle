@@ -241,6 +241,7 @@ jacocoTestReport {
 test {
 	maxHeapSize = "4096m"
 	useJUnitPlatform()
+	maxParallelForks = Runtime.runtime.availableProcessors() ?: 1
 }
 
 import me.shedaniel.javaversionbridge.BridgeTransformingTask

@@ -46,6 +46,7 @@ import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.plugins.JavaPluginConvention;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
+import org.gradle.api.provider.Provider;
 import org.gradle.api.publish.maven.MavenPublication;
 import org.gradle.api.tasks.SourceSet;
 
@@ -91,7 +92,7 @@ public abstract class LoomGradleExtensionApiImpl implements LoomGradleExtensionA
 	// ===================
 	//  Architectury Loom
 	// ===================
-	private Property<ModPlatform> platform;
+	private Provider<ModPlatform> platform;
 	public List<String> mixinConfigs = new ArrayList<>(); // FORGE: Passed to Minecraft
 	public Set<File> accessTransformers = new HashSet<>();
 	public boolean useFabricMixin = true; // FORGE: Use Fabric Mixin for better refmap resolutions
@@ -125,7 +126,7 @@ public abstract class LoomGradleExtensionApiImpl implements LoomGradleExtensionA
 		this.versionParser = new ModVersionParser(project);
 
 		this.deprecationHelper = new DeprecationHelper.ProjectBased(project);
-		this.platform = project.getObjects().property(ModPlatform.class).convention(project.provider(Suppliers.memoize(() -> {
+		this.platform = project.provider(Suppliers.memoize(() -> {
 			Object platformProperty = project.findProperty(PLATFORM_PROPERTY);
 
 			if (platformProperty != null) {
@@ -140,7 +141,7 @@ public abstract class LoomGradleExtensionApiImpl implements LoomGradleExtensionA
 			}
 
 			return ModPlatform.FABRIC;
-		})::get));
+		})::get);
 		this.supportsInclude = new LazyBool(() -> Boolean.parseBoolean(Objects.toString(project.findProperty(INCLUDE_PROPERTY))));
 		this.launchConfigs = project.container(LaunchProviderSettings.class,
 				baseName -> new LaunchProviderSettings(project, baseName));
@@ -241,7 +242,7 @@ public abstract class LoomGradleExtensionApiImpl implements LoomGradleExtensionA
 	}
 
 	@Override
-	public Property<ModPlatform> getPlatform() {
+	public Provider<ModPlatform> getPlatform() {
 		return platform;
 	}
 

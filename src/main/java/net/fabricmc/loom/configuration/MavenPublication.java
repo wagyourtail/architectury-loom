@@ -95,7 +95,7 @@ public final class MavenPublication {
 
 				if (hasSoftwareComponent(publication) || EXCLUDED_PUBLICATIONS.contains(publication)) {
 					continue;
-				} else if (!reportedDeprecation.get()) {
+				} else if (!reportedDeprecation.get() && !LoomGradleExtension.get(project).isForge()) {
 					DeprecationHelper deprecationHelper = LoomGradleExtension.get(project).getDeprecationHelper();
 					deprecationHelper.warn("Loom is applying dependency data manually to publications instead of using a software component (from(components[\"java\"])). This is deprecated and will be removed in Loom 0.12.");
 					reportedDeprecation.set(true);

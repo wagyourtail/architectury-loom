@@ -37,6 +37,7 @@ import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
+import org.gradle.api.provider.Provider;
 import org.gradle.api.publish.maven.MavenPublication;
 import org.gradle.api.tasks.SourceSet;
 
@@ -175,7 +176,7 @@ public class MinecraftGradleExtension implements LoomGradleExtensionAPI {
 	}
 
 	@Override
-	public Property<ModPlatform> getPlatform() {
+	public Provider<ModPlatform> getPlatform() {
 		reportDeprecation();
 		return parent.getPlatform();
 	}
