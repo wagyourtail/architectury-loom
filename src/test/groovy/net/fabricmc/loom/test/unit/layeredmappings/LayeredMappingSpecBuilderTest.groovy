@@ -31,7 +31,6 @@ import net.fabricmc.loom.configuration.providers.mappings.mojmap.MojangMappingsS
 import net.fabricmc.loom.configuration.providers.mappings.parchment.ParchmentMappingsSpec
 import org.gradle.api.Action
 import org.gradle.util.ConfigureUtil
-import spock.lang.Specification
 
 class LayeredMappingSpecBuilderTest extends LayeredMappingsSpecification {
     def "simple mojmap" () {
