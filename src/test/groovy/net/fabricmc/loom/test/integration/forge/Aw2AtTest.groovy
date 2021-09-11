@@ -55,7 +55,7 @@ class Aw2AtTest extends Specification implements GradleProjectTestTrait {
 			gradle.getOutputZipEntry("fabric-example-mod-1.0.0.jar", "META-INF/accesstransformer.cfg") == expected(gradle).replaceAll('\r', '')
 	}
 
-	String expected(gradle) {
+	String expected(GradleProject gradle) {
 		return new File(gradle.projectDir, "expected.accesstransformer.cfg").text
 	}
 }
