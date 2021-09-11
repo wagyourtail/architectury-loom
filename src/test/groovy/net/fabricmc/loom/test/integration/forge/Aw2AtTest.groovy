@@ -31,7 +31,7 @@ import static net.fabricmc.loom.test.LoomTestConstants.*
 import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 
 class Aw2AtTest extends Specification implements GradleProjectTestTrait {
-    def build() {
+    def "build"() {
 		setup:
 			def gradle = gradleProject(project: "forge/aw2At", version: DEFAULT_GRADLE)
 
@@ -43,7 +43,19 @@ class Aw2AtTest extends Specification implements GradleProjectTestTrait {
 			gradle.getOutputZipEntry("fabric-example-mod-1.0.0.jar", "META-INF/accesstransformer.cfg") == expected(gradle).replaceAll('\r', '')
     }
 
-    String expected() {
-        return new File(gradle.projectDir, "expected.accesstransformer.cfg").text
-    }
+	def "legacy build"() {
+		setup:
+			def gradle = gradleProject(project: "forge/legacyAw2At", version: DEFAULT_GRADLE)
+
+		when:
+			def result = gradle.run(task: "build")
+
+		then:
+			result.task(":build").outcome == SUCCESS
+			gradle.getOutputZipEntry("fabric-example-mod-1.0.0.jar", "META-INF/accesstransformer.cfg") == expected(gradle).replaceAll('\r', '')
+	}
+
+	String expected(gradle) {
+		return new File(gradle.projectDir, "expected.accesstransformer.cfg").text
+	}
 }
