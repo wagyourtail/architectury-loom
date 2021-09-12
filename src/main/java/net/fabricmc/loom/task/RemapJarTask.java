@@ -24,6 +24,7 @@
 
 package net.fabricmc.loom.task;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -67,6 +68,7 @@ import dev.architectury.tinyremapper.TinyUtils;
 import dev.architectury.tinyremapper.extension.mixin.MixinExtension;
 import org.cadixdev.at.AccessTransformSet;
 import org.cadixdev.at.io.AccessTransformFormats;
+import org.cadixdev.lorenz.MappingSet;
 import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
@@ -99,6 +101,7 @@ import net.fabricmc.loom.configuration.accesswidener.AccessWidenerJarProcessor;
 import net.fabricmc.loom.configuration.providers.mappings.MappingsProviderImpl;
 import net.fabricmc.loom.util.Constants;
 import net.fabricmc.loom.util.FileSystemUtil;
+import net.fabricmc.loom.util.LfWriter;
 import net.fabricmc.loom.util.SourceRemapper;
 import net.fabricmc.loom.util.TinyRemapperMappingsHelper;
 import net.fabricmc.loom.util.ZipReprocessorUtil;
@@ -494,8 +497,8 @@ public class RemapJarTask extends Jar {
 					throw new NoSuchFileException("Could not find AW '" + aw + "' to convert into AT!");
 				}
 
-				try (InputStream in = Files.newInputStream(awPath)) {
-					at.merge(Aw2At.toAccessTransformSet(in));
+				try (BufferedReader reader = Files.newBufferedReader(awPath, StandardCharsets.UTF_8)) {
+					at.merge(Aw2At.toAccessTransformSet(reader));
 				}
 
 				Files.delete(awPath);
@@ -503,10 +506,13 @@ public class RemapJarTask extends Jar {
 
 			LoomGradleExtension extension = LoomGradleExtension.get(getProject());
 			TinyTree mappings = extension.shouldGenerateSrgTiny() ? extension.getMappingsProvider().getMappingsWithSrg() : extension.getMappingsProvider().getMappings();
-			TinyMappingsReader reader = new TinyMappingsReader(mappings, fromM.get(), toM.get());
-			at = at.remap(reader.read());
 
-			try (Writer writer = Files.newBufferedWriter(atPath)) {
+			try (TinyMappingsReader reader = new TinyMappingsReader(mappings, fromM.get(), toM.get())) {
+				MappingSet mappingSet = reader.read();
+				at = at.remap(mappingSet);
+			}
+
+			try (Writer writer = new LfWriter(Files.newBufferedWriter(atPath))) {
 				AccessTransformFormats.FML.write(writer, at);
 			}
 		}
