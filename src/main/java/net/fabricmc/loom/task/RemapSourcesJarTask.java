@@ -32,6 +32,7 @@ import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.TaskAction;
 
+import net.fabricmc.loom.api.mappings.layered.MappingsNamespace;
 import net.fabricmc.loom.util.SourceRemapper;
 
 public class RemapSourcesJarTask extends AbstractLoomTask {
@@ -53,7 +54,7 @@ public class RemapSourcesJarTask extends AbstractLoomTask {
 		if (sourceRemapper == null) {
 			if (sourceNamespace.get().equals(targetNamespace.get())) {
 				SourceRemapper.remapSources(getProject(), getInput().get().getAsFile(), getOutput().get().getAsFile(),
-						targetNamespace.get().equals("named") ? SourceRemapper.intermediary(getProject()) : "named", targetNamespace.get(), reproducibleFileOrder.get(), preserveFileTimestamps.get());
+						targetNamespace.get().equals(MappingsNamespace.NAMED.toString()) ? SourceRemapper.intermediary(getProject()) : "named", targetNamespace.get(), reproducibleFileOrder.get(), preserveFileTimestamps.get());
 			} else {
 				SourceRemapper.remapSources(getProject(), getInput().get().getAsFile(), getOutput().get().getAsFile(), sourceNamespace.get(), targetNamespace.get(), reproducibleFileOrder.get(), preserveFileTimestamps.get());
 			}

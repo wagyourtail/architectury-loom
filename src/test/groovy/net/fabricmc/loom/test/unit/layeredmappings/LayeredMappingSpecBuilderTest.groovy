@@ -24,8 +24,9 @@
 
 package net.fabricmc.loom.test.unit.layeredmappings
 
+import net.fabricmc.loom.configuration.providers.mappings.utils.MavenFileSpec
 import net.fabricmc.loom.configuration.providers.mappings.LayeredMappingSpec
-import net.fabricmc.loom.configuration.providers.mappings.LayeredMappingSpecBuilder
+import net.fabricmc.loom.configuration.providers.mappings.LayeredMappingSpecBuilderImpl
 import net.fabricmc.loom.configuration.providers.mappings.intermediary.IntermediaryMappingsSpec
 import net.fabricmc.loom.configuration.providers.mappings.mojmap.MojangMappingsSpec
 import net.fabricmc.loom.configuration.providers.mappings.parchment.ParchmentMappingsSpec
@@ -60,7 +61,7 @@ class LayeredMappingSpecBuilderTest extends LayeredMappingsSpecification {
             layers[0].class == IntermediaryMappingsSpec
             layers[1].class == MojangMappingsSpec
             layers[2].class == ParchmentMappingsSpec
-            parchment.mavenNotation() == "I like cake"
+            (parchment.fileSpec() as MavenFileSpec).dependencyNotation() == "I like cake"
             parchment.removePrefix() == true
     }
 
@@ -80,7 +81,7 @@ class LayeredMappingSpecBuilderTest extends LayeredMappingsSpecification {
             layers[0].class == IntermediaryMappingsSpec
             layers[1].class == MojangMappingsSpec
             layers[2].class == ParchmentMappingsSpec
-            parchment.mavenNotation() == "I like cake"
+            (parchment.fileSpec() as MavenFileSpec).dependencyNotation() == "I like cake"
             parchment.removePrefix() == false
     }
 
@@ -100,17 +101,17 @@ class LayeredMappingSpecBuilderTest extends LayeredMappingsSpecification {
             layers[0].class == IntermediaryMappingsSpec
             layers[1].class == MojangMappingsSpec
             layers[2].class == ParchmentMappingsSpec
-            parchment.mavenNotation() == "I really like cake"
+            (parchment.fileSpec() as MavenFileSpec).dependencyNotation() == "I really like cake"
             parchment.removePrefix() == false
     }
 
     // Gradle does this big of magic behind the scenes
-    LayeredMappingSpec layered(@DelegatesTo(LayeredMappingSpecBuilder) Closure cl) {
+    LayeredMappingSpec layered(@DelegatesTo(LayeredMappingSpecBuilderImpl) Closure cl) {
         return layeredAction(ConfigureUtil.configureUsing(cl))
     }
 
-    LayeredMappingSpec layeredAction(Action<LayeredMappingSpecBuilder> action) {
-        LayeredMappingSpecBuilder builder = new LayeredMappingSpecBuilder(null)
+    LayeredMappingSpec layeredAction(Action<LayeredMappingSpecBuilderImpl> action) {
+        LayeredMappingSpecBuilderImpl builder = new LayeredMappingSpecBuilderImpl(null)
         action.execute(builder)
         return builder.build()
     }

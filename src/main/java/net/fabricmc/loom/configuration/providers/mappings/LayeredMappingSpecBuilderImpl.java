@@ -31,13 +31,17 @@ import java.util.List;
 import org.gradle.api.Action;
 import org.jetbrains.annotations.Nullable;
 
+import net.fabricmc.loom.api.mappings.layered.spec.FileSpec;
+import net.fabricmc.loom.api.mappings.layered.spec.LayeredMappingSpecBuilder;
+import net.fabricmc.loom.api.mappings.layered.spec.MappingsSpec;
+import net.fabricmc.loom.api.mappings.layered.spec.ParchmentMappingsSpecBuilder;
 import net.fabricmc.loom.api.LoomGradleExtensionAPI;
 import net.fabricmc.loom.configuration.providers.mappings.crane.CraneMappingsSpec;
 import net.fabricmc.loom.configuration.providers.mappings.intermediary.IntermediaryMappingsSpec;
 import net.fabricmc.loom.configuration.providers.mappings.mojmap.MojangMappingsSpec;
-import net.fabricmc.loom.configuration.providers.mappings.parchment.ParchmentMappingsSpecBuilder;
+import net.fabricmc.loom.configuration.providers.mappings.parchment.ParchmentMappingsSpecBuilderImpl;
 
-public class LayeredMappingSpecBuilder {
+public class LayeredMappingSpecBuilderImpl implements LayeredMappingSpecBuilder {
 	private final List<MappingsSpec<?>> layers = new LinkedList<>();
 	@Nullable
 	private final LoomGradleExtensionAPI extension;
@@ -46,6 +50,9 @@ public class LayeredMappingSpecBuilder {
 		this.extension = extension;
 	}
 
+	@Override
+	public LayeredMappingSpecBuilder addLayer(MappingsSpec<?> mappingSpec) {
+		layers.add(mappingSpec);
 	public LayeredMappingSpecBuilder officialMojangMappings() {
 		layers.add(new MojangMappingsSpec(() -> extension != null && extension.isSilentMojangMappingsLicenseEnabled()));
 		return this;
@@ -56,11 +63,16 @@ public class LayeredMappingSpecBuilder {
 		return this;
 	}
 
-	public LayeredMappingSpecBuilder parchment(String mavenNotation, Action<ParchmentMappingsSpecBuilder> action) {
-		ParchmentMappingsSpecBuilder builder = ParchmentMappingsSpecBuilder.builder(mavenNotation);
+	@Override
+	public LayeredMappingSpecBuilder officialMojangMappings() {
+		return addLayer(new MojangMappingsSpec());
+	}
+
+	@Override
+	public LayeredMappingSpecBuilder parchment(Object object, Action<ParchmentMappingsSpecBuilder> action) {
+		ParchmentMappingsSpecBuilderImpl builder = ParchmentMappingsSpecBuilderImpl.builder(FileSpec.create(object));
 		action.execute(builder);
-		layers.add(builder.build());
-		return this;
+		return addLayer(builder.build());
 	}
 
 	public LayeredMappingSpecBuilder crane(String mavenNotation) {

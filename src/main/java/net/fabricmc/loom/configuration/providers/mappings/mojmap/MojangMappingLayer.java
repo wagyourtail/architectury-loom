@@ -25,7 +25,6 @@
 package net.fabricmc.loom.configuration.providers.mappings.mojmap;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -35,8 +34,8 @@ import java.util.List;
 
 import org.gradle.api.logging.Logger;
 
-import net.fabricmc.loom.configuration.providers.mappings.MappingLayer;
-import net.fabricmc.loom.configuration.providers.mappings.MappingNamespace;
+import net.fabricmc.loom.api.mappings.layered.MappingLayer;
+import net.fabricmc.loom.api.mappings.layered.MappingsNamespace;
 import net.fabricmc.loom.configuration.providers.minecraft.MinecraftVersionMeta;
 import net.fabricmc.loom.configuration.providers.mappings.intermediary.IntermediaryMappingLayer;
 import net.fabricmc.loom.util.HashedDownloadUtil;
@@ -47,33 +46,33 @@ import net.fabricmc.mappingio.format.ProGuardReader;
 public record MojangMappingLayer(String minecraftVersion,
 									MinecraftVersionMeta.Download clientDownload,
 									MinecraftVersionMeta.Download serverDownload,
-									File workingDir,
+									Path workingDir,
 									Logger logger,
 									MojangMappingsSpec.SilenceLicenseOption silenceLicense) implements MappingLayer {
 	@Override
 	public void visit(MappingVisitor mappingVisitor) throws IOException {
-		var clientMappings = new File(workingDir(), "%s.client.txt".formatted(minecraftVersion));
-		var serverMappings = new File(workingDir(), "%s.server.txt".formatted(minecraftVersion));
+		Path clientMappings = workingDir().resolve("%s.client.txt".formatted(minecraftVersion));
+		Path serverMappings = workingDir().resolve("%s.server.txt".formatted(minecraftVersion));
 
 		download(clientMappings, serverMappings);
 
 		if (!silenceLicense.isSilent()) {
-			printMappingsLicense(clientMappings.toPath());
+			printMappingsLicense(clientMappings);
 		}
 
 		// Make official the source namespace
-		MappingSourceNsSwitch nsSwitch = new MappingSourceNsSwitch(mappingVisitor, MappingNamespace.OFFICIAL.stringValue());
+		MappingSourceNsSwitch nsSwitch = new MappingSourceNsSwitch(mappingVisitor, MappingsNamespace.OFFICIAL.toString());
 
-		try (BufferedReader clientBufferedReader = Files.newBufferedReader(clientMappings.toPath(), StandardCharsets.UTF_8);
-				BufferedReader serverBufferedReader = Files.newBufferedReader(serverMappings.toPath(), StandardCharsets.UTF_8)) {
-			ProGuardReader.read(clientBufferedReader, MappingNamespace.NAMED.stringValue(), MappingNamespace.OFFICIAL.stringValue(), nsSwitch);
-			ProGuardReader.read(serverBufferedReader, MappingNamespace.NAMED.stringValue(), MappingNamespace.OFFICIAL.stringValue(), nsSwitch);
+		try (BufferedReader clientBufferedReader = Files.newBufferedReader(clientMappings, StandardCharsets.UTF_8);
+				BufferedReader serverBufferedReader = Files.newBufferedReader(serverMappings, StandardCharsets.UTF_8)) {
+			ProGuardReader.read(clientBufferedReader, MappingsNamespace.NAMED.toString(), MappingsNamespace.OFFICIAL.toString(), nsSwitch);
+			ProGuardReader.read(serverBufferedReader, MappingsNamespace.NAMED.toString(), MappingsNamespace.OFFICIAL.toString(), nsSwitch);
 		}
 	}
 
-	private void download(File clientMappings, File serverMappings) throws IOException {
-		HashedDownloadUtil.downloadIfInvalid(new URL(clientDownload().url()), clientMappings, clientDownload().sha1(), logger(), false);
-		HashedDownloadUtil.downloadIfInvalid(new URL(serverDownload().url()), serverMappings, serverDownload().sha1(), logger(), false);
+	private void download(Path clientMappings, Path serverMappings) throws IOException {
+		HashedDownloadUtil.downloadIfInvalid(new URL(clientDownload().url()), clientMappings.toFile(), clientDownload().sha1(), logger(), false);
+		HashedDownloadUtil.downloadIfInvalid(new URL(serverDownload().url()), serverMappings.toFile(), serverDownload().sha1(), logger(), false);
 	}
 
 	private void printMappingsLicense(Path clientMappings) {
@@ -95,8 +94,8 @@ public record MojangMappingLayer(String minecraftVersion,
 	}
 
 	@Override
-	public MappingNamespace getSourceNamespace() {
-		return MappingNamespace.OFFICIAL;
+	public MappingsNamespace getSourceNamespace() {
+		return MappingsNamespace.OFFICIAL;
 	}
 
 	@Override

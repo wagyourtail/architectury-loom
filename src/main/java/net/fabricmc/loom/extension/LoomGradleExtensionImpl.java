@@ -25,9 +25,11 @@
 package net.fabricmc.loom.extension;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -45,6 +47,7 @@ import net.fabricmc.loom.LoomGradleExtension;
 import net.fabricmc.loom.api.ForgeExtensionAPI;
 import net.fabricmc.loom.configuration.InstallerData;
 import net.fabricmc.loom.configuration.LoomDependencyManager;
+import net.fabricmc.loom.configuration.accesswidener.AccessWidenerFile;
 import net.fabricmc.loom.configuration.processors.JarProcessorManager;
 import net.fabricmc.loom.util.ModPlatform;
 
@@ -59,6 +62,7 @@ public class LoomGradleExtensionImpl extends LoomGradleExtensionApiImpl implemen
 	private final MappingSet[] srcMappingCache = new MappingSet[2];
 	private final Mercury[] srcMercuryCache = new Mercury[2];
 	private final Map<String, NamedDomainObjectProvider<Configuration>> lazyConfigurations = new HashMap<>();
+	private final List<AccessWidenerFile> transitiveAccessWideners = new ArrayList<>();
 
 	private LoomDependencyManager dependencyManager;
 	private JarProcessorManager jarProcessorManager;
@@ -174,6 +178,16 @@ public class LoomGradleExtensionImpl extends LoomGradleExtensionApiImpl implemen
 	@Override
 	public MixinExtension getMixin() {
 		return this.mixinApExtension;
+	}
+
+	@Override
+	public List<AccessWidenerFile> getTransitiveAccessWideners() {
+		return transitiveAccessWideners;
+	}
+
+	@Override
+	public void addTransitiveAccessWideners(List<AccessWidenerFile> accessWidenerFiles) {
+		transitiveAccessWideners.addAll(accessWidenerFiles);
 	}
 
 	@Override

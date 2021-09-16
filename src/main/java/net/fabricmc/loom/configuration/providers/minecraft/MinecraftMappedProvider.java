@@ -46,6 +46,7 @@ import dev.architectury.tinyremapper.TinyRemapper;
 import org.gradle.api.Project;
 import org.jetbrains.annotations.Nullable;
 
+import net.fabricmc.loom.api.mappings.layered.MappingsNamespace;
 import net.fabricmc.loom.configuration.DependencyProvider;
 import net.fabricmc.loom.configuration.providers.MinecraftProviderImpl;
 import net.fabricmc.loom.configuration.providers.mappings.MappingsProviderImpl;
@@ -56,7 +57,7 @@ import net.fabricmc.loom.util.DownloadUtil;
 import net.fabricmc.loom.util.FileSystemUtil;
 import net.fabricmc.loom.util.OperatingSystem;
 import net.fabricmc.loom.util.ThreadingUtils;
-import net.fabricmc.loom.util.TinyRemapperMappingsHelper;
+import net.fabricmc.loom.util.TinyRemapperHelper;
 import net.fabricmc.loom.util.srg.AtRemapper;
 import net.fabricmc.loom.util.srg.CoreModClassRemapper;
 import net.fabricmc.loom.util.srg.InnerClassRemapper;
@@ -251,7 +252,7 @@ public class MinecraftMappedProvider extends DependencyProvider {
 			assetsOut(inputForge, forgeAssets);
 		}
 
-		remap(remapper, vanilla, forge, "official");
+		remap(remapper, vanilla, forge, MappingsNamespace.OFFICIAL.toString());
 	}
 
 	public static class Info {
@@ -273,9 +274,9 @@ public class MinecraftMappedProvider extends DependencyProvider {
 	public void remap(TinyRemapper remapper, Info vanilla, @Nullable Info forge, String fromM) throws IOException {
 		Set<String> classNames = getExtension().isForge() ? InnerClassRemapper.readClassNames(vanilla.input) : null;
 
-		for (String toM : getExtension().isForge() ? Arrays.asList("intermediary", "srg", "named") : Arrays.asList("intermediary", "named")) {
-			Path output = "named".equals(toM) ? vanilla.outputMapped : "srg".equals(toM) ? vanilla.outputSrg : vanilla.outputIntermediary;
-			Path outputForge = forge == null ? null : "named".equals(toM) ? forge.outputMapped : "srg".equals(toM) ? forge.outputSrg : forge.outputIntermediary;
+		for (String toM : getExtension().isForge() ? Arrays.asList(MappingsNamespace.INTERMEDIARY.toString(), MappingsNamespace.SRG.toString(), MappingsNamespace.NAMED.toString()) : Arrays.asList(MappingsNamespace.INTERMEDIARY.toString(), MappingsNamespace.NAMED.toString())) {
+			Path output = MappingsNamespace.NAMED.toString().equals(toM) ? vanilla.outputMapped : MappingsNamespace.SRG.toString().equals(toM) ? vanilla.outputSrg : vanilla.outputIntermediary;
+			Path outputForge = forge == null ? null : MappingsNamespace.NAMED.toString().equals(toM) ? forge.outputMapped : MappingsNamespace.SRG.toString().equals(toM) ? forge.outputSrg : forge.outputIntermediary;
 			InputTag vanillaTag = remapper.createInputTag();
 			InputTag forgeTag = remapper.createInputTag();
 			Stopwatch stopwatch = Stopwatch.createStarted();
@@ -294,6 +295,7 @@ public class MinecraftMappedProvider extends DependencyProvider {
 				OutputRemappingHandler.remap(remapper, forge.assets, outputForge, null, forgeTag);
 			}
 
+			// TODO TinyRemapperHelper
 			getProject().getLogger().lifecycle(":remapped minecraft (TinyRemapper, " + fromM + " -> " + toM + ") in " + stopwatch);
 			remapper.removeInput();
 

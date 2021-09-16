@@ -1,7 +1,7 @@
 /*
  * This file is part of fabric-loom, licensed under the MIT License (MIT).
  *
- * Copyright (c) 2018-2021 FabricMC
+ * Copyright (c) 2016-2021 FabricMC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,15 +22,35 @@
  * SOFTWARE.
  */
 
-package net.fabricmc.loom.configuration.providers.mappings.parchment;
+package net.fabricmc.loom.api.mappings.layered;
 
-import net.fabricmc.loom.api.mappings.layered.spec.FileSpec;
-import net.fabricmc.loom.api.mappings.layered.MappingContext;
-import net.fabricmc.loom.api.mappings.layered.spec.MappingsSpec;
+import java.nio.file.Path;
 
-public record ParchmentMappingsSpec(FileSpec fileSpec, boolean removePrefix) implements MappingsSpec<ParchmentMappingLayer> {
-	@Override
-	public ParchmentMappingLayer createLayer(MappingContext context) {
-		return new ParchmentMappingLayer(fileSpec.get(context), removePrefix());
+import org.gradle.api.artifacts.Dependency;
+import org.gradle.api.logging.Logger;
+import org.jetbrains.annotations.ApiStatus;
+
+import net.fabricmc.loom.configuration.providers.MinecraftProvider;
+import net.fabricmc.loom.configuration.providers.mappings.MappingsProvider;
+
+@ApiStatus.Experimental /* Very Experimental and not cleanly separated from the impl atm */
+public interface MappingContext {
+	Path resolveDependency(Dependency dependency);
+
+	Path resolveMavenDependency(String mavenNotation);
+
+	MappingsProvider mappingsProvider();
+
+	MinecraftProvider minecraftProvider();
+
+	default String minecraftVersion() {
+		return minecraftProvider().minecraftVersion();
 	}
+
+	/**
+	 * Creates a temporary working dir to be used to store working files.
+	 */
+	Path workingDirectory(String name);
+
+	Logger getLogger();
 }

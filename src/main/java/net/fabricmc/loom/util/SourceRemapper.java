@@ -40,11 +40,12 @@ import org.gradle.api.Project;
 import org.zeroturnaround.zip.ZipUtil;
 
 import net.fabricmc.loom.LoomGradleExtension;
+import net.fabricmc.loom.api.mappings.layered.MappingsNamespace;
 import net.fabricmc.loom.configuration.RemappedConfigurationEntry;
 import net.fabricmc.loom.configuration.providers.mappings.MappingsProviderImpl;
 import net.fabricmc.loom.util.gradle.ProgressLogger;
 import net.fabricmc.lorenztiny.TinyMappingsReader;
-import net.fabricmc.mapping.tree.TinyTree;
+import net.fabricmc.mappingio.tree.MemoryMappingTree;
 import net.fabricmc.stitch.util.StitchUtil;
 
 public class SourceRemapper {
@@ -184,7 +185,7 @@ public class SourceRemapper {
 
 		MappingSet mappings = extension.getOrCreateSrcMappingCache(id, () -> {
 			try {
-				TinyTree m = extension.shouldGenerateSrgTiny() ? mappingsProvider.getMappingsWithSrg() : mappingsProvider.getMappings();
+				MemoryMappingTree m = extension.shouldGenerateSrgTiny() ? mappingsProvider.getMappingsWithSrg() : mappingsProvider.getMappings();
 				project.getLogger().info(":loading " + from + " -> " + to + " source mappings");
 				return new TinyMappingsReader(m, from, to).read();
 			} catch (Exception e) {
