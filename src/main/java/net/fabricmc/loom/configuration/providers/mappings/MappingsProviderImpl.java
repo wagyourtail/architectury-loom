@@ -36,12 +36,14 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.regex.Pattern;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.net.UrlEscapers;
@@ -77,6 +79,7 @@ import net.fabricmc.mappingio.adapter.MappingSourceNsSwitch;
 import net.fabricmc.mappingio.format.MappingFormat;
 import net.fabricmc.mappingio.format.Tiny2Reader;
 import net.fabricmc.mappingio.format.Tiny2Writer;
+import net.fabricmc.mappingio.tree.MappingTree;
 import net.fabricmc.mappingio.tree.MemoryMappingTree;
 import net.fabricmc.stitch.Command;
 import net.fabricmc.stitch.commands.CommandProposeFieldNames;
@@ -313,6 +316,46 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 			Files.deleteIfExists(tinyMappings);
 			project.getLogger().lifecycle(":populating field names");
 			suggestFieldNames(minecraftProvider, baseTinyMappings, tinyMappings);
+		}
+
+		MemoryMappingTree tree = new MemoryMappingTree();
+		MappingReader.read(tinyMappings, tree);
+		tmpFixInnerClasses(tree);
+
+		try (Tiny2Writer writer = new Tiny2Writer(Files.newBufferedWriter(tinyMappings, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE), false)) {
+			tree.accept(writer);
+		}
+	}
+
+	private void tmpFixInnerClasses(MappingTree tree) {
+		int intermediaryIdx = tree.getNamespaceId("intermediary");
+		int namedIdx = tree.getNamespaceId("named");
+
+		for (MappingTree.ClassMapping classEntry : tree.getClasses()) {
+			String intermediaryName = classEntry.getDstName(intermediaryIdx);
+			String namedName = classEntry.getDstName(namedIdx);
+
+			// There's no mapped name
+			if (intermediaryName.equals(namedName)) {
+				// Try finding enclosing classes of an unmapped inner class that may have a mapped name we need
+				// to inherit
+				String[] path = intermediaryName.split(Pattern.quote("$"));
+				int parts = path.length;
+
+				for (int i = parts - 2; i >= 0; i--) {
+					String currentPath = String.join("$", Arrays.copyOfRange(path, 0, i + 1));
+					String namedParentClass = tree.mapClassName(currentPath, intermediaryIdx, namedIdx);
+
+					if (!namedParentClass.equals(currentPath)) {
+						String newNamedName = namedParentClass + "$" + String.join("$", Arrays.copyOfRange(path, i + 1, path.length));
+
+						if (!namedName.equals(newNamedName)) {
+							classEntry.setDstName(newNamedName, namedIdx);
+							break;
+						}
+					}
+				}
+			}
 		}
 	}
 
