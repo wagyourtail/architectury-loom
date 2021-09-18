@@ -7,6 +7,7 @@ on:
       - 'dev/0.7-forge'
       - 'dev/0.8'
       - 'dev/0.9'
+      - 'dev/0.10.0'
 
 jobs:
   build:
