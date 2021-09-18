@@ -468,7 +468,7 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 					MappingsNamespace.INTERMEDIARY.toString(), MappingsNamespace.OFFICIAL.toString());
 		} catch (Exception e) {
 			throw new RuntimeException("Could not merge mappings from " + intermediaryMappings.toString()
-			                           + " with mappings from " + yarnMappings, e);
+										+ " with mappings from " + yarnMappings, e);
 		}
 	}
 

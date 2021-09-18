@@ -54,6 +54,7 @@ public class SpecialSourceExecutor {
 		} else if (string.startsWith("/")) {
 			return string.substring(1);
 		}
+
 		return string;
 	}
 
@@ -78,10 +79,12 @@ public class SpecialSourceExecutor {
 					if (!trimLeadingSlash.endsWith(".class")) continue;
 					boolean has = filter.contains(trimLeadingSlash);
 					String s = trimLeadingSlash;
+
 					while (s.contains("$") && !has) {
 						s = s.substring(0, s.lastIndexOf("$")) + ".class";
 						has = filter.contains(s);
 					}
+
 					if (!has) continue;
 					Path to = output.get().getPath(trimLeadingSlash);
 					Path parent = to.getParent();
@@ -123,7 +126,7 @@ public class SpecialSourceExecutor {
 
 				// if running with INFO or DEBUG logging
 				if (project.getGradle().getStartParameter().getShowStacktrace() != ShowStacktrace.INTERNAL_EXCEPTIONS
-				    || project.getGradle().getStartParameter().getLogLevel().compareTo(LogLevel.LIFECYCLE) < 0) {
+						|| project.getGradle().getStartParameter().getLogLevel().compareTo(LogLevel.LIFECYCLE) < 0) {
 					spec.setStandardOutput(System.out);
 					spec.setErrorOutput(System.err);
 				} else {
@@ -161,7 +164,7 @@ public class SpecialSourceExecutor {
 
 				// if running with INFO or DEBUG logging
 				if (project.getGradle().getStartParameter().getShowStacktrace() != ShowStacktrace.INTERNAL_EXCEPTIONS
-				    || project.getGradle().getStartParameter().getLogLevel().compareTo(LogLevel.LIFECYCLE) < 0) {
+						|| project.getGradle().getStartParameter().getLogLevel().compareTo(LogLevel.LIFECYCLE) < 0) {
 					spec.setStandardOutput(System.out);
 					spec.setErrorOutput(System.err);
 				} else {

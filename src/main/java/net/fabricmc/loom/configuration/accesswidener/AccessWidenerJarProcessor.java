@@ -32,7 +32,6 @@ import java.nio.file.Path;
 import java.util.Arrays;
 
 import com.google.common.hash.Hashing;
-import dev.architectury.tinyremapper.TinyRemapper;
 import org.gradle.api.Project;
 import org.objectweb.asm.commons.Remapper;
 import org.zeroturnaround.zip.ZipUtil;
@@ -44,9 +43,6 @@ import net.fabricmc.accesswidener.AccessWidenerWriter;
 import net.fabricmc.loom.LoomGradleExtension;
 import net.fabricmc.loom.api.mappings.layered.MappingsNamespace;
 import net.fabricmc.loom.configuration.processors.JarProcessor;
-import net.fabricmc.loom.configuration.providers.minecraft.MinecraftMappedProvider;
-import net.fabricmc.loom.util.Checksum;
-import net.fabricmc.loom.util.Constants;
 
 public class AccessWidenerJarProcessor implements JarProcessor {
 	// Filename used to store hash of input access widener in processed jar file

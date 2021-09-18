@@ -162,14 +162,20 @@ public class ForgeUserdevProvider extends DependencyProvider {
 			if (settings != null) {
 				settings.evaluateLater(() -> {
 					settings.defaultMainClass(value.getAsJsonPrimitive("main").getAsString());
-					settings.vmArgs(StreamSupport.stream(value.getAsJsonArray("jvmArgs").spliterator(), false)
-							.map(JsonElement::getAsString)
-							.map(this::processTemplates)
-							.collect(Collectors.toList()));
-					for (Map.Entry<String, JsonElement> env : value.getAsJsonObject("env").entrySet()) {
-						String string = processTemplates(env.getValue().getAsString());
 
-						settings.envVariables.put(env.getKey(), string);
+					if (value.has("jvmArgs")) {
+						settings.vmArgs(StreamSupport.stream(value.getAsJsonArray("jvmArgs").spliterator(), false)
+								.map(JsonElement::getAsString)
+								.map(this::processTemplates)
+								.collect(Collectors.toList()));
+					}
+
+					if (value.has("env")) {
+						for (Map.Entry<String, JsonElement> env : value.getAsJsonObject("env").entrySet()) {
+							String string = processTemplates(env.getValue().getAsString());
+
+							settings.envVariables.put(env.getKey(), string);
+						}
 					}
 				});
 			}

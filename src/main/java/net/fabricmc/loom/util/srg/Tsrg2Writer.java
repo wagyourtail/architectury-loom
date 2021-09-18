@@ -37,6 +37,7 @@ public class Tsrg2Writer {
 
 	private static void writeMethod(List<String> namespaces, MappingTree.MethodMapping def, StringBuilder builder) {
 		writeMapped(true, namespaces, def, builder);
+
 		for (MappingTree.MethodArgMapping arg : def.getArgs()) {
 			builder.append("\t\t").append(arg.getLvIndex());
 			writeMapped(true, namespaces, arg, builder);
@@ -52,6 +53,7 @@ public class Tsrg2Writer {
 
 		for (int i = 0; i < names.length; ++i) {
 			String name = names[i];
+
 			if (i == 0) {
 				if (needFirst) {
 					builder.append('\t');
@@ -61,8 +63,10 @@ public class Tsrg2Writer {
 			}
 
 			builder.append(name);
+
 			if (i == 0 && mapped instanceof MappingTreeView.MemberMappingView) {
 				String descriptor = ((MappingTreeView.MemberMappingView) mapped).getSrcDesc();
+
 				if (descriptor != null && !descriptor.isEmpty()) {
 					builder.append(' ');
 					builder.append(descriptor);

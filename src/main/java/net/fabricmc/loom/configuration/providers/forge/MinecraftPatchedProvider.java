@@ -442,7 +442,7 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 				}
 			}
 
-			Files.writeString(outTrimmed, 	Tsrg2Writer.serialize(tree), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+			Files.writeString(outTrimmed, Tsrg2Writer.serialize(tree), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
 			mergedMojangTsrg2Files = new Path[]{out, outTrimmed};
 		}
