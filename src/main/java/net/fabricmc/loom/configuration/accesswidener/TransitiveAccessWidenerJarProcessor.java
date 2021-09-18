@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
+import dev.architectury.tinyremapper.TinyRemapper;
 import org.gradle.api.Project;
 
 import net.fabricmc.accesswidener.AccessWidener;
@@ -44,7 +45,6 @@ import net.fabricmc.loom.configuration.RemappedConfigurationEntry;
 import net.fabricmc.loom.configuration.processors.JarProcessor;
 import net.fabricmc.loom.util.Constants;
 import net.fabricmc.loom.util.TinyRemapperHelper;
-import net.fabricmc.tinyremapper.TinyRemapper;
 
 /**
  * Applies transitive access wideners that are inherited from mod and api dependencies.

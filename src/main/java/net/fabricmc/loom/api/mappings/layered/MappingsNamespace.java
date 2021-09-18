@@ -43,6 +43,7 @@ public enum MappingsNamespace {
 	 * @see <a href="https://github.com/FabricMC/intermediary/">github.com/FabricMC/intermediary/</a>
 	 */
 	INTERMEDIARY,
+	SRG,
 
 	/**
 	 * Named mappings are the developer friendly names used to develop mods against.

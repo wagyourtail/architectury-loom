@@ -48,13 +48,13 @@ import org.zeroturnaround.zip.ZipUtil;
 
 import net.fabricmc.loom.LoomGradleExtension;
 import net.fabricmc.loom.build.ModCompileRemapper;
-import net.fabricmc.loom.configuration.providers.minecraft.MinecraftMappedProvider;
 import net.fabricmc.loom.task.GenerateSourcesTask;
 import net.fabricmc.loom.util.Constants;
 import net.fabricmc.loom.util.DeletingFileVisitor;
 import net.fabricmc.loom.util.FileSystemUtil;
 import net.fabricmc.loom.util.SourceRemapper;
 import net.fabricmc.loom.util.ThreadingUtils;
+import net.fabricmc.loom.util.TinyRemapperHelper;
 import net.fabricmc.lorenztiny.TinyMappingsReader;
 
 public class ForgeSourcesRemapper {
@@ -171,7 +171,7 @@ public class ForgeSourcesRemapper {
 
 		MappingSet mappings = new TinyMappingsReader(extension.getMappingsProvider().getMappingsWithSrg(), "srg", "named").read();
 
-		for (Map.Entry<String, String> entry : MinecraftMappedProvider.JSR_TO_JETBRAINS.entrySet()) {
+		for (Map.Entry<String, String> entry : TinyRemapperHelper.JSR_TO_JETBRAINS.entrySet()) {
 			mappings.getOrCreateClassMapping(entry.getKey()).setDeobfuscatedName(entry.getValue());
 		}
 

@@ -46,26 +46,20 @@ public class LayeredMappingSpecBuilderImpl implements LayeredMappingSpecBuilder 
 	@Nullable
 	private final LoomGradleExtensionAPI extension;
 
-	public LayeredMappingSpecBuilder(@Nullable LoomGradleExtensionAPI extension) {
+	public LayeredMappingSpecBuilderImpl(@Nullable LoomGradleExtensionAPI extension) {
 		this.extension = extension;
 	}
 
 	@Override
 	public LayeredMappingSpecBuilder addLayer(MappingsSpec<?> mappingSpec) {
 		layers.add(mappingSpec);
-	public LayeredMappingSpecBuilder officialMojangMappings() {
-		layers.add(new MojangMappingsSpec(() -> extension != null && extension.isSilentMojangMappingsLicenseEnabled()));
-		return this;
-	}
-
-	public LayeredMappingSpecBuilder parchment(String mavenNotation) {
-		parchment(mavenNotation, parchmentMappingsSpecBuilder -> parchmentMappingsSpecBuilder.setRemovePrefix(true));
 		return this;
 	}
 
 	@Override
 	public LayeredMappingSpecBuilder officialMojangMappings() {
-		return addLayer(new MojangMappingsSpec());
+		layers.add(new MojangMappingsSpec(() -> extension != null && extension.isSilentMojangMappingsLicenseEnabled()));
+		return this;
 	}
 
 	@Override
@@ -75,8 +69,9 @@ public class LayeredMappingSpecBuilderImpl implements LayeredMappingSpecBuilder 
 		return addLayer(builder.build());
 	}
 
-	public LayeredMappingSpecBuilder crane(String mavenNotation) {
-		layers.add(new CraneMappingsSpec(mavenNotation));
+	@Override
+	public LayeredMappingSpecBuilder crane(Object object) {
+		layers.add(new CraneMappingsSpec(FileSpec.create(object)));
 		return this;
 	}
 

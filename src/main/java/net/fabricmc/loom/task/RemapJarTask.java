@@ -88,7 +88,6 @@ import org.zeroturnaround.zip.transform.StreamZipEntryTransformer;
 import org.zeroturnaround.zip.transform.ZipEntryTransformerEntry;
 
 import net.fabricmc.loom.LoomGradleExtension;
-import net.fabricmc.loom.api.mappings.layered.MappingsNamespace;
 import net.fabricmc.loom.build.JarRemapper;
 import net.fabricmc.loom.build.MixinRefmapHelper;
 import net.fabricmc.loom.build.nesting.EmptyNestedJarProvider;
@@ -109,10 +108,7 @@ import net.fabricmc.loom.util.TinyRemapperHelper;
 import net.fabricmc.loom.util.ZipReprocessorUtil;
 import net.fabricmc.loom.util.aw2at.Aw2At;
 import net.fabricmc.lorenztiny.TinyMappingsReader;
-import net.fabricmc.mapping.tree.ClassDef;
-import net.fabricmc.mapping.tree.FieldDef;
-import net.fabricmc.mapping.tree.MethodDef;
-import net.fabricmc.mapping.tree.TinyTree;
+import net.fabricmc.mappingio.tree.MappingTree;
 import net.fabricmc.stitch.util.Pair;
 
 public class RemapJarTask extends Jar {
@@ -169,7 +165,7 @@ public class RemapJarTask extends Jar {
 	}
 
 	private ReferenceRemapper createReferenceRemapper(LoomGradleExtension extension, String from, String to) throws IOException {
-		TinyTree mappings = extension.shouldGenerateSrgTiny() ? extension.getMappingsProvider().getMappingsWithSrg() : extension.getMappingsProvider().getMappings();
+		MappingTree mappings = extension.shouldGenerateSrgTiny() ? extension.getMappingsProvider().getMappingsWithSrg() : extension.getMappingsProvider().getMappings();
 
 		return new SimpleReferenceRemapper(new SimpleReferenceRemapper.Remapper() {
 			@Override
@@ -186,13 +182,13 @@ public class RemapJarTask extends Jar {
 			@Nullable
 			public String mapMethod(@Nullable String className, String methodName, String methodDescriptor) {
 				if (className != null) {
-					Optional<ClassDef> classDef = mappings.getClasses().stream()
+					Optional<MappingTree.ClassMapping> classDef = (Optional<MappingTree.ClassMapping>) mappings.getClasses().stream()
 							.filter(c -> Objects.equals(c.getName(from), className))
 							.findFirst();
 
 					if (classDef.isPresent()) {
-						for (MethodDef methodDef : classDef.get().getMethods()) {
-							if (Objects.equals(methodDef.getName(from), methodName) && Objects.equals(methodDef.getDescriptor(from), methodDescriptor)) {
+						for (MappingTree.MethodMapping methodDef : classDef.get().getMethods()) {
+							if (Objects.equals(methodDef.getName(from), methodName) && Objects.equals(methodDef.getDesc(from), methodDescriptor)) {
 								return methodDef.getName(to);
 							}
 						}
@@ -201,7 +197,7 @@ public class RemapJarTask extends Jar {
 
 				return mappings.getClasses().stream()
 						.flatMap(classDef -> classDef.getMethods().stream())
-						.filter(methodDef -> Objects.equals(methodDef.getName(from), methodName) && Objects.equals(methodDef.getDescriptor(from), methodDescriptor))
+						.filter(methodDef -> Objects.equals(methodDef.getName(from), methodName) && Objects.equals(methodDef.getDesc(from), methodDescriptor))
 						.findFirst()
 						.map(methodDef -> methodDef.getName(to))
 						.orElse(null);
@@ -211,13 +207,13 @@ public class RemapJarTask extends Jar {
 			@Nullable
 			public String mapField(@Nullable String className, String fieldName, String fieldDescriptor) {
 				if (className != null) {
-					Optional<ClassDef> classDef = mappings.getClasses().stream()
+					Optional<MappingTree.ClassMapping> classDef = (Optional<MappingTree.ClassMapping>) mappings.getClasses().stream()
 							.filter(c -> Objects.equals(c.getName(from), className))
 							.findFirst();
 
 					if (classDef.isPresent()) {
-						for (FieldDef fieldDef : classDef.get().getFields()) {
-							if (Objects.equals(fieldDef.getName(from), fieldName) && Objects.equals(fieldDef.getDescriptor(from), fieldDescriptor)) {
+						for (MappingTree.FieldMapping fieldDef : classDef.get().getFields()) {
+							if (Objects.equals(fieldDef.getName(from), fieldName) && Objects.equals(fieldDef.getDesc(from), fieldDescriptor)) {
 								return fieldDef.getName(to);
 							}
 						}
@@ -226,7 +222,7 @@ public class RemapJarTask extends Jar {
 
 				return mappings.getClasses().stream()
 						.flatMap(classDef -> classDef.getFields().stream())
-						.filter(fieldDef -> Objects.equals(fieldDef.getName(from), fieldName) && Objects.equals(fieldDef.getDescriptor(from), fieldDescriptor))
+						.filter(fieldDef -> Objects.equals(fieldDef.getName(from), fieldName) && Objects.equals(fieldDef.getDesc(from), fieldDescriptor))
 						.findFirst()
 						.map(fieldDef -> fieldDef.getName(to))
 						.orElse(null);
@@ -407,7 +403,7 @@ public class RemapJarTask extends Jar {
 	}
 
 	private IMappingProvider remapToSrg(LoomGradleExtension extension, IMappingProvider parent, String from, String to) throws IOException {
-		TinyTree mappings = extension.shouldGenerateSrgTiny() ? extension.getMappingsProvider().getMappingsWithSrg() : extension.getMappingsProvider().getMappings();
+		MappingTree mappings = extension.shouldGenerateSrgTiny() ? extension.getMappingsProvider().getMappingsWithSrg() : extension.getMappingsProvider().getMappings();
 
 		return sink -> {
 			parent.load(new IMappingProvider.MappingAcceptor() {
@@ -507,7 +503,7 @@ public class RemapJarTask extends Jar {
 			}
 
 			LoomGradleExtension extension = LoomGradleExtension.get(getProject());
-			TinyTree mappings = extension.shouldGenerateSrgTiny() ? extension.getMappingsProvider().getMappingsWithSrg() : extension.getMappingsProvider().getMappings();
+			MappingTree mappings = extension.shouldGenerateSrgTiny() ? extension.getMappingsProvider().getMappingsWithSrg() : extension.getMappingsProvider().getMappings();
 
 			try (TinyMappingsReader reader = new TinyMappingsReader(mappings, fromM.get(), toM.get())) {
 				MappingSet mappingSet = reader.read();

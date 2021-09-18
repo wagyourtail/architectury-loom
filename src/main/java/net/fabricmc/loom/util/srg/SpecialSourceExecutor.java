@@ -29,25 +29,34 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
-import java.util.jar.JarOutputStream;
 import java.util.stream.Collectors;
-import java.util.zip.ZipEntry;
 
-import org.apache.commons.io.IOUtils;
+import com.google.common.base.Stopwatch;
 import org.apache.commons.io.output.NullOutputStream;
 import org.gradle.api.Project;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.logging.LogLevel;
 import org.gradle.api.logging.configuration.ShowStacktrace;
-import org.zeroturnaround.zip.ZipUtil;
 
 import net.fabricmc.loom.LoomGradleExtension;
+import net.fabricmc.loom.util.FileSystemUtil;
+import net.fabricmc.loom.util.ThreadingUtils;
 
 public class SpecialSourceExecutor {
+	private static String trimLeadingSlash(String string) {
+		if (string.startsWith(File.separator)) {
+			return string.substring(File.separator.length());
+		} else if (string.startsWith("/")) {
+			return string.substring(1);
+		}
+		return string;
+	}
+
 	public static Path produceSrgJar(boolean specialSource, Project project, String side, FileCollection classpath, Set<File> mcLibs, Path officialJar, Path mappings)
 			throws Exception {
 		Set<String> filter = Files.readAllLines(mappings, StandardCharsets.UTF_8).stream()
@@ -58,14 +67,35 @@ public class SpecialSourceExecutor {
 		Path stripped = extension.getFiles().getProjectBuildCache().toPath().resolve(officialJar.getFileName().toString().substring(0, officialJar.getFileName().toString().length() - 4) + "-filtered.jar");
 		Files.deleteIfExists(stripped);
 
-		try (JarOutputStream output = new JarOutputStream(Files.newOutputStream(stripped))) {
-			ZipUtil.iterate(officialJar.toFile(), (in, zipEntry) -> {
-				if (filter.contains(zipEntry.getName())) {
-					output.putNextEntry((ZipEntry) zipEntry.clone());
-					IOUtils.write(IOUtils.toByteArray(in), output);
-					output.closeEntry();
+		Stopwatch stopwatch = Stopwatch.createStarted();
+
+		try (FileSystemUtil.FileSystemDelegate output = FileSystemUtil.getJarFileSystem(stripped, true)) {
+			try (FileSystemUtil.FileSystemDelegate fs = FileSystemUtil.getJarFileSystem(officialJar, false)) {
+				ThreadingUtils.TaskCompleter completer = ThreadingUtils.taskCompleter();
+
+				for (Path path : (Iterable<? extends Path>) Files.walk(fs.get().getPath("/"))::iterator) {
+					String trimLeadingSlash = trimLeadingSlash(path.toString());
+					if (!trimLeadingSlash.endsWith(".class")) continue;
+					boolean has = filter.contains(trimLeadingSlash);
+					String s = trimLeadingSlash;
+					while (s.contains("$") && !has) {
+						s = s.substring(0, s.lastIndexOf("$")) + ".class";
+						has = filter.contains(s);
+					}
+					if (!has) continue;
+					Path to = output.get().getPath(trimLeadingSlash);
+					Path parent = to.getParent();
+					if (parent != null) Files.createDirectories(parent);
+
+					completer.add(() -> {
+						Files.copy(path, to, StandardCopyOption.COPY_ATTRIBUTES);
+					});
 				}
-			});
+
+				completer.complete();
+			}
+		} finally {
+			project.getLogger().info("Copied class files in " + stopwatch.stop());
 		}
 
 		Path output = extension.getFiles().getProjectBuildCache().toPath().resolve(officialJar.getFileName().toString().substring(0, officialJar.getFileName().toString().length() - 4) + "-srg-output.jar");
@@ -93,7 +123,7 @@ public class SpecialSourceExecutor {
 
 				// if running with INFO or DEBUG logging
 				if (project.getGradle().getStartParameter().getShowStacktrace() != ShowStacktrace.INTERNAL_EXCEPTIONS
-						|| project.getGradle().getStartParameter().getLogLevel().compareTo(LogLevel.LIFECYCLE) < 0) {
+				    || project.getGradle().getStartParameter().getLogLevel().compareTo(LogLevel.LIFECYCLE) < 0) {
 					spec.setStandardOutput(System.out);
 					spec.setErrorOutput(System.err);
 				} else {
@@ -131,7 +161,7 @@ public class SpecialSourceExecutor {
 
 				// if running with INFO or DEBUG logging
 				if (project.getGradle().getStartParameter().getShowStacktrace() != ShowStacktrace.INTERNAL_EXCEPTIONS
-						|| project.getGradle().getStartParameter().getLogLevel().compareTo(LogLevel.LIFECYCLE) < 0) {
+				    || project.getGradle().getStartParameter().getLogLevel().compareTo(LogLevel.LIFECYCLE) < 0) {
 					spec.setStandardOutput(System.out);
 					spec.setErrorOutput(System.err);
 				} else {

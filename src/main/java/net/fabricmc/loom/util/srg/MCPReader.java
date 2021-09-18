@@ -42,11 +42,6 @@ import java.util.regex.Pattern;
 
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
-import dev.architectury.mappingslayers.api.mutable.MutableClassDef;
-import dev.architectury.mappingslayers.api.mutable.MutableFieldDef;
-import dev.architectury.mappingslayers.api.mutable.MutableMethodDef;
-import dev.architectury.mappingslayers.api.mutable.MutableTinyTree;
-import dev.architectury.mappingslayers.api.utils.MappingsUtils;
 import org.apache.commons.io.IOUtils;
 import org.cadixdev.lorenz.MappingSet;
 import org.cadixdev.lorenz.io.srg.tsrg.TSrgReader;
@@ -57,6 +52,9 @@ import org.cadixdev.lorenz.model.MethodMapping;
 import org.cadixdev.lorenz.model.TopLevelClassMapping;
 import org.jetbrains.annotations.Nullable;
 
+import net.fabricmc.mappingio.MappingReader;
+import net.fabricmc.mappingio.tree.MappingTree;
+import net.fabricmc.mappingio.tree.MemoryMappingTree;
 import net.fabricmc.stitch.commands.tinyv2.TinyClass;
 import net.fabricmc.stitch.commands.tinyv2.TinyField;
 import net.fabricmc.stitch.commands.tinyv2.TinyFile;
@@ -204,21 +202,22 @@ public class MCPReader {
 		return tokens;
 	}
 
-	private void readTsrg2(Map<MemberToken, String> tokens, String content) {
-		MutableTinyTree tree = MappingsUtils.deserializeFromTsrg2(content);
-		int obfIndex = tree.getMetadata().index("obf");
-		int srgIndex = tree.getMetadata().index("srg");
+	private void readTsrg2(Map<MemberToken, String> tokens, String content) throws IOException {
+		MemoryMappingTree tree = new MemoryMappingTree();
+		MappingReader.read(new StringReader(content), tree);
+		int obfIndex = tree.getNamespaceId("obf");
+		int srgIndex = tree.getNamespaceId("srg");
 
-		for (MutableClassDef classDef : tree.getClassesMutable()) {
+		for (MappingTree.ClassMapping classDef : tree.getClasses()) {
 			MemberToken ofClass = MemberToken.ofClass(classDef.getName(obfIndex));
 			tokens.put(ofClass, classDef.getName(srgIndex));
 
-			for (MutableFieldDef fieldDef : classDef.getFieldsMutable()) {
+			for (MappingTree.FieldMapping fieldDef : classDef.getFields()) {
 				tokens.put(MemberToken.ofField(ofClass, fieldDef.getName(obfIndex)), fieldDef.getName(srgIndex));
 			}
 
-			for (MutableMethodDef methodDef : classDef.getMethodsMutable()) {
-				tokens.put(MemberToken.ofMethod(ofClass, methodDef.getName(obfIndex), methodDef.getDescriptor(obfIndex)),
+			for (MappingTree.MethodMapping methodDef : classDef.getMethods()) {
+				tokens.put(MemberToken.ofMethod(ofClass, methodDef.getName(obfIndex), methodDef.getDesc(obfIndex)),
 						methodDef.getName(srgIndex));
 			}
 		}

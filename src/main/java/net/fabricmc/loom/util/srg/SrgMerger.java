@@ -37,14 +37,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.google.common.base.MoreObjects;
-import dev.architectury.mappingslayers.api.mutable.MutableClassDef;
-import dev.architectury.mappingslayers.api.mutable.MutableDescriptored;
-import dev.architectury.mappingslayers.api.mutable.MutableFieldDef;
-import dev.architectury.mappingslayers.api.mutable.MutableMethodDef;
-import dev.architectury.mappingslayers.api.mutable.MutableTinyTree;
-import dev.architectury.mappingslayers.api.utils.MappingsUtils;
 import org.apache.commons.io.IOUtils;
 import org.cadixdev.lorenz.MappingSet;
 import org.cadixdev.lorenz.io.srg.tsrg.TSrgReader;
@@ -56,12 +52,11 @@ import org.cadixdev.lorenz.model.TopLevelClassMapping;
 import org.jetbrains.annotations.Nullable;
 
 import net.fabricmc.loom.util.function.CollectionUtil;
-import net.fabricmc.mapping.tree.ClassDef;
-import net.fabricmc.mapping.tree.FieldDef;
-import net.fabricmc.mapping.tree.MethodDef;
-import net.fabricmc.mapping.tree.TinyMappingFactory;
-import net.fabricmc.mapping.tree.TinyTree;
+import net.fabricmc.mappingio.MappingReader;
 import net.fabricmc.mappingio.format.TsrgReader;
+import net.fabricmc.mappingio.tree.MappingTree;
+import net.fabricmc.mappingio.tree.MappingTreeView;
+import net.fabricmc.mappingio.tree.MemoryMappingTree;
 import net.fabricmc.stitch.commands.tinyv2.TinyClass;
 import net.fabricmc.stitch.commands.tinyv2.TinyField;
 import net.fabricmc.stitch.commands.tinyv2.TinyFile;
@@ -87,15 +82,15 @@ public final class SrgMerger {
 	 *                          or if an element mentioned in the SRG file does not have tiny mappings
 	 */
 	public static void mergeSrg(Supplier<Path> mojmap, Path srg, Path tiny, Path out, boolean lenient) throws IOException, MappingException {
-		Map<String, List<MutableDescriptored>> addRegardlessSrgs = new HashMap<>();
+		Map<String, List<MappingTreeView.MemberMappingView>> addRegardlessSrgs = new HashMap<>();
 		MappingSet arr = readSrg(srg, mojmap, addRegardlessSrgs);
-		TinyTree foss;
+		MemoryMappingTree foss = new MemoryMappingTree();
 
 		try (BufferedReader reader = Files.newBufferedReader(tiny)) {
-			foss = TinyMappingFactory.loadWithDetection(reader);
+			MappingReader.read(reader, foss);
 		}
 
-		List<String> namespaces = new ArrayList<>(foss.getMetadata().getNamespaces());
+		List<String> namespaces = Stream.concat(Stream.of(foss.getSrcNamespace()), foss.getDstNamespaces().stream()).collect(Collectors.toList());
 		namespaces.add(1, "srg");
 
 		if (!"official".equals(namespaces.get(0))) {
@@ -114,7 +109,8 @@ public final class SrgMerger {
 		TinyV2Writer.write(file, out);
 	}
 
-	private static MappingSet readSrg(Path srg, Supplier<Path> mojmap, Map<String, List<MutableDescriptored>> addRegardlessSrgs) throws IOException {
+	private static MappingSet readSrg(Path srg, Supplier<Path> mojmap, Map<String, List<MappingTreeView.MemberMappingView>> addRegardlessSrgs)
+			throws IOException {
 		try (BufferedReader reader = Files.newBufferedReader(srg)) {
 			String content = IOUtils.toString(reader);
 
@@ -128,26 +124,27 @@ public final class SrgMerger {
 		}
 	}
 
-	private static MappingSet readTsrg2(String content, Supplier<Path> mojmap, Map<String, List<MutableDescriptored>> addRegardlessSrgs) throws IOException {
+	private static MappingSet readTsrg2(String content, Supplier<Path> mojmap, Map<String, List<MappingTreeView.MemberMappingView>> addRegardlessSrgs)
+			throws IOException {
 		MappingSet set;
 
 		try (Tsrg2Utils.MappingsIO2LorenzWriter lorenzWriter = new Tsrg2Utils.MappingsIO2LorenzWriter(0, false)) {
 			TsrgReader.read(new StringReader(content), lorenzWriter);
 			set = lorenzWriter.read();
-			MutableTinyTree mojmapTree = readTsrg2ToTinyTree(mojmap.get());
+			MemoryMappingTree mojmapTree = readTsrg2ToTinyTree(mojmap.get());
 
-			for (MutableClassDef classDef : mojmapTree.getClassesMutable()) {
-				for (MutableMethodDef methodDef : classDef.getMethodsMutable()) {
-					String name = methodDef.getName(0);
+			for (MappingTree.ClassMapping classDef : mojmapTree.getClasses()) {
+				for (MappingTree.MethodMapping methodDef : classDef.getMethods()) {
+					String name = methodDef.getSrcName();
 
-					if (name.indexOf('<') != 0 && name.equals(methodDef.getName(1))) {
-						addRegardlessSrgs.computeIfAbsent(classDef.getName(0), $ -> new ArrayList<>()).add(methodDef);
+					if (name.indexOf('<') != 0 && name.equals(methodDef.getDstName(0))) {
+						addRegardlessSrgs.computeIfAbsent(classDef.getSrcName(), $ -> new ArrayList<>()).add(methodDef);
 					}
 				}
 
-				for (MutableFieldDef fieldDef : classDef.getFieldsMutable()) {
-					if (fieldDef.getName(0).equals(fieldDef.getName(1))) {
-						addRegardlessSrgs.computeIfAbsent(classDef.getName(0), $ -> new ArrayList<>()).add(fieldDef);
+				for (MappingTree.FieldMapping fieldDef : classDef.getFields()) {
+					if (fieldDef.getSrcName().equals(fieldDef.getDstName(0))) {
+						addRegardlessSrgs.computeIfAbsent(classDef.getSrcName(), $ -> new ArrayList<>()).add(fieldDef);
 					}
 				}
 			}
@@ -156,20 +153,20 @@ public final class SrgMerger {
 		return set;
 	}
 
-	private static MutableTinyTree readTsrg2ToTinyTree(Path path) throws IOException {
-		MutableTinyTree tree;
+	private static MemoryMappingTree readTsrg2ToTinyTree(Path path) throws IOException {
+		MemoryMappingTree tree = new MemoryMappingTree();
 
 		try (BufferedReader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
-			tree = MappingsUtils.deserializeFromTsrg2(IOUtils.toString(reader));
+			MappingReader.read(reader, tree);
 		}
 
 		return tree;
 	}
 
-	private static void classToTiny(Map<String, List<MutableDescriptored>> addRegardlessSrgs, TinyTree foss, List<String> namespaces, ClassMapping<?, ?> klass, Consumer<TinyClass> classConsumer, boolean lenient) {
+	private static void classToTiny(Map<String, List<MappingTreeView.MemberMappingView>> addRegardlessSrgs, MappingTree foss, List<String> namespaces, ClassMapping<?, ?> klass, Consumer<TinyClass> classConsumer, boolean lenient) {
 		String obf = klass.getFullObfuscatedName();
 		String srg = klass.getFullDeobfuscatedName();
-		ClassDef classDef = foss.getDefaultNamespaceClassMap().get(obf);
+		MappingTree.ClassMapping classDef = foss.getClass(obf);
 
 		if (classDef == null) {
 			if (lenient) {
@@ -188,9 +185,9 @@ public final class SrgMerger {
 		List<TinyField> fields = new ArrayList<>();
 
 		for (MethodMapping method : klass.getMethodMappings()) {
-			MethodDef def = CollectionUtil.find(
+			MappingTree.MethodMapping def = CollectionUtil.find(
 					classDef.getMethods(),
-					m -> m.getName("official").equals(method.getObfuscatedName()) && m.getDescriptor("official").equals(method.getObfuscatedDescriptor())
+					m -> m.getName("official").equals(method.getObfuscatedName()) && m.getDesc("official").equals(method.getObfuscatedDescriptor())
 			).orElse(null);
 
 			if (def == null) {
@@ -209,7 +206,7 @@ public final class SrgMerger {
 			);
 
 			methods.add(new TinyMethod(
-					def.getDescriptor("official"), methodNames,
+					def.getDesc("official"), methodNames,
 					/* parameters */ Collections.emptyList(),
 					/* locals */ Collections.emptyList(),
 					/* comments */ Collections.emptyList()
@@ -217,7 +214,7 @@ public final class SrgMerger {
 		}
 
 		for (FieldMapping field : klass.getFieldMappings()) {
-			FieldDef def = CollectionUtil.find(
+			MappingTree.FieldMapping def = CollectionUtil.find(
 					classDef.getFields(),
 					f -> f.getName("official").equals(field.getObfuscatedName())
 			).orElse(nullOrThrow(lenient, () -> new MappingException("Missing field: " + field.getFullObfuscatedName() + " (srg: " + field.getFullDeobfuscatedName() + ")")));
@@ -229,7 +226,7 @@ public final class SrgMerger {
 					namespace -> "srg".equals(namespace) ? field.getDeobfuscatedName() : def.getName(namespace)
 			);
 
-			fields.add(new TinyField(def.getDescriptor("official"), fieldNames, Collections.emptyList()));
+			fields.add(new TinyField(def.getDesc("official"), fieldNames, Collections.emptyList()));
 		}
 
 		TinyClass tinyClass = new TinyClass(classNames, methods, fields, Collections.emptyList());
@@ -240,13 +237,13 @@ public final class SrgMerger {
 		}
 	}
 
-	private static boolean tryMatchRegardlessSrgs(Map<String, List<MutableDescriptored>> addRegardlessSrgs, List<String> namespaces, String obf,
+	private static boolean tryMatchRegardlessSrgs(Map<String, List<MappingTreeView.MemberMappingView>> addRegardlessSrgs, List<String> namespaces, String obf,
 			List<TinyMethod> methods, MethodMapping method) {
-		List<MutableDescriptored> mutableDescriptoredList = addRegardlessSrgs.get(obf);
+		List<MappingTreeView.MemberMappingView> mutableDescriptoredList = addRegardlessSrgs.get(obf);
 
 		if (!method.getDeobfuscatedName().equals(method.getObfuscatedName())) {
-			for (MutableDescriptored descriptored : MoreObjects.firstNonNull(mutableDescriptoredList, Collections.<MutableDescriptored>emptyList())) {
-				if (descriptored.isMethod() && descriptored.getName(0).equals(method.getObfuscatedName()) && descriptored.getDescriptor(0).equals(method.getObfuscatedDescriptor())) {
+			for (MappingTreeView.MemberMappingView descriptored : MoreObjects.firstNonNull(mutableDescriptoredList, Collections.<MappingTreeView.MemberMappingView>emptyList())) {
+				if (descriptored instanceof MappingTreeView.MethodMappingView && descriptored.getSrcName().equals(method.getObfuscatedName()) && descriptored.getSrcDesc().equals(method.getObfuscatedDescriptor())) {
 					List<String> methodNames = CollectionUtil.map(
 							namespaces,
 							namespace -> "srg".equals(namespace) ? method.getDeobfuscatedName() : method.getObfuscatedName()

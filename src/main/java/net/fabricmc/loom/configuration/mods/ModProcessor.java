@@ -67,7 +67,7 @@ import net.fabricmc.loom.util.LoggerFilter;
 import net.fabricmc.loom.util.TinyRemapperHelper;
 import net.fabricmc.loom.util.srg.AtRemapper;
 import net.fabricmc.loom.util.srg.CoreModClassRemapper;
-import net.fabricmc.mapping.tree.TinyTree;
+import net.fabricmc.mappingio.tree.MemoryMappingTree;
 
 public class ModProcessor {
 	public static void processMods(Project project, List<ModDependencyInfo> processList) throws IOException {
@@ -148,7 +148,7 @@ public class ModProcessor {
 		Stopwatch stopwatch = Stopwatch.createStarted();
 		project.getLogger().lifecycle(":remapping " + remapList.size() + " mods (TinyRemapper, " + fromM + " -> " + toM + ")");
 
-		TinyTree mappings = extension.isForge() ? mappingsProvider.getMappingsWithSrg() : mappingsProvider.getMappings();
+		MemoryMappingTree mappings = extension.isForge() ? mappingsProvider.getMappingsWithSrg() : mappingsProvider.getMappings();
 		LoggerFilter.replaceSystemOut();
 		TinyRemapper remapper = TinyRemapper.newRemapper()
 				.logger(project.getLogger()::lifecycle)

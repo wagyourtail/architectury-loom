@@ -39,6 +39,7 @@ import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
 
 import net.fabricmc.accesswidener.AccessWidenerReader;
+import net.fabricmc.accesswidener.AccessWidenerVisitor;
 import net.fabricmc.loom.LoomGradleExtension;
 import net.fabricmc.loom.task.RemapJarTask;
 
@@ -82,19 +83,19 @@ public final class Aw2At {
 	public static AccessTransformSet toAccessTransformSet(BufferedReader reader) throws IOException {
 		AccessTransformSet atSet = AccessTransformSet.create();
 
-		new AccessWidenerReader(new AccessWidenerReader.Visitor() {
+		new AccessWidenerReader(new AccessWidenerVisitor() {
 			@Override
-			public void visitClass(String name, AccessWidenerReader.AccessType access) {
+				public void visitClass(String name, AccessWidenerReader.AccessType access, boolean transitive) {
 				atSet.getOrCreateClass(name).merge(toAt(access));
 			}
 
 			@Override
-			public void visitMethod(String owner, String name, String descriptor, AccessWidenerReader.AccessType access) {
+				public void visitMethod(String owner, String name, String descriptor, AccessWidenerReader.AccessType access, boolean transitive) {
 				atSet.getOrCreateClass(owner).mergeMethod(MethodSignature.of(name, descriptor), toAt(access));
 			}
 
 			@Override
-			public void visitField(String owner, String name, String descriptor, AccessWidenerReader.AccessType access) {
+				public void visitField(String owner, String name, String descriptor, AccessWidenerReader.AccessType access, boolean transitive) {
 				atSet.getOrCreateClass(owner).mergeField(name, toAt(access));
 			}
 		}).read(reader);

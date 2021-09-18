@@ -27,6 +27,7 @@ package net.fabricmc.loom.configuration.providers.forge;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.StringWriter;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -44,11 +45,6 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
-import dev.architectury.mappingslayers.api.mutable.MappingsEntry;
-import dev.architectury.mappingslayers.api.mutable.MutableClassDef;
-import dev.architectury.mappingslayers.api.mutable.MutableFieldDef;
-import dev.architectury.mappingslayers.api.mutable.MutableTinyTree;
-import dev.architectury.mappingslayers.api.utils.MappingsUtils;
 import dev.architectury.refmapremapper.utils.DescriptorRemapper;
 import org.gradle.api.Project;
 import org.objectweb.asm.ClassReader;
@@ -58,14 +54,16 @@ import org.objectweb.asm.Opcodes;
 
 import net.fabricmc.loom.LoomGradleExtension;
 import net.fabricmc.loom.LoomGradlePlugin;
+import net.fabricmc.loom.api.mappings.layered.MappingsNamespace;
 import net.fabricmc.loom.configuration.providers.mappings.MappingsProviderImpl;
 import net.fabricmc.loom.util.FileSystemUtil;
 import net.fabricmc.loom.util.ThreadingUtils;
 import net.fabricmc.loom.util.srg.SrgMerger;
-import net.fabricmc.mapping.tree.ClassDef;
-import net.fabricmc.mapping.tree.FieldDef;
-import net.fabricmc.mapping.tree.TinyMappingFactory;
-import net.fabricmc.mapping.tree.TinyTree;
+import net.fabricmc.mappingio.MappingReader;
+import net.fabricmc.mappingio.format.Tiny2Writer;
+import net.fabricmc.mappingio.tree.MappingTree;
+import net.fabricmc.mappingio.tree.MappingTreeView;
+import net.fabricmc.mappingio.tree.MemoryMappingTree;
 
 public class FieldMigratedMappingsProvider extends MappingsProviderImpl {
 	private List<Map.Entry<FieldMember, String>> migratedFields = new ArrayList<>();
@@ -148,27 +146,30 @@ public class FieldMigratedMappingsProvider extends MappingsProviderImpl {
 				fieldDescriptorMap.put(entry.getKey().owner, entry.getKey().field, entry.getValue());
 			}
 
-			MutableTinyTree mappings;
+			MemoryMappingTree mappings = new MemoryMappingTree();
 
 			try (BufferedReader reader = Files.newBufferedReader(rawTinyMappings)) {
-				mappings = MappingsUtils.copyAsMutable(TinyMappingFactory.loadWithDetection(reader));
+				MappingReader.read(reader, mappings);
 
-				for (MutableClassDef classDef : mappings.getClassesMutable()) {
-					Map<String, String> row = fieldDescriptorMap.row(classDef.getIntermediary());
+				for (MappingTree.ClassMapping classDef : new ArrayList<>(mappings.getClasses())) {
+					Map<String, String> row = fieldDescriptorMap.row(classDef.getName(MappingsNamespace.INTERMEDIARY.toString()));
 
 					if (!row.isEmpty()) {
-						for (MutableFieldDef fieldDef : classDef.getFieldsMutable()) {
-							String newDescriptor = row.get(fieldDef.getIntermediary());
+						for (MappingTree.FieldMapping fieldDef : new ArrayList<>(classDef.getFields())) {
+							String newDescriptor = row.get(fieldDef.getName(MappingsNamespace.INTERMEDIARY.toString()));
 
 							if (newDescriptor != null) {
-								fieldDef.setDescriptor(MappingsEntry.NS_INTERMEDIARY, newDescriptor);
+								fieldDef.setSrcDesc(mappings.mapDesc(newDescriptor, mappings.getNamespaceId(MappingsNamespace.INTERMEDIARY.toString()), MappingTreeView.SRC_NAMESPACE_ID));
 							}
 						}
 					}
 				}
 			}
 
-			Files.writeString(tinyMappings, MappingsUtils.serializeToString(mappings), StandardOpenOption.CREATE);
+			StringWriter stringWriter = new StringWriter();
+			Tiny2Writer tiny2Writer = new Tiny2Writer(stringWriter, false);
+			mappings.accept(tiny2Writer);
+			Files.writeString(tinyMappings, stringWriter.toString(), StandardOpenOption.CREATE);
 		}
 	}
 
@@ -217,27 +218,28 @@ public class FieldMigratedMappingsProvider extends MappingsProviderImpl {
 		Map<FieldMember, String> migratedFields = new HashMap<>();
 
 		try (BufferedReader reader = Files.newBufferedReader(rawTinyMappingsWithSrg)) {
-			TinyTree mappings = TinyMappingFactory.loadWithDetection(reader);
+			MemoryMappingTree mappings = new MemoryMappingTree();
+			MappingReader.read(reader, mappings);
 			Map<String, String> srgToIntermediary = new HashMap<>();
 
-			for (ClassDef aClass : mappings.getClasses()) {
+			for (MappingTree.ClassMapping aClass : mappings.getClasses()) {
 				srgToIntermediary.put(aClass.getName("srg"), aClass.getName("intermediary"));
 			}
 
-			for (ClassDef classDef : mappings.getClasses()) {
+			for (MappingTree.ClassMapping classDef : mappings.getClasses()) {
 				String ownerSrg = classDef.getName("srg");
 				String ownerIntermediary = classDef.getName("intermediary");
 
-				for (FieldDef fieldDef : classDef.getFields()) {
+				for (MappingTree.FieldMapping fieldDef : classDef.getFields()) {
 					String fieldSrg = fieldDef.getName("srg");
-					String descriptorSrg = fieldDef.getDescriptor("srg");
+					String descriptorSrg = fieldDef.getDesc("srg");
 
 					FieldMember member = new FieldMember(ownerSrg, fieldSrg);
 					String newDescriptor = fieldDescriptorMap.get(member);
 
 					if (newDescriptor != null && !newDescriptor.equals(descriptorSrg)) {
 						String fieldIntermediary = fieldDef.getName("intermediary");
-						String descriptorIntermediary = fieldDef.getDescriptor("intermediary");
+						String descriptorIntermediary = fieldDef.getDesc("intermediary");
 						String newDescriptorRemapped = DescriptorRemapper.remapDescriptor(newDescriptor,
 								clazz -> srgToIntermediary.getOrDefault(clazz, clazz));
 						migratedFields.put(new FieldMember(ownerIntermediary, fieldIntermediary), newDescriptorRemapped);

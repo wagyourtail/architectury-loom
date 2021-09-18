@@ -71,7 +71,6 @@ import net.fabricmc.loom.util.DownloadUtil;
 import net.fabricmc.loom.util.srg.MCPReader;
 import net.fabricmc.loom.util.srg.SrgMerger;
 import net.fabricmc.loom.util.srg.SrgNamedWriter;
-import net.fabricmc.mapping.reader.v2.TinyMetadata;
 import net.fabricmc.mappingio.MappingReader;
 import net.fabricmc.mappingio.adapter.MappingNsCompleter;
 import net.fabricmc.mappingio.adapter.MappingSourceNsSwitch;
@@ -107,6 +106,7 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 	private boolean hasUnpickDefinitions;
 	private UnpickMetadata unpickMetadata;
 	private MemoryMappingTree mappingTree;
+	private MemoryMappingTree mappingTreeWithSrg;
 
 	public MappingsProviderImpl(Project project) {
 		super(project);
@@ -116,12 +116,8 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 		return Objects.requireNonNull(mappingTree, "Cannot get mappings before they have been read");
 	}
 
-	public TinyTree getMappingsWithSrg() throws IOException {
-		if (getExtension().shouldGenerateSrgTiny()) {
-			return MappingsCache.INSTANCE.get(tinyMappingsWithSrg);
-		}
-
-		throw new UnsupportedOperationException("Not running with Forge support / Tiny srg support.");
+	public MemoryMappingTree getMappingsWithSrg() throws IOException {
+		return Objects.requireNonNull(mappingTreeWithSrg, "Cannot get mappings before they have been read");
 	}
 
 	@Override
@@ -152,7 +148,7 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 			patchedProvider.provide(dependency, postPopulationScheduler);
 		}
 
-		mappingTree = readMappings();
+		mappingTree = readMappings(tinyMappings);
 		manipulateMappings(mappingsJar.toPath());
 
 		if (getExtension().shouldGenerateSrgTiny()) {
@@ -161,6 +157,8 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 				SrgMerger.mergeSrg(this::getMojmapSrgFileIfPossible, getRawSrgFile(), tinyMappings, tinyMappingsWithSrg, true);
 			}
 		}
+
+		mappingTreeWithSrg = readMappings(tinyMappingsWithSrg);
 
 		if (Files.notExists(tinyMappingsJar) || isRefreshDeps()) {
 			ZipUtil.pack(new ZipEntrySource[] {new FileSource("mappings/mappings.tiny", tinyMappings.toFile())}, tinyMappingsJar.toFile());
@@ -318,9 +316,9 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 		}
 	}
 
-	private MemoryMappingTree readMappings() throws IOException {
+	private static MemoryMappingTree readMappings(Path file) throws IOException {
 		MemoryMappingTree mappingTree = new MemoryMappingTree();
-		MappingReader.read(tinyMappings, mappingTree);
+		MappingReader.read(file, mappingTree);
 		return mappingTree;
 	}
 
@@ -362,9 +360,8 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 
 	private static boolean areMappingsMergedV2(Path path) throws IOException {
 		try (BufferedReader reader = Files.newBufferedReader(path)) {
-			TinyMetadata metadata = TinyV2Factory.readMetadata(reader);
-			return metadata.getNamespaces().containsAll(Arrays.asList("named", "intermediary", "official"));
-		} catch (IllegalArgumentException | NoSuchFileException e) {
+			return MappingReader.detectFormat(reader) == MappingFormat.TINY_2 && MappingReader.getNamespaces(reader).containsAll(Arrays.asList("named", "intermediary", "official"));
+		} catch (NoSuchFileException e) {
 			return false;
 		}
 	}
@@ -374,6 +371,8 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 			try (BufferedReader reader = Files.newBufferedReader(fs.getPath("mappings", "mappings.tiny"))) {
 				return MappingReader.detectFormat(reader) == MappingFormat.TINY_2;
 			}
+		} catch (NoSuchFileException e) {
+			return false;
 		}
 	}
 
@@ -466,10 +465,10 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 			runCommand(command, intermediaryMappings.toAbsolutePath().toString(),
 					yarnMappings.toAbsolutePath().toString(),
 					newMergedMappings.toAbsolutePath().toString(),
-							MappingsNamespace.INTERMEDIARY.toString(), MappingsNamespace.OFFICIAL.toString());
+					MappingsNamespace.INTERMEDIARY.toString(), MappingsNamespace.OFFICIAL.toString());
 		} catch (Exception e) {
 			throw new RuntimeException("Could not merge mappings from " + intermediaryMappings.toString()
-					+ " with mappings from " + yarnMappings, e);
+			                           + " with mappings from " + yarnMappings, e);
 		}
 	}
 

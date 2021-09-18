@@ -42,7 +42,7 @@ import org.gradle.api.logging.Logger;
 
 import net.fabricmc.loom.util.Constants;
 import net.fabricmc.loom.util.function.CollectionUtil;
-import net.fabricmc.mapping.tree.TinyTree;
+import net.fabricmc.mappingio.tree.MappingTree;
 
 /**
  * Remaps AT classes from SRG to Yarn.
@@ -50,7 +50,7 @@ import net.fabricmc.mapping.tree.TinyTree;
  * @author Juuz
  */
 public final class AtRemapper {
-	public static void remap(Logger logger, Path jar, TinyTree mappings) throws IOException {
+	public static void remap(Logger logger, Path jar, MappingTree mappings) throws IOException {
 		try (FileSystem fs = FileSystems.newFileSystem(URI.create("jar:" + jar.toUri()), ImmutableMap.of("create", false))) {
 			Path atPath = fs.getPath(Constants.Forge.ACCESS_TRANSFORMER_PATH);
 

@@ -39,11 +39,10 @@ import dev.architectury.tinyremapper.IMappingProvider;
 
 import net.fabricmc.loom.util.FileSystemUtil;
 import net.fabricmc.loom.util.FileSystemUtil.FileSystemDelegate;
-import net.fabricmc.mapping.tree.ClassDef;
-import net.fabricmc.mapping.tree.TinyTree;
+import net.fabricmc.mappingio.tree.MappingTree;
 
 public class InnerClassRemapper {
-	public static IMappingProvider of(Set<String> fromClassNames, TinyTree mappingsWithSrg, String from, String to) throws IOException {
+	public static IMappingProvider of(Set<String> fromClassNames, MappingTree mappingsWithSrg, String from, String to) throws IOException {
 		return sink -> {
 			remapInnerClass(fromClassNames, mappingsWithSrg, from, to, sink::acceptClass);
 		};
@@ -72,10 +71,10 @@ public class InnerClassRemapper {
 		return set;
 	}
 
-	private static void remapInnerClass(Set<String> classNames, TinyTree mappingsWithSrg, String from, String to, BiConsumer<String, String> action) {
+	private static void remapInnerClass(Set<String> classNames, MappingTree mappingsWithSrg, String from, String to, BiConsumer<String, String> action) {
 		BiMap<String, String> availableClasses = HashBiMap.create(mappingsWithSrg.getClasses().stream()
 				.collect(Collectors.groupingBy(classDef -> classDef.getName(from),
-						Collectors.<ClassDef, String>reducing(
+						Collectors.<MappingTree.ClassMapping, String>reducing(
 								null,
 								classDef -> classDef.getName(to),
 								(first, last) -> last

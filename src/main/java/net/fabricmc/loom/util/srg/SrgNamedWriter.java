@@ -32,10 +32,10 @@ import org.cadixdev.lorenz.io.srg.SrgWriter;
 import org.gradle.api.logging.Logger;
 
 import net.fabricmc.lorenztiny.TinyMappingsReader;
-import net.fabricmc.mapping.tree.TinyTree;
+import net.fabricmc.mappingio.tree.MappingTree;
 
 public class SrgNamedWriter {
-	public static void writeTo(Logger logger, Path srgFile, TinyTree mappings, String from, String to) throws IOException {
+	public static void writeTo(Logger logger, Path srgFile, MappingTree mappings, String from, String to) throws IOException {
 		Files.deleteIfExists(srgFile);
 
 		try (SrgWriter writer = new SrgWriter(Files.newBufferedWriter(srgFile))) {

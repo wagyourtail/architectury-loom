@@ -30,18 +30,19 @@ import java.nio.file.Path;
 import java.util.Map;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import dev.architectury.tinyremapper.IMappingProvider;
+import dev.architectury.tinyremapper.TinyRemapper;
 import org.gradle.api.Project;
 
 import net.fabricmc.loom.LoomGradleExtension;
 import net.fabricmc.mappingio.tree.MappingTree;
-import net.fabricmc.tinyremapper.IMappingProvider;
-import net.fabricmc.tinyremapper.TinyRemapper;
 
 /**
  * Contains shortcuts to create tiny remappers using the mappings accessibly to the project.
  */
 public final class TinyRemapperHelper {
-	private static final Map<String, String> JSR_TO_JETBRAINS = new ImmutableMap.Builder<String, String>()
+	public static final Map<String, String> JSR_TO_JETBRAINS = new ImmutableMap.Builder<String, String>()
 			.put("javax/annotation/Nullable", "org/jetbrains/annotations/Nullable")
 			.put("javax/annotation/Nonnull", "org/jetbrains/annotations/NotNull")
 			.put("javax/annotation/concurrent/Immutable", "org/jetbrains/annotations/Unmodifiable")
@@ -53,12 +54,41 @@ public final class TinyRemapperHelper {
 	public static TinyRemapper getTinyRemapper(Project project, String fromM, String toM) throws IOException {
 		LoomGradleExtension extension = LoomGradleExtension.get(project);
 
-		return TinyRemapper.newRemapper()
-				.withMappings(create(extension.getMappingsProvider().getMappings(), fromM, toM, true))
-				.withMappings(out -> JSR_TO_JETBRAINS.forEach(out::acceptClass))
+		TinyRemapper remapper = _getTinyRemapper(project);
+		remapper.replaceMappings(ImmutableSet.of(
+				TinyRemapperHelper.create(extension.isForge() ? extension.getMappingsProvider().getMappingsWithSrg() : extension.getMappingsProvider().getMappings(), fromM, toM, true),
+				out -> TinyRemapperHelper.JSR_TO_JETBRAINS.forEach(out::acceptClass)
+		));
+		return remapper;
+	}
+
+	public static TinyRemapper _getTinyRemapper(Project project) throws IOException {
+		LoomGradleExtension extension = LoomGradleExtension.get(project);
+
+		TinyRemapper.Builder builder = TinyRemapper.newRemapper()
 				.renameInvalidLocals(true)
-				.rebuildSourceFilenames(true)
-				.build();
+				.logUnknownInvokeDynamic(false)
+				.ignoreConflicts(extension.isForge())
+				.cacheMappings(true)
+				.threads(Runtime.getRuntime().availableProcessors())
+				.logger(project.getLogger()::lifecycle)
+				.rebuildSourceFilenames(true);
+
+		if (extension.isForge()) {
+			/* FORGE: Required for classes like aej$OptionalNamedTag (1.16.4) which are added by Forge patches.
+			 * They won't get remapped to their proper packages, so IllegalAccessErrors will happen without ._.
+			 */
+			builder.fixPackageAccess(true);
+		}
+
+		return builder.build();
+	}
+
+	public static TinyRemapper getTinyRemapper(Project project) throws IOException {
+		TinyRemapper remapper = _getTinyRemapper(project);
+		remapper.readClassPath(getMinecraftDependencies(project));
+		remapper.prepareClasses();
+		return remapper;
 	}
 
 	public static Path[] getMinecraftDependencies(Project project) {

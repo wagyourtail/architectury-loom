@@ -47,4 +47,6 @@ public interface LayeredMappingSpecBuilder {
 	}
 
 	LayeredMappingSpecBuilder parchment(Object object, Action<ParchmentMappingsSpecBuilder> action);
+
+	LayeredMappingSpecBuilder crane(Object object);
 }

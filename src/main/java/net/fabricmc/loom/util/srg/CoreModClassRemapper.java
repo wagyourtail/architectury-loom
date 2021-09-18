@@ -47,7 +47,7 @@ import com.google.gson.JsonObject;
 import org.gradle.api.logging.Logger;
 
 import net.fabricmc.loom.util.function.CollectionUtil;
-import net.fabricmc.mapping.tree.TinyTree;
+import net.fabricmc.mappingio.tree.MappingTree;
 
 /**
  * Remaps coremod class names from SRG to Yarn.
@@ -57,7 +57,7 @@ import net.fabricmc.mapping.tree.TinyTree;
 public final class CoreModClassRemapper {
 	private static final Pattern CLASS_NAME_PATTERN = Pattern.compile("^(.*')((?:com\\.mojang\\.|net\\.minecraft\\.)[A-Za-z0-9.-_$]+)('.*)$");
 
-	public static void remapJar(Path jar, TinyTree mappings, Logger logger) throws IOException {
+	public static void remapJar(Path jar, MappingTree mappings, Logger logger) throws IOException {
 		try (FileSystem fs = FileSystems.newFileSystem(URI.create("jar:" + jar.toUri()), ImmutableMap.of("create", false))) {
 			Path coremodsJsonPath = fs.getPath("META-INF", "coremods.json");
 
@@ -86,7 +86,7 @@ public final class CoreModClassRemapper {
 		}
 	}
 
-	public static void remap(Path js, TinyTree mappings) throws IOException {
+	public static void remap(Path js, MappingTree mappings) throws IOException {
 		List<String> lines = Files.readAllLines(js);
 		List<String> output = new ArrayList<>(lines);
 

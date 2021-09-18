@@ -24,12 +24,13 @@
 
 package net.fabricmc.loom.configuration.providers.mappings.crane;
 
-import net.fabricmc.loom.configuration.providers.mappings.MappingContext;
-import net.fabricmc.loom.configuration.providers.mappings.MappingsSpec;
+import net.fabricmc.loom.api.mappings.layered.MappingContext;
+import net.fabricmc.loom.api.mappings.layered.spec.FileSpec;
+import net.fabricmc.loom.api.mappings.layered.spec.MappingsSpec;
 
-public record CraneMappingsSpec(String mavenNotation) implements MappingsSpec<CraneMappingLayer> {
+public record CraneMappingsSpec(FileSpec fileSpec) implements MappingsSpec<CraneMappingLayer> {
 	@Override
 	public CraneMappingLayer createLayer(MappingContext context) {
-		return new CraneMappingLayer(context.mavenFile(mavenNotation()));
+		return new CraneMappingLayer(fileSpec().get(context));
 	}
 }

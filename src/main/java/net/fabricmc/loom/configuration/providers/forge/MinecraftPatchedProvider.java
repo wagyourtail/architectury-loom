@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.io.StringReader;
 import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -65,10 +66,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.Hashing;
 import com.google.common.io.ByteSource;
 import de.oceanlabs.mcp.mcinjector.adaptors.ParameterAnnotationFixer;
-import dev.architectury.mappingslayers.api.mutable.MutableClassDef;
-import dev.architectury.mappingslayers.api.mutable.MutableMethodDef;
-import dev.architectury.mappingslayers.api.mutable.MutableTinyTree;
-import dev.architectury.mappingslayers.api.utils.MappingsUtils;
 import dev.architectury.tinyremapper.InputTag;
 import dev.architectury.tinyremapper.OutputConsumerPath;
 import dev.architectury.tinyremapper.TinyRemapper;
@@ -92,25 +89,27 @@ import org.objectweb.asm.tree.ClassNode;
 import org.zeroturnaround.zip.ZipUtil;
 
 import net.fabricmc.loom.LoomGradleExtension;
+import net.fabricmc.loom.api.mappings.layered.MappingsNamespace;
 import net.fabricmc.loom.configuration.DependencyProvider;
 import net.fabricmc.loom.configuration.providers.MinecraftProviderImpl;
 import net.fabricmc.loom.configuration.providers.mappings.GradleMappingContext;
-import net.fabricmc.loom.configuration.providers.mappings.MappingNamespace;
 import net.fabricmc.loom.configuration.providers.mappings.mojmap.MojangMappingLayer;
 import net.fabricmc.loom.configuration.providers.mappings.mojmap.MojangMappingsSpec;
-import net.fabricmc.loom.configuration.providers.minecraft.MinecraftMappedProvider;
 import net.fabricmc.loom.util.Constants;
 import net.fabricmc.loom.util.DependencyDownloader;
 import net.fabricmc.loom.util.FileSystemUtil;
 import net.fabricmc.loom.util.MappingsProviderVerbose;
 import net.fabricmc.loom.util.ThreadingUtils;
-import net.fabricmc.loom.util.TinyRemapperMappingsHelper;
+import net.fabricmc.loom.util.TinyRemapperHelper;
 import net.fabricmc.loom.util.function.FsPathConsumer;
 import net.fabricmc.loom.util.srg.InnerClassRemapper;
 import net.fabricmc.loom.util.srg.SpecialSourceExecutor;
 import net.fabricmc.loom.util.srg.Tsrg2Utils;
-import net.fabricmc.mapping.tree.TinyTree;
+import net.fabricmc.loom.util.srg.Tsrg2Writer;
+import net.fabricmc.mappingio.MappingReader;
 import net.fabricmc.mappingio.MappingVisitor;
+import net.fabricmc.mappingio.tree.MappingTree;
+import net.fabricmc.mappingio.tree.MemoryMappingTree;
 
 public class MinecraftPatchedProvider extends DependencyProvider {
 	private static final String LOOM_PATCH_VERSION_KEY = "Loom-Patch-Version";
@@ -319,12 +318,12 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 	}
 
 	private TinyRemapper buildRemapper(Path input) throws IOException {
-		Path[] libraries = MinecraftMappedProvider.getRemapClasspath(getProject());
-		TinyTree mappingsWithSrg = getExtension().getMappingsProvider().getMappingsWithSrg();
+		Path[] libraries = TinyRemapperHelper.getMinecraftDependencies(getProject());
+		MemoryMappingTree mappingsWithSrg = getExtension().getMappingsProvider().getMappingsWithSrg();
 		TinyRemapper remapper = TinyRemapper.newRemapper()
 				.logger(getProject().getLogger()::lifecycle)
 				.logUnknownInvokeDynamic(false)
-				.withMappings(TinyRemapperMappingsHelper.create(mappingsWithSrg, "srg", "official", true))
+				.withMappings(TinyRemapperHelper.create(mappingsWithSrg, "srg", "official", true))
 				.withMappings(InnerClassRemapper.of(InnerClassRemapper.readClassNames(input), mappingsWithSrg, "srg", "official"))
 				.renameInvalidLocals(true)
 				.rebuildSourceFilenames(true)
@@ -377,14 +376,14 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 		GradleMappingContext context = new GradleMappingContext(project, "tmp-mojmap");
 
 		try {
-			FileUtils.deleteDirectory(context.workingDirectory("/"));
+			FileUtils.deleteDirectory(context.workingDirectory("/").toFile());
 			MojangMappingLayer layer = new MojangMappingsSpec(() -> true).createLayer(context);
 			layer.visit(visitor);
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		} finally {
 			try {
-				FileUtils.deleteDirectory(context.workingDirectory("/"));
+				FileUtils.deleteDirectory(context.workingDirectory("/").toFile());
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -397,7 +396,7 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 		if (Files.notExists(path)) {
 			try (BufferedWriter writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
 				Tsrg2Utils.writeTsrg(visitor -> visitMojmap(visitor, project),
-						MappingNamespace.NAMED.stringValue(), false, writer);
+						MappingsNamespace.NAMED.toString(), false, writer);
 			}
 		}
 
@@ -409,7 +408,9 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 
 		if (Files.notExists(path)) {
 			try (BufferedWriter writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
-				Tsrg2Utils.writeTsrg2(visitor -> visitMojmap(visitor, project), writer);
+				MemoryMappingTree tree = new MemoryMappingTree();
+				visitMojmap(tree, project);
+				writer.write(Tsrg2Writer.serialize(tree));
 			}
 		}
 
@@ -432,15 +433,16 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 					out.toAbsolutePath().toString()
 			});
 
-			MutableTinyTree mappings = MappingsUtils.deserializeFromTsrg2(FileUtils.readFileToString(out.toFile(), StandardCharsets.UTF_8));
+			MemoryMappingTree tree = new MemoryMappingTree();
+			MappingReader.read(new StringReader(FileUtils.readFileToString(out.toFile(), StandardCharsets.UTF_8)), tree);
 
-			for (MutableClassDef classDef : mappings.getClassesMutable()) {
-				for (MutableMethodDef methodDef : classDef.getMethodsMutable()) {
-					methodDef.getParametersMutable().clear();
+			for (MappingTree.ClassMapping classDef : tree.getClasses()) {
+				for (MappingTree.MethodMapping methodDef : classDef.getMethods()) {
+					methodDef.getArgs().clear();
 				}
 			}
 
-			Files.writeString(outTrimmed, MappingsUtils.serializeToTsrg2(mappings), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+			Files.writeString(outTrimmed, 	Tsrg2Writer.serialize(tree), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
 			mergedMojangTsrg2Files = new Path[]{out, outTrimmed};
 		}

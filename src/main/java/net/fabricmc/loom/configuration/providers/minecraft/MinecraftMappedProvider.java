@@ -32,12 +32,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.ImmutableMap;
 import dev.architectury.tinyremapper.IMappingProvider;
 import dev.architectury.tinyremapper.InputTag;
 import dev.architectury.tinyremapper.NonClassCopyMode;
@@ -61,15 +59,9 @@ import net.fabricmc.loom.util.TinyRemapperHelper;
 import net.fabricmc.loom.util.srg.AtRemapper;
 import net.fabricmc.loom.util.srg.CoreModClassRemapper;
 import net.fabricmc.loom.util.srg.InnerClassRemapper;
-import net.fabricmc.mapping.tree.TinyTree;
+import net.fabricmc.mappingio.tree.MemoryMappingTree;
 
 public class MinecraftMappedProvider extends DependencyProvider {
-	public static final Map<String, String> JSR_TO_JETBRAINS = new ImmutableMap.Builder<String, String>()
-			.put("javax/annotation/Nullable", "org/jetbrains/annotations/Nullable")
-			.put("javax/annotation/Nonnull", "org/jetbrains/annotations/NotNull")
-			.put("javax/annotation/concurrent/Immutable", "org/jetbrains/annotations/Unmodifiable")
-			.build();
-
 	private File inputJar;
 	private File inputForgeJar;
 	private File minecraftMappedJar;
@@ -177,14 +169,6 @@ public class MinecraftMappedProvider extends DependencyProvider {
 		}
 	}
 
-	private TinyRemapper buildRemapper() throws IOException {
-		Path[] libraries = getRemapClasspath(getProject());
-		TinyRemapper remapper = getTinyRemapper();
-		remapper.readClassPath(libraries);
-		remapper.prepareClasses();
-		return remapper;
-	}
-
 	private byte[][] inputBytes(Path input) throws IOException {
 		List<byte[]> inputByteList = new ArrayList<>();
 
@@ -244,7 +228,7 @@ public class MinecraftMappedProvider extends DependencyProvider {
 		Info vanilla = new Info(vanillaAssets, input, outputMapped, outputIntermediary, outputSrg);
 		Info forge = getExtension().isForgeAndNotOfficial() ? new Info(forgeAssets, inputForge, forgeOutputMapped, forgeOutputIntermediary, forgeOutputSrg) : null;
 
-		TinyRemapper remapper = remapperArray[0] = buildRemapper();
+		TinyRemapper remapper = remapperArray[0] = TinyRemapperHelper.getTinyRemapper(getProject());
 
 		assetsOut(input, vanillaAssets);
 
@@ -295,58 +279,32 @@ public class MinecraftMappedProvider extends DependencyProvider {
 				OutputRemappingHandler.remap(remapper, forge.assets, outputForge, null, forgeTag);
 			}
 
-			// TODO TinyRemapperHelper
 			getProject().getLogger().lifecycle(":remapped minecraft (TinyRemapper, " + fromM + " -> " + toM + ") in " + stopwatch);
 			remapper.removeInput();
 
 			if (getExtension().isForge() && !"srg".equals(toM)) {
 				getProject().getLogger().info(":running minecraft finalising tasks");
 
-				TinyTree yarnWithSrg = getExtension().getMappingsProvider().getMappingsWithSrg();
+				MemoryMappingTree yarnWithSrg = getExtension().getMappingsProvider().getMappingsWithSrg();
 				AtRemapper.remap(getProject().getLogger(), output, yarnWithSrg);
 				CoreModClassRemapper.remapJar(output, yarnWithSrg, getProject().getLogger());
 			}
 		}
 	}
 
-	public TinyRemapper getTinyRemapper() throws IOException {
-		TinyRemapper.Builder builder = TinyRemapper.newRemapper()
-				.renameInvalidLocals(true)
-				.logUnknownInvokeDynamic(false)
-				.ignoreConflicts(getExtension().isForge())
-				.cacheMappings(true)
-				.threads(Runtime.getRuntime().availableProcessors())
-				.logger(getProject().getLogger()::lifecycle)
-				.rebuildSourceFilenames(true);
-
-		if (getExtension().isForge()) {
-			/* FORGE: Required for classes like aej$OptionalNamedTag (1.16.4) which are added by Forge patches.
-			 * They won't get remapped to their proper packages, so IllegalAccessErrors will happen without ._.
-			 */
-			builder.fixPackageAccess(true);
-		}
-
-		return builder.build();
-	}
-
 	public Set<IMappingProvider> getMappings(@Nullable Set<String> fromClassNames, String fromM, String toM) throws IOException {
 		Set<IMappingProvider> providers = new HashSet<>();
-		providers.add(TinyRemapperMappingsHelper.create(getExtension().isForge() ? getExtension().getMappingsProvider().getMappingsWithSrg() : getExtension().getMappingsProvider().getMappings(), fromM, toM, true));
+		providers.add(TinyRemapperHelper.create(getExtension().isForge() ? getExtension().getMappingsProvider().getMappingsWithSrg() : getExtension().getMappingsProvider().getMappings(), fromM, toM, true));
 
 		if (getExtension().isForge()) {
 			if (fromClassNames != null) {
 				providers.add(InnerClassRemapper.of(fromClassNames, getExtension().getMappingsProvider().getMappingsWithSrg(), fromM, toM));
 			}
 		} else {
-			providers.add(out -> JSR_TO_JETBRAINS.forEach(out::acceptClass));
+			providers.add(out -> TinyRemapperHelper.JSR_TO_JETBRAINS.forEach(out::acceptClass));
 		}
 
 		return providers;
-	}
-
-	public static Path[] getRemapClasspath(Project project) {
-		return project.getConfigurations().getByName(Constants.Configurations.MINECRAFT_DEPENDENCIES).getFiles()
-				.stream().map(File::toPath).toArray(Path[]::new);
 	}
 
 	protected void addDependencies(DependencyInfo dependency, Consumer<Runnable> postPopulationScheduler) {

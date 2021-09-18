@@ -25,19 +25,22 @@
 package net.fabricmc.loom.util;
 
 import java.io.IOException;
+import java.io.StringWriter;
+import java.io.UncheckedIOException;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.Arrays;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Set;
 
-import dev.architectury.mappingslayers.api.mutable.MutableTinyMetadata;
-import dev.architectury.mappingslayers.api.mutable.MutableTinyTree;
-import dev.architectury.mappingslayers.api.utils.MappingsUtils;
 import dev.architectury.tinyremapper.IMappingProvider;
 import dev.architectury.tinyremapper.TinyRemapper;
+
+import net.fabricmc.mappingio.adapter.RegularAsFlatMappingVisitor;
+import net.fabricmc.mappingio.format.Tiny2Writer;
+import net.fabricmc.mappingio.tree.MemoryMappingTree;
 
 public class MappingsProviderVerbose {
 	public static void saveFile(TinyRemapper providers) throws IOException {
@@ -52,26 +55,38 @@ public class MappingsProviderVerbose {
 	}
 
 	public static void saveFile(Iterable<IMappingProvider> providers) throws IOException {
-		MutableTinyTree tree = MappingsUtils.create(MutableTinyMetadata.create(2, 0, Arrays.asList("from", "to"), new HashMap<>()));
+		MemoryMappingTree tree = new MemoryMappingTree();
+		tree.setSrcNamespace("from");
+		tree.setDstNamespaces(new ArrayList<>(Collections.singletonList("to")));
+		RegularAsFlatMappingVisitor flatVisitor = new RegularAsFlatMappingVisitor(tree);
 
 		for (IMappingProvider provider : providers) {
 			provider.load(new IMappingProvider.MappingAcceptor() {
 				@Override
 				public void acceptClass(String from, String to) {
-					tree.getOrCreateClass(from).setName(1, to);
+					try {
+						flatVisitor.visitClass(from, to);
+					} catch (IOException e) {
+						throw new UncheckedIOException(e);
+					}
 				}
 
 				@Override
 				public void acceptMethod(IMappingProvider.Member from, String to) {
-					tree.getOrCreateClass(from.owner).getOrCreateMethod(from.name, from.desc)
-							.setName(1, to);
+					try {
+						flatVisitor.visitMethod(from.owner, from.name, from.desc, to);
+					} catch (IOException e) {
+						throw new UncheckedIOException(e);
+					}
 				}
 
 				@Override
 				public void acceptMethodArg(IMappingProvider.Member from, int lvIndex, String to) {
-					tree.getOrCreateClass(from.owner).getOrCreateMethod(from.name, from.desc)
-							.getOrCreateParameter(lvIndex, "")
-							.setName(1, to);
+					try {
+						flatVisitor.visitMethodArg(from.owner, from.name, from.desc, lvIndex, lvIndex, "", to);
+					} catch (IOException e) {
+						throw new UncheckedIOException(e);
+					}
 				}
 
 				@Override
@@ -81,14 +96,20 @@ public class MappingsProviderVerbose {
 
 				@Override
 				public void acceptField(IMappingProvider.Member from, String to) {
-					tree.getOrCreateClass(from.owner).getOrCreateField(from.name, from.desc)
-							.setName(1, to);
+					try {
+						flatVisitor.visitField(from.owner, from.name, from.desc, to);
+					} catch (IOException e) {
+						throw new UncheckedIOException(e);
+					}
 				}
 			});
 		}
 
 		Path check = Files.createTempFile("CHECK", null);
-		Files.writeString(check, MappingsUtils.serializeToString(tree), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+		StringWriter stringWriter = new StringWriter();
+		Tiny2Writer tiny2Writer = new Tiny2Writer(stringWriter, false);
+		tree.accept(tiny2Writer);
+		Files.writeString(check, stringWriter.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 		System.out.println("Saved debug check mappings to " + check);
 	}
 }
