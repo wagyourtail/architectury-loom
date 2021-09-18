@@ -28,6 +28,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -47,6 +48,11 @@ public final class TinyRemapperHelper {
 			.put("javax/annotation/Nonnull", "org/jetbrains/annotations/NotNull")
 			.put("javax/annotation/concurrent/Immutable", "org/jetbrains/annotations/Unmodifiable")
 			.build();
+
+	/**
+	 * Matches the new local variable naming format introduced in 21w37a.
+	 */
+	private static final Pattern MC_LV_PATTERN = Pattern.compile("\\$\\$\\d+");
 
 	private TinyRemapperHelper() {
 	}
@@ -81,7 +87,8 @@ public final class TinyRemapperHelper {
 			builder.fixPackageAccess(true);
 		}
 
-		return builder.build();
+		return builder.invalidLvNamePattern(MC_LV_PATTERN)
+				.build();
 	}
 
 	public static TinyRemapper getTinyRemapper(Project project) throws IOException {
