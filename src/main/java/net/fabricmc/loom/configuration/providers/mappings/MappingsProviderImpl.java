@@ -156,9 +156,9 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 				// Merge tiny mappings with srg
 				SrgMerger.mergeSrg(this::getMojmapSrgFileIfPossible, getRawSrgFile(), tinyMappings, tinyMappingsWithSrg, true);
 			}
-		}
 
-		mappingTreeWithSrg = readMappings(tinyMappingsWithSrg);
+			mappingTreeWithSrg = readMappings(tinyMappingsWithSrg);
+		}
 
 		if (Files.notExists(tinyMappingsJar) || isRefreshDeps()) {
 			ZipUtil.pack(new ZipEntrySource[] {new FileSource("mappings/mappings.tiny", tinyMappings.toFile())}, tinyMappingsJar.toFile());
