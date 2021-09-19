@@ -73,7 +73,7 @@ public class MinecraftMappedProvider extends DependencyProvider {
 	private File forgeIntermediaryJar;
 	private File forgeSrgJar;
 
-	private MinecraftProviderImpl minecraftProvider;
+	protected MinecraftProviderImpl minecraftProvider;
 
 	public MinecraftMappedProvider(Project project) {
 		super(project);

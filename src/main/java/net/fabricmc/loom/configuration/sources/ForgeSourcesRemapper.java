@@ -26,6 +26,7 @@ package net.fabricmc.loom.configuration.sources;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -39,11 +40,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
+import org.apache.commons.io.output.NullOutputStream;
 import org.cadixdev.lorenz.MappingSet;
 import org.cadixdev.mercury.Mercury;
 import org.cadixdev.mercury.remapper.MercuryRemapper;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.ResolvedArtifact;
+import org.gradle.api.logging.LogLevel;
+import org.gradle.api.logging.configuration.ShowStacktrace;
 import org.zeroturnaround.zip.ZipUtil;
 
 import net.fabricmc.loom.LoomGradleExtension;
@@ -134,7 +138,21 @@ public class ForgeSourcesRemapper {
 			taskCompleter.complete();
 		}
 
+		PrintStream out = System.out;
+		PrintStream err = System.err;
+
+		if (project.getGradle().getStartParameter().getShowStacktrace() == ShowStacktrace.INTERNAL_EXCEPTIONS && project.getGradle().getStartParameter().getLogLevel().compareTo(LogLevel.LIFECYCLE) >= 0) {
+			System.setOut(new PrintStream(NullOutputStream.NULL_OUTPUT_STREAM));
+			System.setErr(new PrintStream(NullOutputStream.NULL_OUTPUT_STREAM));
+		}
+
 		remapForgeSourcesInner(project, tmpInput.toPath(), tmpOutput.toPath());
+
+		if (project.getGradle().getStartParameter().getShowStacktrace() == ShowStacktrace.INTERNAL_EXCEPTIONS && project.getGradle().getStartParameter().getLogLevel().compareTo(LogLevel.LIFECYCLE) >= 0) {
+			System.setOut(out);
+			System.setErr(err);
+		}
+
 		tmpInput.delete();
 		int[] failedToRemap = {0};
 
@@ -149,7 +167,7 @@ public class ForgeSourcesRemapper {
 						sources.put(entry.getKey(), Files.readAllBytes(path));
 					} else {
 						sources.remove(entry.getKey());
-						project.getLogger().error("forge source failed to remap " + entry.getKey());
+						project.getLogger().error("Failed to remap sources for " + entry.getKey());
 						failedToRemap[0]++;
 					}
 				});
@@ -161,7 +179,7 @@ public class ForgeSourcesRemapper {
 		tmpOutput.delete();
 
 		if (failedToRemap[0] > 0) {
-			project.getLogger().error("{} forge sources failed to remap", failedToRemap[0]);
+			project.getLogger().error("Failed to remap {} forge sources", failedToRemap[0]);
 		}
 	}
 
