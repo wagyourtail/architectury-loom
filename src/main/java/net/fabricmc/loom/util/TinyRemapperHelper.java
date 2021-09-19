@@ -37,7 +37,9 @@ import dev.architectury.tinyremapper.TinyRemapper;
 import org.gradle.api.Project;
 
 import net.fabricmc.loom.LoomGradleExtension;
+import net.fabricmc.loom.api.mappings.layered.MappingsNamespace;
 import net.fabricmc.mappingio.tree.MappingTree;
+import net.fabricmc.mappingio.tree.MemoryMappingTree;
 
 /**
  * Contains shortcuts to create tiny remappers using the mappings accessibly to the project.
@@ -58,9 +60,13 @@ public final class TinyRemapperHelper {
 	}
 
 	public static TinyRemapper getTinyRemapper(Project project, String fromM, String toM) throws IOException {
+		return getTinyRemapper(project, fromM, toM, false);
+	}
+
+	public static TinyRemapper getTinyRemapper(Project project, String fromM, String toM, boolean fixRecords) throws IOException {
 		LoomGradleExtension extension = LoomGradleExtension.get(project);
 
-		TinyRemapper remapper = _getTinyRemapper(project);
+		TinyRemapper remapper = _getTinyRemapper(project, fixRecords);
 		remapper.replaceMappings(ImmutableSet.of(
 				TinyRemapperHelper.create(extension.isForge() ? extension.getMappingsProvider().getMappingsWithSrg() : extension.getMappingsProvider().getMappings(), fromM, toM, true),
 				out -> TinyRemapperHelper.JSR_TO_JETBRAINS.forEach(out::acceptClass)
@@ -68,8 +74,15 @@ public final class TinyRemapperHelper {
 		return remapper;
 	}
 
-	public static TinyRemapper _getTinyRemapper(Project project) throws IOException {
+	public static TinyRemapper _getTinyRemapper(Project project, boolean fixRecords) throws IOException {
 		LoomGradleExtension extension = LoomGradleExtension.get(project);
+		MemoryMappingTree mappingTree = extension.getMappingsProvider().getMappings();
+
+		if (fixRecords && !mappingTree.getSrcNamespace().equals(fromM)) {
+			throw new IllegalStateException("Mappings src namespace must match remap src namespace");
+		}
+
+		int intermediaryNsId = mappingTree.getNamespaceId(MappingsNamespace.INTERMEDIARY.toString());
 
 		TinyRemapper.Builder builder = TinyRemapper.newRemapper()
 				.renameInvalidLocals(true)
@@ -88,6 +101,13 @@ public final class TinyRemapperHelper {
 		}
 
 		return builder.invalidLvNamePattern(MC_LV_PATTERN)
+				.extraPreApplyVisitor((cls, next) -> {
+					if (fixRecords && !cls.isRecord() && "java/lang/Record".equals(cls.getSuperName())) {
+						return new RecordComponentFixVisitor(next, mappingTree, intermediaryNsId);
+					}
+
+					return next;
+				})
 				.build();
 	}
 
