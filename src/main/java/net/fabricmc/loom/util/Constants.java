@@ -113,7 +113,7 @@ public class Constants {
 			public static final String TERMINAL_CONSOLE_APPENDER = "1.2.0";
 			public static final String JETBRAINS_ANNOTATIONS = "22.0.0";
 			public static final String JAVAX_ANNOTATIONS = "3.0.2";
-			public static final String FORGE_RUNTIME = "1.0.1";
+			public static final String FORGE_RUNTIME = "1.1.3";
 			public static final String ACCESS_TRANSFORMERS = "3.0.1";
 			public static final String SPECIAL_SOURCE = "1.8.3";
 			public static final String VIGNETTE = "0.2.0.10";

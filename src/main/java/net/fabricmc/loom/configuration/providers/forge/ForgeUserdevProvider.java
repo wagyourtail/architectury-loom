@@ -115,7 +115,11 @@ public class ForgeUserdevProvider extends DependencyProvider {
 
 			if (lib.getAsString().startsWith("org.spongepowered:mixin:")) {
 				if (getExtension().isUseFabricMixin()) {
-					dep = addDependency("net.fabricmc:sponge-mixin:0.8.2+build.24", Constants.Configurations.FORGE_DEPENDENCIES);
+					if (lib.getAsString().contains("0.8.2")) {
+						dep = addDependency("net.fabricmc:sponge-mixin:0.8.2+build.24", Constants.Configurations.FORGE_DEPENDENCIES);
+					} else {
+						dep = addDependency("dev.architectury:mixin-patched" + lib.getAsString().substring(lib.getAsString().lastIndexOf(":")) + ".+", Constants.Configurations.FORGE_DEPENDENCIES);
+					}
 				}
 			}
 

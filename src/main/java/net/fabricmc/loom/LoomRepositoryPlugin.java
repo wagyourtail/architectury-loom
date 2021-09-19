@@ -35,7 +35,6 @@ import org.gradle.api.plugins.PluginAware;
 import org.jetbrains.annotations.NotNull;
 
 import net.fabricmc.loom.extension.LoomFiles;
-import net.fabricmc.loom.util.Constants;
 import net.fabricmc.loom.util.MirrorUtil;
 
 public class LoomRepositoryPlugin implements Plugin<PluginAware> {
@@ -68,9 +67,7 @@ public class LoomRepositoryPlugin implements Plugin<PluginAware> {
 			repo.setName("Architectury");
 			repo.setUrl("https://maven.architectury.dev/");
 			repo.mavenContent(content -> {
-				content.releasesOnly();
-				String[] dep = Constants.Dependencies.FORGE_RUNTIME.split(":");
-				content.includeVersion(dep[0], dep[1], Constants.Dependencies.Versions.FORGE_RUNTIME);
+				content.includeGroup("dev.architectury");
 			});
 		});
 		repositories.maven(repo -> {
