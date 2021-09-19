@@ -28,7 +28,6 @@ import java.io.File;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 import org.gradle.api.Action;
 import org.gradle.api.NamedDomainObjectContainer;
@@ -38,7 +37,6 @@ import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
-import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.publish.maven.MavenPublication;
 import org.jetbrains.annotations.ApiStatus;
 
@@ -47,6 +45,7 @@ import net.fabricmc.loom.api.mappings.layered.spec.LayeredMappingSpecBuilder;
 import net.fabricmc.loom.configuration.ide.RunConfig;
 import net.fabricmc.loom.configuration.ide.RunConfigSettings;
 import net.fabricmc.loom.configuration.launch.LaunchProviderSettings;
+import net.fabricmc.loom.configuration.mods.forge.ForgeLocalMod;
 import net.fabricmc.loom.configuration.processors.JarProcessor;
 import net.fabricmc.loom.util.DeprecationHelper;
 import net.fabricmc.loom.util.ModPlatform;
@@ -253,13 +252,9 @@ public interface LoomGradleExtensionAPI {
 		return isForge() && !getDataGenMods().isEmpty();
 	}
 
-	void localMods(Action<SourceSetConsumer> action);
+	void localMods(Action<NamedDomainObjectContainer<ForgeLocalMod>> action);
 
-	interface SourceSetConsumer {
-		void add(Object... sourceSets);
-	}
-
-	List<Supplier<SourceSet>> getForgeLocalMods();
+	NamedDomainObjectContainer<ForgeLocalMod> getForgeLocalMods();
 
 	void dataGen(Action<DataGenConsumer> action);
 

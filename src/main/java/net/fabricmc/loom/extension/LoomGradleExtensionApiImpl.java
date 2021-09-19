@@ -34,7 +34,6 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 import com.google.common.base.Suppliers;
 import org.gradle.api.Action;
@@ -43,22 +42,21 @@ import org.gradle.api.Project;
 import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.RegularFileProperty;
-import org.gradle.api.plugins.JavaPluginConvention;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.publish.maven.MavenPublication;
-import org.gradle.api.tasks.SourceSet;
 
+import net.fabricmc.loom.api.ForgeExtensionAPI;
 import net.fabricmc.loom.api.LoomGradleExtensionAPI;
 import net.fabricmc.loom.api.MixinExtensionAPI;
 import net.fabricmc.loom.api.decompilers.LoomDecompiler;
 import net.fabricmc.loom.api.mappings.layered.spec.LayeredMappingSpecBuilder;
-import net.fabricmc.loom.api.ForgeExtensionAPI;
 import net.fabricmc.loom.configuration.ide.RunConfig;
 import net.fabricmc.loom.configuration.ide.RunConfigSettings;
-import net.fabricmc.loom.configuration.mods.ModVersionParser;
 import net.fabricmc.loom.configuration.launch.LaunchProviderSettings;
+import net.fabricmc.loom.configuration.mods.ModVersionParser;
+import net.fabricmc.loom.configuration.mods.forge.ForgeLocalMod;
 import net.fabricmc.loom.configuration.processors.JarProcessor;
 import net.fabricmc.loom.configuration.providers.mappings.GradleMappingContext;
 import net.fabricmc.loom.configuration.providers.mappings.LayeredMappingSpec;
@@ -103,10 +101,9 @@ public abstract class LoomGradleExtensionApiImpl implements LoomGradleExtensionA
 	private final LazyBool supportsInclude;
 	private List<String> dataGenMods = new ArrayList<>();
 	private final List<String> tasksBeforeRun = Collections.synchronizedList(new ArrayList<>());
-	public final List<Supplier<SourceSet>> forgeLocalMods = Collections.synchronizedList(new ArrayList<>(Collections.singletonList(() ->
-			getProject().getConvention().getPlugin(JavaPluginConvention.class).getSourceSets().getByName("main"))));
 	public final List<Consumer<RunConfig>> settingsPostEdit = new ArrayList<>();
 	private NamedDomainObjectContainer<LaunchProviderSettings> launchConfigs;
+	private NamedDomainObjectContainer<ForgeLocalMod> forgeLocalMods;
 
 	protected LoomGradleExtensionApiImpl(Project project, LoomFiles directories) {
 		this.runConfigs = project.container(RunConfigSettings.class,
@@ -150,6 +147,11 @@ public abstract class LoomGradleExtensionApiImpl implements LoomGradleExtensionA
 		this.supportsInclude = new LazyBool(() -> Boolean.parseBoolean(Objects.toString(project.findProperty(INCLUDE_PROPERTY))));
 		this.launchConfigs = project.container(LaunchProviderSettings.class,
 				baseName -> new LaunchProviderSettings(project, baseName));
+		this.forgeLocalMods = project.container(ForgeLocalMod.class,
+				baseName -> new ForgeLocalMod(project, baseName, new ArrayList<>()));
+		localMods(mod -> {
+			mod.create("main").add("main");
+		});
 	}
 
 	@Override
@@ -292,24 +294,13 @@ public abstract class LoomGradleExtensionApiImpl implements LoomGradleExtensionA
 
 	@SuppressWarnings("Convert2Lambda")
 	@Override
-	public void localMods(Action<SourceSetConsumer> action) {
+	public void localMods(Action<NamedDomainObjectContainer<ForgeLocalMod>> action) {
 		ModPlatform.assertPlatform(this, ModPlatform.FORGE);
-		action.execute(new SourceSetConsumer() {
-			@Override
-			public void add(Object... sourceSets) {
-				for (Object sourceSet : sourceSets) {
-					if (sourceSet instanceof SourceSet) {
-						forgeLocalMods.add(() -> (SourceSet) sourceSet);
-					} else {
-						forgeLocalMods.add(() -> getProject().getConvention().getPlugin(JavaPluginConvention.class).getSourceSets().findByName(String.valueOf(forgeLocalMods)));
-					}
-				}
-			}
-		});
+		action.execute(forgeLocalMods);
 	}
 
 	@Override
-	public List<Supplier<SourceSet>> getForgeLocalMods() {
+	public NamedDomainObjectContainer<ForgeLocalMod> getForgeLocalMods() {
 		return forgeLocalMods;
 	}
 

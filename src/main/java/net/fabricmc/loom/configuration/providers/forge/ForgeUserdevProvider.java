@@ -38,9 +38,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -60,11 +58,11 @@ import org.gradle.api.artifacts.type.ArtifactTypeDefinition;
 import org.gradle.api.attributes.Attribute;
 import org.gradle.api.file.FileSystemLocation;
 import org.gradle.api.provider.Provider;
-import org.gradle.api.tasks.SourceSet;
 
 import net.fabricmc.loom.configuration.DependencyProvider;
 import net.fabricmc.loom.configuration.ide.RunConfigSettings;
 import net.fabricmc.loom.configuration.launch.LaunchProviderSettings;
+import net.fabricmc.loom.configuration.mods.forge.ForgeLocalMod;
 import net.fabricmc.loom.util.Constants;
 import net.fabricmc.loom.util.DependencyDownloader;
 import net.fabricmc.loom.util.FileSystemUtil;
@@ -256,15 +254,13 @@ public class ForgeUserdevProvider extends DependencyProvider {
 			} else if (key.equals("source_roots")) {
 				List<String> modClasses = new ArrayList<>();
 
-				for (Supplier<SourceSet> sourceSetSupplier : getExtension().getForgeLocalMods()) {
-					SourceSet sourceSet = sourceSetSupplier.get();
-					String sourceSetName = sourceSet.getName() + "_" + UUID.randomUUID().toString().replace("-", "").substring(0, 7);
+				for (ForgeLocalMod localMod : getExtension().getForgeLocalMods()) {
+					String sourceSetName = localMod.getName();
 
-					Stream.concat(
-							Stream.of(sourceSet.getOutput().getResourcesDir().getAbsolutePath()),
-							StreamSupport.stream(sourceSet.getOutput().getClassesDirs().spliterator(), false)
-									.map(File::getAbsolutePath)
-					).map(s -> sourceSetName + "%%" + s).collect(Collectors.toCollection(() -> modClasses));
+					localMod.getSourceSets().flatMap(sourceSet -> Stream.concat(
+							Stream.of(sourceSet.getOutput().getResourcesDir()),
+							sourceSet.getOutput().getClassesDirs().getFiles().stream())
+					).map(File::getAbsolutePath).distinct().map(s -> sourceSetName + "%%" + s).collect(Collectors.toCollection(() -> modClasses));
 				}
 
 				string = String.join(File.pathSeparator, modClasses);

@@ -28,7 +28,6 @@ import java.io.File;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 import org.gradle.api.Action;
 import org.gradle.api.NamedDomainObjectContainer;
@@ -39,7 +38,6 @@ import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.publish.maven.MavenPublication;
-import org.gradle.api.tasks.SourceSet;
 
 import net.fabricmc.loom.api.ForgeExtensionAPI;
 import net.fabricmc.loom.api.LoomGradleExtensionAPI;
@@ -49,6 +47,7 @@ import net.fabricmc.loom.api.mappings.layered.spec.LayeredMappingSpecBuilder;
 import net.fabricmc.loom.configuration.ide.RunConfig;
 import net.fabricmc.loom.configuration.ide.RunConfigSettings;
 import net.fabricmc.loom.configuration.launch.LaunchProviderSettings;
+import net.fabricmc.loom.configuration.mods.forge.ForgeLocalMod;
 import net.fabricmc.loom.configuration.processors.JarProcessor;
 import net.fabricmc.loom.util.DeprecationHelper;
 import net.fabricmc.loom.util.ModPlatform;
@@ -236,13 +235,13 @@ public class MinecraftGradleExtension implements LoomGradleExtensionAPI {
 	}
 
 	@Override
-	public void localMods(Action<SourceSetConsumer> action) {
+	public void localMods(Action<NamedDomainObjectContainer<ForgeLocalMod>> action) {
 		reportDeprecation();
 		parent.localMods(action);
 	}
 
 	@Override
-	public List<Supplier<SourceSet>> getForgeLocalMods() {
+	public NamedDomainObjectContainer<ForgeLocalMod> getForgeLocalMods() {
 		reportDeprecation();
 		return parent.getForgeLocalMods();
 	}
