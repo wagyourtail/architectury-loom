@@ -41,6 +41,8 @@ import dev.architectury.tinyremapper.InputTag;
 import dev.architectury.tinyremapper.NonClassCopyMode;
 import dev.architectury.tinyremapper.OutputConsumerPath;
 import dev.architectury.tinyremapper.TinyRemapper;
+import org.apache.commons.lang3.mutable.Mutable;
+import org.apache.commons.lang3.tuple.Pair;
 import org.gradle.api.Project;
 import org.jetbrains.annotations.Nullable;
 
@@ -228,7 +230,8 @@ public class MinecraftMappedProvider extends DependencyProvider {
 		Info vanilla = new Info(vanillaAssets, input, outputMapped, outputIntermediary, outputSrg);
 		Info forge = getExtension().isForgeAndNotOfficial() ? new Info(forgeAssets, inputForge, forgeOutputMapped, forgeOutputIntermediary, forgeOutputSrg) : null;
 
-		TinyRemapper remapper = remapperArray[0] = TinyRemapperHelper.getTinyRemapper(getProject());
+		Pair<TinyRemapper, Mutable<MemoryMappingTree>> pair = TinyRemapperHelper.getTinyRemapper(getProject(), true);
+		TinyRemapper remapper = remapperArray[0] = pair.getKey();
 
 		assetsOut(input, vanillaAssets);
 
@@ -236,7 +239,7 @@ public class MinecraftMappedProvider extends DependencyProvider {
 			assetsOut(inputForge, forgeAssets);
 		}
 
-		remap(remapper, vanilla, forge, MappingsNamespace.OFFICIAL.toString());
+		remap(remapper, pair.getValue(), vanilla, forge, MappingsNamespace.OFFICIAL.toString());
 	}
 
 	public static class Info {
@@ -255,7 +258,7 @@ public class MinecraftMappedProvider extends DependencyProvider {
 		}
 	}
 
-	public void remap(TinyRemapper remapper, Info vanilla, @Nullable Info forge, String fromM) throws IOException {
+	public void remap(TinyRemapper remapper, Mutable<MemoryMappingTree> mappings, Info vanilla, @Nullable Info forge, String fromM) throws IOException {
 		Set<String> classNames = getExtension().isForge() ? InnerClassRemapper.readClassNames(vanilla.input) : null;
 
 		for (String toM : getExtension().isForge() ? Arrays.asList(MappingsNamespace.INTERMEDIARY.toString(), MappingsNamespace.SRG.toString(), MappingsNamespace.NAMED.toString()) : Arrays.asList(MappingsNamespace.INTERMEDIARY.toString(), MappingsNamespace.NAMED.toString())) {
@@ -272,7 +275,8 @@ public class MinecraftMappedProvider extends DependencyProvider {
 				remapper.readInputs(forgeTag, forge.input);
 			}
 
-			remapper.replaceMappings(getMappings(classNames, fromM, toM));
+			remapper.replaceMappings(getMappings(classNames, fromM, toM, mappings));
+			if (!MappingsNamespace.INTERMEDIARY.toString().equals(toM)) mappings.setValue(null);
 			OutputRemappingHandler.remap(remapper, vanilla.assets, output, null, vanillaTag);
 
 			if (forge != null) {
@@ -281,6 +285,7 @@ public class MinecraftMappedProvider extends DependencyProvider {
 
 			getProject().getLogger().lifecycle(":remapped minecraft (TinyRemapper, " + fromM + " -> " + toM + ") in " + stopwatch);
 			remapper.removeInput();
+			mappings.setValue(null);
 
 			if (getExtension().isForge() && !"srg".equals(toM)) {
 				getProject().getLogger().info(":running minecraft finalising tasks");
@@ -292,9 +297,10 @@ public class MinecraftMappedProvider extends DependencyProvider {
 		}
 	}
 
-	public Set<IMappingProvider> getMappings(@Nullable Set<String> fromClassNames, String fromM, String toM) throws IOException {
+	public Set<IMappingProvider> getMappings(@Nullable Set<String> fromClassNames, String fromM, String toM, Mutable<MemoryMappingTree> mappings) throws IOException {
 		Set<IMappingProvider> providers = new HashSet<>();
-		providers.add(TinyRemapperHelper.create(getExtension().isForge() ? getExtension().getMappingsProvider().getMappingsWithSrg() : getExtension().getMappingsProvider().getMappings(), fromM, toM, true));
+		mappings.setValue(getExtension().isForge() ? getExtension().getMappingsProvider().getMappingsWithSrg() : getExtension().getMappingsProvider().getMappings());
+		providers.add(TinyRemapperHelper.create(mappings.getValue(), fromM, toM, true));
 
 		if (getExtension().isForge()) {
 			if (fromClassNames != null) {

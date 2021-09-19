@@ -34,6 +34,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import dev.architectury.tinyremapper.IMappingProvider;
 import dev.architectury.tinyremapper.TinyRemapper;
+import org.apache.commons.lang3.mutable.Mutable;
+import org.apache.commons.lang3.mutable.MutableObject;
+import org.apache.commons.lang3.tuple.Pair;
 import org.gradle.api.Project;
 
 import net.fabricmc.loom.LoomGradleExtension;
@@ -66,7 +69,7 @@ public final class TinyRemapperHelper {
 	public static TinyRemapper getTinyRemapper(Project project, String fromM, String toM, boolean fixRecords) throws IOException {
 		LoomGradleExtension extension = LoomGradleExtension.get(project);
 
-		TinyRemapper remapper = _getTinyRemapper(project, fixRecords);
+		TinyRemapper remapper = _getTinyRemapper(project, fixRecords).getKey();
 		remapper.replaceMappings(ImmutableSet.of(
 				TinyRemapperHelper.create(extension.isForge() ? extension.getMappingsProvider().getMappingsWithSrg() : extension.getMappingsProvider().getMappings(), fromM, toM, true),
 				out -> TinyRemapperHelper.JSR_TO_JETBRAINS.forEach(out::acceptClass)
@@ -74,15 +77,9 @@ public final class TinyRemapperHelper {
 		return remapper;
 	}
 
-	public static TinyRemapper _getTinyRemapper(Project project, boolean fixRecords) throws IOException {
+	public static Pair<TinyRemapper, Mutable<MemoryMappingTree>> _getTinyRemapper(Project project, boolean fixRecords) throws IOException {
 		LoomGradleExtension extension = LoomGradleExtension.get(project);
-		MemoryMappingTree mappingTree = extension.getMappingsProvider().getMappings();
-
-		if (fixRecords && !mappingTree.getSrcNamespace().equals(fromM)) {
-			throw new IllegalStateException("Mappings src namespace must match remap src namespace");
-		}
-
-		int intermediaryNsId = mappingTree.getNamespaceId(MappingsNamespace.INTERMEDIARY.toString());
+		Mutable<MemoryMappingTree> mappings = new MutableObject<>();
 
 		TinyRemapper.Builder builder = TinyRemapper.newRemapper()
 				.renameInvalidLocals(true)
@@ -100,21 +97,22 @@ public final class TinyRemapperHelper {
 			builder.fixPackageAccess(true);
 		}
 
-		return builder.invalidLvNamePattern(MC_LV_PATTERN)
+		TinyRemapper remapper = builder.invalidLvNamePattern(MC_LV_PATTERN)
 				.extraPreApplyVisitor((cls, next) -> {
-					if (fixRecords && !cls.isRecord() && "java/lang/Record".equals(cls.getSuperName())) {
-						return new RecordComponentFixVisitor(next, mappingTree, intermediaryNsId);
+					if (fixRecords && !cls.isRecord() && "java/lang/Record".equals(cls.getSuperName()) && mappings.getValue() != null) {
+						return new RecordComponentFixVisitor(next, mappings.getValue(), mappings.getValue().getNamespaceId(MappingsNamespace.INTERMEDIARY.toString()));
 					}
 
 					return next;
 				})
 				.build();
+		return Pair.of(remapper, mappings);
 	}
 
-	public static TinyRemapper getTinyRemapper(Project project) throws IOException {
-		TinyRemapper remapper = _getTinyRemapper(project);
-		remapper.readClassPath(getMinecraftDependencies(project));
-		remapper.prepareClasses();
+	public static Pair<TinyRemapper, Mutable<MemoryMappingTree>> getTinyRemapper(Project project, boolean fixRecords) throws IOException {
+		Pair<TinyRemapper, Mutable<MemoryMappingTree>> remapper = _getTinyRemapper(project, fixRecords);
+		remapper.getKey().readClassPath(getMinecraftDependencies(project));
+		remapper.getKey().prepareClasses();
 		return remapper;
 	}
 
