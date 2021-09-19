@@ -149,9 +149,12 @@ public abstract class LoomGradleExtensionApiImpl implements LoomGradleExtensionA
 				baseName -> new LaunchProviderSettings(project, baseName));
 		this.forgeLocalMods = project.container(ForgeLocalMod.class,
 				baseName -> new ForgeLocalMod(project, baseName, new ArrayList<>()));
-		localMods(mod -> {
-			mod.create("main").add("main");
-		});
+
+		if (isForge()) {
+			localMods(mod -> {
+				mod.create("main").add("main");
+			});
+		}
 	}
 
 	@Override
