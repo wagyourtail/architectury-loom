@@ -25,6 +25,7 @@
 package net.fabricmc.loom.configuration;
 
 import java.io.IOException;
+import java.util.Set;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
@@ -36,7 +37,6 @@ import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.PublishArtifact;
 import org.gradle.api.artifacts.dsl.ArtifactHandler;
 import org.gradle.api.plugins.JavaPlugin;
-import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.bundling.AbstractArchiveTask;
 import org.gradle.api.tasks.bundling.Jar;
 import org.jetbrains.annotations.ApiStatus;
@@ -48,6 +48,7 @@ import net.fabricmc.loom.task.AbstractLoomTask;
 import net.fabricmc.loom.task.RemapAllSourcesTask;
 import net.fabricmc.loom.task.RemapJarTask;
 import net.fabricmc.loom.task.RemapSourcesJarTask;
+import net.fabricmc.loom.util.PropertyUtil;
 import net.fabricmc.loom.util.SourceRemapper;
 import net.fabricmc.loom.util.aw2at.Aw2At;
 
@@ -117,9 +118,13 @@ public class RemapConfiguration {
 		}
 
 		if (extension.isForge()) {
-			((Jar) jarTask).manifest(manifest -> {
-				manifest.attributes(ImmutableMap.of("MixinConfigs", String.join(",", extension.getMixinConfigs())));
-			});
+			Set<String> mixinConfigs = PropertyUtil.getAndFinalize(extension.getForge().getMixinConfigs());
+
+			if (!mixinConfigs.isEmpty()) {
+				((Jar) jarTask).manifest(manifest -> {
+					manifest.attributes(ImmutableMap.of("MixinConfigs", String.join(",", mixinConfigs)));
+				});
+			}
 		}
 
 		if (isDefaultRemap) {
@@ -130,10 +135,9 @@ public class RemapConfiguration {
 			project.getArtifacts().add("archives", remapJarTask);
 
 			if (extension.isForge()) {
-				Property<Boolean> convertAws = extension.getForge().getConvertAccessWideners();
-				convertAws.finalizeValue();
+				boolean convertAws = PropertyUtil.getAndFinalize(extension.getForge().getConvertAccessWideners());
 
-				if (convertAws.get()) {
+				if (convertAws) {
 					Aw2At.setup(project, remapJarTask);
 					remapJarTask.getRemapAccessWidener().set(false);
 				}
