@@ -24,13 +24,19 @@
 
 package net.fabricmc.loom.api;
 
+import java.util.List;
+
+import org.gradle.api.Action;
+import org.gradle.api.NamedDomainObjectContainer;
+import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.SetProperty;
+import org.jetbrains.annotations.ApiStatus;
 
 /**
  * This is the forge extension api available exposed to build scripts.
  */
-// TODO: Move other forge-related configuration here
+@ApiStatus.NonExtendable
 public interface ForgeExtensionAPI {
 	/**
 	 * If true, {@linkplain LoomGradleExtensionAPI#getAccessWidenerPath() the project access widener file}
@@ -48,4 +54,89 @@ public interface ForgeExtensionAPI {
 	 * @return the property
 	 */
 	SetProperty<String> getExtraAccessWideners();
+
+	/**
+	 * A collection of all project access transformers.
+	 * The collection should only contain AT files, and not directories or other files.
+	 *
+	 * <p>If this collection is empty, Loom tries to resolve the AT from the default path
+	 * ({@code META-INF/accesstransformer.cfg} in the {@code main} source set).
+	 *
+	 * @return the collection of AT files
+	 */
+	ConfigurableFileCollection getAccessTransformers();
+
+	/**
+	 * Adds a {@linkplain #getAccessTransformers() project access transformer}.
+	 *
+	 * @param file the file, evaluated as per {@link org.gradle.api.Project#file(Object)}
+	 */
+	void accessTransformer(Object file);
+
+	/**
+	 * A set of all mixin configs related to source set resource roots.
+	 * All mixin configs must be added to this property so that they apply in a dev environment.
+	 *
+	 * @return the property
+	 */
+	SetProperty<String> getMixinConfigs();
+
+	/**
+	 * Adds mixin config files to {@link #getMixinConfigs() mixinConfigs}.
+	 *
+	 * @param mixinConfigs the mixin config file paths relative to resource roots
+	 */
+	void mixinConfigs(String... mixinConfigs);
+
+	/**
+	 * If true, upstream Mixin from Sponge will be replaced with Fabric's fork.
+	 * This is enabled by default.
+	 *
+	 * @return the property
+	 */
+	Property<Boolean> getUseFabricMixin();
+
+	/**
+	 * A list of mod IDs for mods applied for data generation.
+	 * The returned list is unmodifiable but not immutable - it will reflect changes done with
+	 * {@link #dataGen(Action)}.
+	 *
+	 * @return the list
+	 */
+	List<String> getDataGenMods();
+
+	/**
+	 * Applies data generation settings.
+	 *
+	 * @param action the action to configure data generation
+	 */
+	void dataGen(Action<DataGenConsumer> action);
+
+	/**
+	 * Data generation config.
+	 */
+	@ApiStatus.NonExtendable
+	interface DataGenConsumer {
+		/**
+		 * Adds mod IDs applied for data generation.
+		 *
+		 * @param modIds the mod IDs
+		 */
+		void mod(String... modIds);
+	}
+
+	/**
+	 * Configures local mods.
+	 *
+	 * @param action the configuration action
+	 */
+	void localMods(Action<NamedDomainObjectContainer<ForgeLocalMod>> action);
+
+	/**
+	 * The container of local mods applied to run configs.
+	 *
+	 * @return the container
+	 * @see ForgeLocalMod
+	 */
+	NamedDomainObjectContainer<ForgeLocalMod> getLocalMods();
 }

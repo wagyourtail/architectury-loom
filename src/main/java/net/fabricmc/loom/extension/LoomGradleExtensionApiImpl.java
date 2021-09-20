@@ -24,15 +24,11 @@
 
 package net.fabricmc.loom.extension;
 
-import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.Consumer;
 
 import com.google.common.base.Suppliers;
@@ -56,7 +52,6 @@ import net.fabricmc.loom.configuration.ide.RunConfig;
 import net.fabricmc.loom.configuration.ide.RunConfigSettings;
 import net.fabricmc.loom.configuration.launch.LaunchProviderSettings;
 import net.fabricmc.loom.configuration.mods.ModVersionParser;
-import net.fabricmc.loom.configuration.mods.forge.ForgeLocalMod;
 import net.fabricmc.loom.configuration.processors.JarProcessor;
 import net.fabricmc.loom.configuration.providers.mappings.GradleMappingContext;
 import net.fabricmc.loom.configuration.providers.mappings.LayeredMappingSpec;
@@ -64,7 +59,6 @@ import net.fabricmc.loom.configuration.providers.mappings.LayeredMappingSpecBuil
 import net.fabricmc.loom.configuration.providers.mappings.LayeredMappingsDependency;
 import net.fabricmc.loom.util.DeprecationHelper;
 import net.fabricmc.loom.util.ModPlatform;
-import net.fabricmc.loom.util.function.LazyBool;
 
 /**
  * This class implements the public extension api.
@@ -72,7 +66,6 @@ import net.fabricmc.loom.util.function.LazyBool;
 public abstract class LoomGradleExtensionApiImpl implements LoomGradleExtensionAPI {
 	private static final String FORGE_PROPERTY = "loom.forge";
 	private static final String PLATFORM_PROPERTY = "loom.platform";
-	private static final String INCLUDE_PROPERTY = "loom.forge.include";
 
 	protected final DeprecationHelper deprecationHelper;
 	protected final ListProperty<LoomDecompiler> decompilers;
@@ -93,17 +86,11 @@ public abstract class LoomGradleExtensionApiImpl implements LoomGradleExtensionA
 	//  Architectury Loom
 	// ===================
 	private Provider<ModPlatform> platform;
-	public List<String> mixinConfigs = new ArrayList<>(); // FORGE: Passed to Minecraft
-	public Set<File> accessTransformers = new HashSet<>();
-	public boolean useFabricMixin = true; // FORGE: Use Fabric Mixin for better refmap resolutions
 	private boolean silentMojangMappingsLicense = false;
 	public Boolean generateSrgTiny = null;
-	private final LazyBool supportsInclude;
-	private List<String> dataGenMods = new ArrayList<>();
 	private final List<String> tasksBeforeRun = Collections.synchronizedList(new ArrayList<>());
 	public final List<Consumer<RunConfig>> settingsPostEdit = new ArrayList<>();
 	private NamedDomainObjectContainer<LaunchProviderSettings> launchConfigs;
-	private NamedDomainObjectContainer<ForgeLocalMod> forgeLocalMods;
 
 	protected LoomGradleExtensionApiImpl(Project project, LoomFiles directories) {
 		this.runConfigs = project.container(RunConfigSettings.class,
@@ -144,17 +131,8 @@ public abstract class LoomGradleExtensionApiImpl implements LoomGradleExtensionA
 
 			return ModPlatform.FABRIC;
 		})::get);
-		this.supportsInclude = new LazyBool(() -> Boolean.parseBoolean(Objects.toString(project.findProperty(INCLUDE_PROPERTY))));
 		this.launchConfigs = project.container(LaunchProviderSettings.class,
 				baseName -> new LaunchProviderSettings(project, baseName));
-		this.forgeLocalMods = project.container(ForgeLocalMod.class,
-				baseName -> new ForgeLocalMod(project, baseName, new ArrayList<>()));
-
-		if (isForge()) {
-			localMods(mod -> {
-				mod.create("main").add("main");
-			});
-		}
 	}
 
 	@Override
@@ -262,11 +240,6 @@ public abstract class LoomGradleExtensionApiImpl implements LoomGradleExtensionA
 	}
 
 	@Override
-	public boolean supportsInclude() {
-		return !isForge() || supportsInclude.getAsBoolean();
-	}
-
-	@Override
 	public void setGenerateSrgTiny(Boolean generateSrgTiny) {
 		this.generateSrgTiny = generateSrgTiny;
 	}
@@ -291,71 +264,8 @@ public abstract class LoomGradleExtensionApiImpl implements LoomGradleExtensionA
 	}
 
 	@Override
-	public List<String> getDataGenMods() {
-		return dataGenMods;
-	}
-
-	@SuppressWarnings("Convert2Lambda")
-	@Override
-	public void localMods(Action<NamedDomainObjectContainer<ForgeLocalMod>> action) {
-		ModPlatform.assertPlatform(this, ModPlatform.FORGE);
-		action.execute(forgeLocalMods);
-	}
-
-	@Override
-	public NamedDomainObjectContainer<ForgeLocalMod> getForgeLocalMods() {
-		return forgeLocalMods;
-	}
-
-	@SuppressWarnings("Convert2Lambda")
-	@Override
-	public void dataGen(Action<DataGenConsumer> action) {
-		ModPlatform.assertPlatform(this, ModPlatform.FORGE);
-		action.execute(new DataGenConsumer() {
-			@Override
-			public void mod(String... modIds) {
-				dataGenMods.addAll(Arrays.asList(modIds));
-
-				if (modIds.length > 0 && getRunConfigs().findByName("data") == null) {
-					getRunConfigs().create("data", RunConfigSettings::data);
-				}
-			}
-		});
-	}
-
-	@Override
 	public List<String> getTasksBeforeRun() {
 		return tasksBeforeRun;
-	}
-
-	@Override
-	public void mixinConfig(String... config) {
-		mixinConfigs.addAll(Arrays.asList(config));
-	}
-
-	@Override
-	public List<String> getMixinConfigs() {
-		return mixinConfigs;
-	}
-
-	@Override
-	public void accessTransformer(Object file) {
-		this.accessTransformers.add(getProject().file(file));
-	}
-
-	@Override
-	public Set<File> getAccessTransformers() {
-		return accessTransformers;
-	}
-
-	@Override
-	public boolean isUseFabricMixin() {
-		return useFabricMixin;
-	}
-
-	@Override
-	public void setUseFabricMixin(boolean useFabricMixin) {
-		this.useFabricMixin = useFabricMixin;
 	}
 
 	@Override
@@ -392,16 +302,6 @@ public abstract class LoomGradleExtensionApiImpl implements LoomGradleExtensionA
 
 		@Override
 		public MixinExtension getMixin() {
-			throw new RuntimeException("Yeah... something is really wrong");
-		}
-
-		@Override
-		public boolean isForgeAndOfficial() {
-			throw new RuntimeException("Yeah... something is really wrong");
-		}
-
-		@Override
-		public boolean isForgeAndNotOfficial() {
 			throw new RuntimeException("Yeah... something is really wrong");
 		}
 

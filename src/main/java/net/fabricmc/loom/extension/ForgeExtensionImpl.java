@@ -24,22 +24,48 @@
 
 package net.fabricmc.loom.extension;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 import javax.inject.Inject;
 
+import org.gradle.api.Action;
+import org.gradle.api.NamedDomainObjectContainer;
 import org.gradle.api.Project;
+import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.SetProperty;
 
+import net.fabricmc.loom.LoomGradleExtension;
 import net.fabricmc.loom.api.ForgeExtensionAPI;
+import net.fabricmc.loom.api.ForgeLocalMod;
+import net.fabricmc.loom.configuration.ide.RunConfigSettings;
 
 public class ForgeExtensionImpl implements ForgeExtensionAPI {
+	private final LoomGradleExtension extension;
 	private final Property<Boolean> convertAccessWideners;
 	private final SetProperty<String> extraAccessWideners;
+	private final ConfigurableFileCollection accessTransformers;
+	private final SetProperty<String> mixinConfigs;
+	private final Property<Boolean> useFabricMixin;
+	private final List<String> dataGenMods = new ArrayList<>(); // not a property because it has custom adding logic
+	private final NamedDomainObjectContainer<ForgeLocalMod> localMods;
 
 	@Inject
-	public ForgeExtensionImpl(Project project) {
+	public ForgeExtensionImpl(Project project, LoomGradleExtension extension) {
+		this.extension = extension;
 		convertAccessWideners = project.getObjects().property(Boolean.class).convention(false);
 		extraAccessWideners = project.getObjects().setProperty(String.class).empty();
+		accessTransformers = project.getObjects().fileCollection();
+		mixinConfigs = project.getObjects().setProperty(String.class).empty();
+		useFabricMixin = project.getObjects().property(Boolean.class).convention(true);
+		localMods = project.container(ForgeLocalMod.class,
+				baseName -> new ForgeLocalMod(project, baseName, new ArrayList<>()));
+
+		// Create default mod from main source set
+		localMods(mod -> mod.create("main").add("main"));
 	}
 
 	@Override
@@ -50,5 +76,61 @@ public class ForgeExtensionImpl implements ForgeExtensionAPI {
 	@Override
 	public SetProperty<String> getExtraAccessWideners() {
 		return extraAccessWideners;
+	}
+
+	@Override
+	public ConfigurableFileCollection getAccessTransformers() {
+		return accessTransformers;
+	}
+
+	@Override
+	public void accessTransformer(Object file) {
+		accessTransformers.from(file);
+	}
+
+	@Override
+	public SetProperty<String> getMixinConfigs() {
+		return mixinConfigs;
+	}
+
+	@Override
+	public void mixinConfigs(String... mixinConfigs) {
+		this.mixinConfigs.addAll(mixinConfigs);
+	}
+
+	@Override
+	public Property<Boolean> getUseFabricMixin() {
+		return useFabricMixin;
+	}
+
+	@Override
+	public List<String> getDataGenMods() {
+		// unmod list prevents uncontrolled additions (we want to create the run config too)
+		return Collections.unmodifiableList(dataGenMods);
+	}
+
+	@SuppressWarnings("Convert2Lambda")
+	@Override
+	public void dataGen(Action<DataGenConsumer> action) {
+		action.execute(new DataGenConsumer() {
+			@Override
+			public void mod(String... modIds) {
+				dataGenMods.addAll(Arrays.asList(modIds));
+
+				if (modIds.length > 0 && extension.getRunConfigs().findByName("data") == null) {
+					extension.getRunConfigs().create("data", RunConfigSettings::data);
+				}
+			}
+		});
+	}
+
+	@Override
+	public void localMods(Action<NamedDomainObjectContainer<ForgeLocalMod>> action) {
+		action.execute(localMods);
+	}
+
+	@Override
+	public NamedDomainObjectContainer<ForgeLocalMod> getLocalMods() {
+		return localMods;
 	}
 }

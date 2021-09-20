@@ -62,10 +62,11 @@ import org.gradle.api.provider.Provider;
 import net.fabricmc.loom.configuration.DependencyProvider;
 import net.fabricmc.loom.configuration.ide.RunConfigSettings;
 import net.fabricmc.loom.configuration.launch.LaunchProviderSettings;
-import net.fabricmc.loom.configuration.mods.forge.ForgeLocalMod;
+import net.fabricmc.loom.api.ForgeLocalMod;
 import net.fabricmc.loom.util.Constants;
 import net.fabricmc.loom.util.DependencyDownloader;
 import net.fabricmc.loom.util.FileSystemUtil;
+import net.fabricmc.loom.util.PropertyUtil;
 
 public class ForgeUserdevProvider extends DependencyProvider {
 	private File userdevJar;
@@ -114,7 +115,7 @@ public class ForgeUserdevProvider extends DependencyProvider {
 			Dependency dep = null;
 
 			if (lib.getAsString().startsWith("org.spongepowered:mixin:")) {
-				if (getExtension().isUseFabricMixin()) {
+				if (PropertyUtil.getAndFinalize(getExtension().getForge().getUseFabricMixin())) {
 					if (lib.getAsString().contains("0.8.2")) {
 						dep = addDependency("net.fabricmc:sponge-mixin:0.8.2+build.24", Constants.Configurations.FORGE_DEPENDENCIES);
 					} else {
@@ -258,7 +259,7 @@ public class ForgeUserdevProvider extends DependencyProvider {
 			} else if (key.equals("source_roots")) {
 				List<String> modClasses = new ArrayList<>();
 
-				for (ForgeLocalMod localMod : getExtension().getForgeLocalMods()) {
+				for (ForgeLocalMod localMod : getExtension().getForge().getLocalMods()) {
 					String sourceSetName = localMod.getName();
 
 					localMod.getSourceSets().flatMap(sourceSet -> Stream.concat(

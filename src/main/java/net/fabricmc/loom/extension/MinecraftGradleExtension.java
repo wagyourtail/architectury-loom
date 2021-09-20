@@ -24,9 +24,7 @@
 
 package net.fabricmc.loom.extension;
 
-import java.io.File;
 import java.util.List;
-import java.util.Set;
 import java.util.function.Consumer;
 
 import org.gradle.api.Action;
@@ -47,7 +45,6 @@ import net.fabricmc.loom.api.mappings.layered.spec.LayeredMappingSpecBuilder;
 import net.fabricmc.loom.configuration.ide.RunConfig;
 import net.fabricmc.loom.configuration.ide.RunConfigSettings;
 import net.fabricmc.loom.configuration.launch.LaunchProviderSettings;
-import net.fabricmc.loom.configuration.mods.forge.ForgeLocalMod;
 import net.fabricmc.loom.configuration.processors.JarProcessor;
 import net.fabricmc.loom.util.DeprecationHelper;
 import net.fabricmc.loom.util.ModPlatform;
@@ -187,24 +184,6 @@ public class MinecraftGradleExtension implements LoomGradleExtensionAPI {
 	}
 
 	@Override
-	public boolean isForgeAndOfficial() {
-		reportDeprecation();
-		return parent.isForgeAndOfficial();
-	}
-
-	@Override
-	public boolean isForgeAndNotOfficial() {
-		reportDeprecation();
-		return parent.isForgeAndNotOfficial();
-	}
-
-	@Override
-	public boolean supportsInclude() {
-		reportDeprecation();
-		return parent.supportsInclude();
-	}
-
-	@Override
 	public void setGenerateSrgTiny(Boolean generateSrgTiny) {
 		reportDeprecation();
 		parent.setGenerateSrgTiny(generateSrgTiny);
@@ -229,69 +208,9 @@ public class MinecraftGradleExtension implements LoomGradleExtensionAPI {
 	}
 
 	@Override
-	public List<String> getDataGenMods() {
-		reportDeprecation();
-		return parent.getDataGenMods();
-	}
-
-	@Override
-	public void localMods(Action<NamedDomainObjectContainer<ForgeLocalMod>> action) {
-		reportDeprecation();
-		parent.localMods(action);
-	}
-
-	@Override
-	public NamedDomainObjectContainer<ForgeLocalMod> getForgeLocalMods() {
-		reportDeprecation();
-		return parent.getForgeLocalMods();
-	}
-
-	@Override
-	public void dataGen(Action<DataGenConsumer> action) {
-		reportDeprecation();
-		parent.dataGen(action);
-	}
-
-	@Override
 	public List<String> getTasksBeforeRun() {
 		reportDeprecation();
 		return parent.getTasksBeforeRun();
-	}
-
-	@Override
-	public void mixinConfig(String... config) {
-		reportDeprecation();
-		parent.mixinConfig(config);
-	}
-
-	@Override
-	public List<String> getMixinConfigs() {
-		reportDeprecation();
-		return parent.getMixinConfigs();
-	}
-
-	@Override
-	public void accessTransformer(Object file) {
-		reportDeprecation();
-		parent.accessTransformer(file);
-	}
-
-	@Override
-	public Set<File> getAccessTransformers() {
-		reportDeprecation();
-		return parent.getAccessTransformers();
-	}
-
-	@Override
-	public boolean isUseFabricMixin() {
-		reportDeprecation();
-		return parent.isUseFabricMixin();
-	}
-
-	@Override
-	public void setUseFabricMixin(boolean useFabricMixin) {
-		reportDeprecation();
-		parent.setUseFabricMixin(useFabricMixin);
 	}
 
 	@Override

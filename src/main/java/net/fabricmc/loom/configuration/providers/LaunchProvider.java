@@ -34,6 +34,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.StringJoiner;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -47,6 +48,7 @@ import net.fabricmc.loom.configuration.DependencyProvider;
 import net.fabricmc.loom.configuration.RemappedConfigurationEntry;
 import net.fabricmc.loom.configuration.launch.LaunchProviderSettings;
 import net.fabricmc.loom.util.Constants;
+import net.fabricmc.loom.util.PropertyUtil;
 
 public class LaunchProvider extends DependencyProvider {
 	public LaunchProvider(Project project) {
@@ -78,21 +80,21 @@ public class LaunchProvider extends DependencyProvider {
 
 					.argument("data", "--all")
 					.argument("data", "--mod")
-					.argument("data", String.join(",", getExtension().getDataGenMods()))
+					.argument("data", String.join(",", getExtension().getForge().getDataGenMods()))
 					.argument("data", "--output")
 					.argument("data", getProject().file("src/generated/resources").getAbsolutePath())
 
 					.property("mixin.env.remapRefMap", "true");
 
-			if (getExtension().isUseFabricMixin()) {
+			if (PropertyUtil.getAndFinalize(getExtension().getForge().getUseFabricMixin())) {
 				launchConfig.property("mixin.forgeloom.inject.mappings.srg-named", getExtension().getMappingsProvider().mixinTinyMappingsWithSrg.toAbsolutePath().toString());
 			} else {
 				launchConfig.property("net.minecraftforge.gradle.GradleStart.srg.srg-mcp", getExtension().getMappingsProvider().srgToNamedSrg.toAbsolutePath().toString());
 			}
 
-			List<String> mixinConfigs = getExtension().getMixinConfigs();
+			Set<String> mixinConfigs = PropertyUtil.getAndFinalize(getExtension().getForge().getMixinConfigs());
 
-			if (mixinConfigs != null) {
+			if (!mixinConfigs.isEmpty()) {
 				for (String config : mixinConfigs) {
 					launchConfig.argument("-mixin.config");
 					launchConfig.argument(config);

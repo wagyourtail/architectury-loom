@@ -26,7 +26,6 @@ package net.fabricmc.loom.api;
 
 import java.io.File;
 import java.util.List;
-import java.util.Set;
 import java.util.function.Consumer;
 
 import org.gradle.api.Action;
@@ -45,7 +44,6 @@ import net.fabricmc.loom.api.mappings.layered.spec.LayeredMappingSpecBuilder;
 import net.fabricmc.loom.configuration.ide.RunConfig;
 import net.fabricmc.loom.configuration.ide.RunConfigSettings;
 import net.fabricmc.loom.configuration.launch.LaunchProviderSettings;
-import net.fabricmc.loom.configuration.mods.forge.ForgeLocalMod;
 import net.fabricmc.loom.configuration.processors.JarProcessor;
 import net.fabricmc.loom.util.DeprecationHelper;
 import net.fabricmc.loom.util.ModPlatform;
@@ -232,12 +230,6 @@ public interface LoomGradleExtensionAPI {
 		return getPlatform().get() == ModPlatform.FORGE;
 	}
 
-	boolean isForgeAndOfficial();
-
-	boolean isForgeAndNotOfficial();
-
-	boolean supportsInclude();
-
 	void setGenerateSrgTiny(Boolean generateSrgTiny);
 
 	boolean shouldGenerateSrgTiny();
@@ -246,49 +238,20 @@ public interface LoomGradleExtensionAPI {
 
 	NamedDomainObjectContainer<LaunchProviderSettings> getLaunchConfigs();
 
-	List<String> getDataGenMods();
-
-	default boolean isDataGenEnabled() {
-		return isForge() && !getDataGenMods().isEmpty();
-	}
-
-	void localMods(Action<NamedDomainObjectContainer<ForgeLocalMod>> action);
-
-	NamedDomainObjectContainer<ForgeLocalMod> getForgeLocalMods();
-
-	void dataGen(Action<DataGenConsumer> action);
-
-	interface DataGenConsumer {
-		void mod(String... modIds);
-	}
-
 	default void addTaskBeforeRun(String task) {
 		this.getTasksBeforeRun().add(task);
 	}
 
 	List<String> getTasksBeforeRun();
 
-	void mixinConfig(String... config);
-
-	List<String> getMixinConfigs();
-
-	void accessTransformer(Object file);
-
-	Set<File> getAccessTransformers();
-
-	boolean isUseFabricMixin();
-
-	void setUseFabricMixin(boolean useFabricMixin);
-
 	List<Consumer<RunConfig>> getSettingsPostEdit();
 
 	/**
 	 * Gets the Forge extension used to configure Forge details.
-	 * Note that (for now) some Forge configuration is instead in this interface -
-	 * this is due to change in the future.
 	 *
 	 * @return the Forge extension
 	 * @throws UnsupportedOperationException if running on another platform
+	 * @see #isForge()
 	 */
 	ForgeExtensionAPI getForge();
 
