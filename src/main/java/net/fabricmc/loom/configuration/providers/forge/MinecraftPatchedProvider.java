@@ -93,6 +93,7 @@ import net.fabricmc.loom.api.mappings.layered.MappingsNamespace;
 import net.fabricmc.loom.configuration.DependencyProvider;
 import net.fabricmc.loom.configuration.providers.MinecraftProviderImpl;
 import net.fabricmc.loom.configuration.providers.mappings.GradleMappingContext;
+import net.fabricmc.loom.configuration.providers.mappings.MappingsProviderImpl;
 import net.fabricmc.loom.configuration.providers.mappings.mojmap.MojangMappingLayer;
 import net.fabricmc.loom.configuration.providers.mappings.mojmap.MojangMappingsSpec;
 import net.fabricmc.loom.util.Constants;
@@ -136,7 +137,6 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 	private boolean atDirty = false;
 	private boolean filesDirty = false;
 	private Path mcpConfigMappings;
-	private Path[] mergedMojangTsrg2Files;
 
 	public MinecraftPatchedProvider(Project project) {
 		super(project);
@@ -365,11 +365,7 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 	}
 
 	private Path getToSrgMappings() throws IOException {
-		if (getExtension().isForgeAndOfficial()) {
-			return getMergedMojangTsrg2(true);
-		} else {
-			return getExtension().getMcpConfigProvider().getMappings();
-		}
+		return getExtension().getMappingsProvider().getRawSrgFile();
 	}
 
 	private static void visitMojmap(MappingVisitor visitor, Project project) {
@@ -417,17 +413,19 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 		return path;
 	}
 
-	public Path getMergedMojangTsrg2(boolean hasParameters) throws IOException {
-		if (mergedMojangTsrg2Files == null) {
+	public static Path getMergedMojangTsrg2(LoomGradleExtension extension, boolean hasParameters) throws IOException {
+		MappingsProviderImpl mappingsProvider = extension.getMappingsProvider();
+
+		if (mappingsProvider.mergedMojangTsrg2Files == null) {
 			Path out = Files.createTempFile("merged-mojang-tsrg2", null);
 			Path outTrimmed = Files.createTempFile("merged-mojang-tsrg2-trimmed", null);
 			net.minecraftforge.installertools.ConsoleTool.main(new String[]{
 					"--task",
 					"MERGE_MAPPING",
 					"--left",
-					getExtension().getMcpConfigProvider().getMappings().toAbsolutePath().toString(),
+					extension.getSrgProvider().getSrg().toAbsolutePath().toString(),
 					"--right",
-					getMojmapTsrg(getProject(), getExtension()).toAbsolutePath().toString(),
+					getMojmapTsrg(mappingsProvider.getProject(), extension).toAbsolutePath().toString(),
 					"--classes",
 					"--output",
 					out.toAbsolutePath().toString()
@@ -444,10 +442,10 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 
 			Files.writeString(outTrimmed, Tsrg2Writer.serialize(tree), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
-			mergedMojangTsrg2Files = new Path[]{out, outTrimmed};
+			mappingsProvider.mergedMojangTsrg2Files = new Path[]{out, outTrimmed};
 		}
 
-		return mergedMojangTsrg2Files[hasParameters ? 0 : 1];
+		return mappingsProvider.mergedMojangTsrg2Files[hasParameters ? 0 : 1];
 	}
 
 	private void fixParameterAnnotation(File jarFile) throws Exception {

@@ -24,6 +24,7 @@
 
 package net.fabricmc.loom.configuration.providers.forge;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.net.URI;
 import java.nio.file.FileSystem;
@@ -40,7 +41,8 @@ import net.fabricmc.loom.configuration.DependencyProvider;
 import net.fabricmc.loom.util.Constants;
 
 public class SrgProvider extends DependencyProvider {
-	private File srg;
+	private Path srg;
+	private Boolean isTsrgV2;
 
 	public SrgProvider(Project project) {
 		super(project);
@@ -50,26 +52,30 @@ public class SrgProvider extends DependencyProvider {
 	public void provide(DependencyInfo dependency, Consumer<Runnable> postPopulationScheduler) throws Exception {
 		init(dependency.getDependency().getVersion());
 
-		if (srg.exists() && !isRefreshDeps()) {
-			return; // No work for us to do here
+		if (!Files.exists(srg) || isRefreshDeps()) {
+			Path srgZip = dependency.resolveFile().orElseThrow(() -> new RuntimeException("Could not resolve srg")).toPath();
+
+			try (FileSystem fs = FileSystems.newFileSystem(new URI("jar:" + srgZip.toUri()), ImmutableMap.of("create", false))) {
+				Files.copy(fs.getPath("config", "joined.tsrg"), srg, StandardCopyOption.REPLACE_EXISTING);
+			}
 		}
 
-		Path srgZip = dependency.resolveFile().orElseThrow(() -> new RuntimeException("Could not resolve srg")).toPath();
-
-		if (!srg.exists() || isRefreshDeps()) {
-			try (FileSystem fs = FileSystems.newFileSystem(new URI("jar:" + srgZip.toUri()), ImmutableMap.of("create", false))) {
-				Files.copy(fs.getPath("config", "joined.tsrg"), srg.toPath(), StandardCopyOption.REPLACE_EXISTING);
-			}
+		try (BufferedReader reader = Files.newBufferedReader(srg)) {
+			isTsrgV2 = reader.readLine().startsWith("tsrg2");
 		}
 	}
 
 	private void init(String version) {
 		File dir = getMinecraftProvider().dir("srg/" + version);
-		srg = new File(dir, "srg.tsrg");
+		srg = new File(dir, "srg.tsrg").toPath();
 	}
 
-	public File getSrg() {
+	public Path getSrg() {
 		return srg;
+	}
+
+	public boolean isTsrgV2() {
+		return isTsrgV2;
 	}
 
 	@Override

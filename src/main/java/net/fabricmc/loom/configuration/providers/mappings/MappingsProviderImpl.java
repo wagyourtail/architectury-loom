@@ -109,6 +109,7 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 	private UnpickMetadata unpickMetadata;
 	private MemoryMappingTree mappingTree;
 	private MemoryMappingTree mappingTreeWithSrg;
+	public Path[] mergedMojangTsrg2Files;
 
 	public MappingsProviderImpl(Project project) {
 		super(project);
@@ -231,14 +232,14 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 		mappedProvider.provide(dependency, postPopulationScheduler);
 	}
 
-	protected Path getRawSrgFile() throws IOException {
+	public Path getRawSrgFile() throws IOException {
 		LoomGradleExtension extension = getExtension();
 
-		if (extension.isForgeAndOfficial()) {
-			return patchedProvider.getMergedMojangTsrg2(false);
+		if (extension.getSrgProvider().isTsrgV2()) {
+			return MinecraftPatchedProvider.getMergedMojangTsrg2(getExtension(), false);
 		}
 
-		return extension.getSrgProvider().getSrg().toPath();
+		return extension.getSrgProvider().getSrg();
 	}
 
 	protected Path getMojmapSrgFileIfPossible() {
