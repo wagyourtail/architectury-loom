@@ -86,7 +86,7 @@ public class LaunchProvider extends DependencyProvider {
 
 					.property("mixin.env.remapRefMap", "true");
 
-			if (PropertyUtil.getAndFinalize(getExtension().getForge().getUseFabricMixin())) {
+			if (PropertyUtil.getAndFinalize(getExtension().getForge().getUseCustomMixin())) {
 				launchConfig.property("mixin.forgeloom.inject.mappings.srg-named", getExtension().getMappingsProvider().mixinTinyMappingsWithSrg.toAbsolutePath().toString());
 			} else {
 				launchConfig.property("net.minecraftforge.gradle.GradleStart.srg.srg-mcp", getExtension().getMappingsProvider().srgToNamedSrg.toAbsolutePath().toString());

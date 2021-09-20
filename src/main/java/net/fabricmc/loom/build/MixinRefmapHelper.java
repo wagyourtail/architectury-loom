@@ -60,7 +60,7 @@ public final class MixinRefmapHelper {
 			MixinExtension mixin = LoomGradleExtension.get(project).getMixin();
 			File output = outputPath.toFile();
 
-			Collection<String> allMixinConfigs = getMixinConfigurationFiles(readFabricModJson(output));
+			Collection<String> allMixinConfigs = LoomGradleExtension.get(project).isForge() ? LoomGradleExtension.get(project).getForge().getMixinConfigs().get() : getMixinConfigurationFiles(readFabricModJson(output));
 
 			return mixin.getMixinSourceSetsStream().map(sourceSet -> {
 				MixinExtension.MixinInformationContainer container = Objects.requireNonNull(

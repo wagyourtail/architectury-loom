@@ -89,12 +89,21 @@ public interface ForgeExtensionAPI {
 	void mixinConfigs(String... mixinConfigs);
 
 	/**
-	 * If true, upstream Mixin from Sponge will be replaced with Fabric's fork.
+	 * Adds mixin config files to {@link #getMixinConfigs() mixinConfigs}.
+	 *
+	 * @param mixinConfigs the mixin config file paths relative to resource roots
+	 */
+	default void mixinConfig(String... mixinConfigs) {
+		mixinConfigs(mixinConfigs);
+	}
+
+	/**
+	 * If true, upstream Mixin from Sponge will be replaced with Fabric's or Architectury's fork.
 	 * This is enabled by default.
 	 *
 	 * @return the property
 	 */
-	Property<Boolean> getUseFabricMixin();
+	Property<Boolean> getUseCustomMixin();
 
 	/**
 	 * A list of mod IDs for mods applied for data generation.

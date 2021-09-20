@@ -49,7 +49,7 @@ public class ForgeExtensionImpl implements ForgeExtensionAPI {
 	private final SetProperty<String> extraAccessWideners;
 	private final ConfigurableFileCollection accessTransformers;
 	private final SetProperty<String> mixinConfigs;
-	private final Property<Boolean> useFabricMixin;
+	private final Property<Boolean> useCustomMixin;
 	private final List<String> dataGenMods = new ArrayList<>(); // not a property because it has custom adding logic
 	private final NamedDomainObjectContainer<ForgeLocalMod> localMods;
 
@@ -60,7 +60,7 @@ public class ForgeExtensionImpl implements ForgeExtensionAPI {
 		extraAccessWideners = project.getObjects().setProperty(String.class).empty();
 		accessTransformers = project.getObjects().fileCollection();
 		mixinConfigs = project.getObjects().setProperty(String.class).empty();
-		useFabricMixin = project.getObjects().property(Boolean.class).convention(true);
+		useCustomMixin = project.getObjects().property(Boolean.class).convention(true);
 		localMods = project.container(ForgeLocalMod.class,
 				baseName -> new ForgeLocalMod(project, baseName, new ArrayList<>()));
 
@@ -99,8 +99,8 @@ public class ForgeExtensionImpl implements ForgeExtensionAPI {
 	}
 
 	@Override
-	public Property<Boolean> getUseFabricMixin() {
-		return useFabricMixin;
+	public Property<Boolean> getUseCustomMixin() {
+		return useCustomMixin;
 	}
 
 	@Override
