@@ -35,7 +35,6 @@ import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.util.PatternSet;
 
-import net.fabricmc.loom.LoomGradleExtension;
 import net.fabricmc.loom.api.MixinExtensionAPI;
 
 public abstract class MixinExtensionApiImpl implements MixinExtensionAPI {
@@ -45,7 +44,8 @@ public abstract class MixinExtensionApiImpl implements MixinExtensionAPI {
 	public MixinExtensionApiImpl(Project project) {
 		this.project = Objects.requireNonNull(project);
 		this.useMixinAp = project.getObjects().property(Boolean.class)
-				.convention(project.provider(() -> LoomGradleExtension.get(project).isForge()));
+				// .convention(project.provider(() -> LoomGradleExtension.get(project).isForge()));
+				.convention(true);
 	}
 
 	protected final PatternSet add0(SourceSet sourceSet, String refmapName) {
