@@ -42,6 +42,7 @@ import java.util.stream.Stream;
 
 import com.google.common.base.MoreObjects;
 import org.apache.commons.io.IOUtils;
+import org.gradle.api.logging.Logger;
 import org.jetbrains.annotations.Nullable;
 
 import net.fabricmc.loom.util.function.CollectionUtil;
@@ -71,7 +72,7 @@ public final class SrgMerger {
 	 * @throws MappingException if the input tiny tree's default namespace is not 'official'
 	 *                          or if an element mentioned in the SRG file does not have tiny mappings
 	 */
-	public static void mergeSrg(Supplier<Path> mojmap, Path srg, Path tiny, Path out, boolean lenient) throws IOException, MappingException {
+	public static void mergeSrg(Logger logger, Supplier<Path> mojmap, Path srg, Path tiny, Path out, boolean lenient) throws IOException, MappingException {
 		Map<String, List<MappingTreeView.MemberMappingView>> addRegardlessSrgs = new HashMap<>();
 		MemoryMappingTree arr = readSrg(srg, mojmap, addRegardlessSrgs);
 		addRegardlessSrgs.clear();
@@ -90,7 +91,7 @@ public final class SrgMerger {
 		RegularAsFlatMappingVisitor flatMappingVisitor = new RegularAsFlatMappingVisitor(output);
 
 		for (MappingTree.ClassMapping klass : arr.getClasses()) {
-			classToTiny(addRegardlessSrgs, klass, foss, flatMappingVisitor, output, lenient);
+			classToTiny(logger,  addRegardlessSrgs, klass, foss, flatMappingVisitor, output, lenient);
 		}
 
 		try (Tiny2Writer writer = new Tiny2Writer(Files.newBufferedWriter(out), false)) {
@@ -151,7 +152,7 @@ public final class SrgMerger {
 		return tree;
 	}
 
-	private static void classToTiny(Map<String, List<MappingTreeView.MemberMappingView>> addRegardlessSrgs, MappingTree.ClassMapping klass, MemoryMappingTree foss, RegularAsFlatMappingVisitor flatOutput, MemoryMappingTree output, boolean lenient)
+	private static void classToTiny(Logger logger, Map<String, List<MappingTreeView.MemberMappingView>> addRegardlessSrgs, MappingTree.ClassMapping klass, MemoryMappingTree foss, RegularAsFlatMappingVisitor flatOutput, MemoryMappingTree output, boolean lenient)
 			throws IOException {
 		String obf = klass.getSrcName();
 		String srg = klass.getDstName(0);
@@ -186,7 +187,7 @@ public final class SrgMerger {
 					throw new MappingException("Missing method: " + method.getSrcName() + " (srg: " + method.getDstName(0) + ")");
 				}
 
-				System.out.println("Missing method: " + method.getSrcName() + method.getSrcDesc() + " (srg: " + method.getDstName(0) + ") " + fossClass.getMethods().size() + " methods in the original class:");
+				logger.debug("Missing method: " + method.getSrcName() + method.getSrcDesc() + " (srg: " + method.getDstName(0) + ") " + fossClass.getMethods().size() + " methods in the original class");
 
 				continue;
 			}
@@ -208,7 +209,7 @@ public final class SrgMerger {
 			).orElse(nullOrThrow(lenient, () -> new MappingException("Missing field: " + field.getSrcName() + " (srg: " + field.getDstName(0) + ")")));
 
 			if (fossField == null) {
-				System.out.println("Missing field: " + field.getSrcName() + " (srg: " + field.getDstName(0) + ") " + fossClass.getFields().size() + " fields in the original class:");
+				logger.debug("Missing field: " + field.getSrcName() + " (srg: " + field.getDstName(0) + ") " + fossClass.getFields().size() + " fields in the original class");
 				continue;
 			}
 
