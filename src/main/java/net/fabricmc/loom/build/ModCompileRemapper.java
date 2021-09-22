@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.function.Supplier;
 import java.util.zip.ZipFile;
 
+import com.google.common.base.Suppliers;
 import com.google.common.io.Files;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
@@ -87,8 +88,10 @@ public class ModCompileRemapper {
 
 				for (ResolvedArtifact artifact : sourceConfig.getResolvedConfiguration().getResolvedArtifacts()) {
 					String group = replaceIfNullOrEmpty(artifact.getModuleVersion().getId().getGroup(), () -> MISSING_GROUP);
-					String name = artifact.getModuleVersion().getId().getName();
-					String version = replaceIfNullOrEmpty(artifact.getModuleVersion().getId().getVersion(), () -> Checksum.truncatedSha256(artifact.getFile()));
+					// Awful fix for https://github.com/architectury/architectury-loom/issues/42 for now
+					Supplier<String> checksum = Suppliers.memoize(() -> Checksum.truncatedSha256(artifact.getFile()));
+					String name = extension.isForgeAndOfficial() ? "B" + checksum.get() : artifact.getModuleVersion().getId().getName();
+					String version = extension.isForgeAndOfficial() ? "B" + checksum.get() : replaceIfNullOrEmpty(artifact.getModuleVersion().getId().getVersion(), () -> Checksum.truncatedSha256(artifact.getFile()));
 
 					if (!shouldRemapMod(logger, artifact.getFile(), artifact.getId(), extension.isForge(), sourceConfig.getName())) {
 						addToRegularCompile(project, regularConfig, artifact);

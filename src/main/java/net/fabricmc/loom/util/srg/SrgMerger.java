@@ -35,34 +35,24 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
+import java.util.Objects;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.google.common.base.MoreObjects;
 import org.apache.commons.io.IOUtils;
-import org.cadixdev.lorenz.MappingSet;
-import org.cadixdev.lorenz.io.srg.tsrg.TSrgReader;
-import org.cadixdev.lorenz.model.ClassMapping;
-import org.cadixdev.lorenz.model.FieldMapping;
-import org.cadixdev.lorenz.model.InnerClassMapping;
-import org.cadixdev.lorenz.model.MethodMapping;
-import org.cadixdev.lorenz.model.TopLevelClassMapping;
 import org.jetbrains.annotations.Nullable;
 
 import net.fabricmc.loom.util.function.CollectionUtil;
 import net.fabricmc.mappingio.MappingReader;
+import net.fabricmc.mappingio.adapter.MappingDstNsReorder;
+import net.fabricmc.mappingio.adapter.RegularAsFlatMappingVisitor;
+import net.fabricmc.mappingio.format.Tiny2Writer;
 import net.fabricmc.mappingio.format.TsrgReader;
 import net.fabricmc.mappingio.tree.MappingTree;
 import net.fabricmc.mappingio.tree.MappingTreeView;
 import net.fabricmc.mappingio.tree.MemoryMappingTree;
-import net.fabricmc.stitch.commands.tinyv2.TinyClass;
-import net.fabricmc.stitch.commands.tinyv2.TinyField;
-import net.fabricmc.stitch.commands.tinyv2.TinyFile;
-import net.fabricmc.stitch.commands.tinyv2.TinyHeader;
-import net.fabricmc.stitch.commands.tinyv2.TinyMethod;
-import net.fabricmc.stitch.commands.tinyv2.TinyV2Writer;
 
 /**
  * Utilities for merging SRG mappings.
@@ -83,33 +73,35 @@ public final class SrgMerger {
 	 */
 	public static void mergeSrg(Supplier<Path> mojmap, Path srg, Path tiny, Path out, boolean lenient) throws IOException, MappingException {
 		Map<String, List<MappingTreeView.MemberMappingView>> addRegardlessSrgs = new HashMap<>();
-		MappingSet arr = readSrg(srg, mojmap, addRegardlessSrgs);
+		MemoryMappingTree arr = readSrg(srg, mojmap, addRegardlessSrgs);
+		addRegardlessSrgs.clear();
 		MemoryMappingTree foss = new MemoryMappingTree();
 
 		try (BufferedReader reader = Files.newBufferedReader(tiny)) {
 			MappingReader.read(reader, foss);
 		}
 
-		List<String> namespaces = Stream.concat(Stream.of(foss.getSrcNamespace()), foss.getDstNamespaces().stream()).collect(Collectors.toList());
-		namespaces.add(1, "srg");
-
-		if (!"official".equals(namespaces.get(0))) {
+		if (!"official".equals(foss.getSrcNamespace())) {
 			throw new MappingException("Mapping file " + tiny + " does not have the 'official' namespace as the default!");
 		}
 
-		TinyHeader header = new TinyHeader(namespaces, 2, 0, Collections.emptyMap());
+		MemoryMappingTree output = new MemoryMappingTree();
+		output.visitNamespaces(foss.getSrcNamespace(), Stream.concat(foss.getDstNamespaces().stream(), Stream.of("srg")).collect(Collectors.toList()));
+		RegularAsFlatMappingVisitor flatMappingVisitor = new RegularAsFlatMappingVisitor(output);
 
-		List<TinyClass> classes = new ArrayList<>();
-
-		for (TopLevelClassMapping klass : arr.getTopLevelClassMappings()) {
-			classToTiny(addRegardlessSrgs, foss, namespaces, klass, classes::add, lenient);
+		for (MappingTree.ClassMapping klass : arr.getClasses()) {
+			classToTiny(addRegardlessSrgs, klass, foss, flatMappingVisitor, output, lenient);
 		}
 
-		TinyFile file = new TinyFile(header, classes);
-		TinyV2Writer.write(file, out);
+		try (Tiny2Writer writer = new Tiny2Writer(Files.newBufferedWriter(out), false)) {
+			MappingDstNsReorder reorder = new MappingDstNsReorder(writer, Stream.concat(Stream.of("srg"), foss.getDstNamespaces().stream()).collect(Collectors.toList()));
+			output.accept(reorder);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
-	private static MappingSet readSrg(Path srg, Supplier<Path> mojmap, Map<String, List<MappingTreeView.MemberMappingView>> addRegardlessSrgs)
+	private static MemoryMappingTree readSrg(Path srg, Supplier<Path> mojmap, Map<String, List<MappingTreeView.MemberMappingView>> addRegardlessSrgs)
 			throws IOException {
 		try (BufferedReader reader = Files.newBufferedReader(srg)) {
 			String content = IOUtils.toString(reader);
@@ -117,40 +109,36 @@ public final class SrgMerger {
 			if (content.startsWith("tsrg2")) {
 				return readTsrg2(content, mojmap, addRegardlessSrgs);
 			} else {
-				try (TSrgReader srgReader = new TSrgReader(new StringReader(content))) {
-					return srgReader.read();
-				}
+				MemoryMappingTree tsrg = new MemoryMappingTree();
+				TsrgReader.read(new StringReader(content), tsrg);
+				return tsrg;
 			}
 		}
 	}
 
-	private static MappingSet readTsrg2(String content, Supplier<Path> mojmap, Map<String, List<MappingTreeView.MemberMappingView>> addRegardlessSrgs)
+	private static MemoryMappingTree readTsrg2(String content, Supplier<Path> mojmap, Map<String, List<MappingTreeView.MemberMappingView>> addRegardlessSrgs)
 			throws IOException {
-		MappingSet set;
+		MemoryMappingTree tsrg2 = new MemoryMappingTree();
+		TsrgReader.read(new StringReader(content), tsrg2);
+		MemoryMappingTree mojmapTree = readTsrg2ToTinyTree(mojmap.get());
 
-		try (Tsrg2Utils.MappingsIO2LorenzWriter lorenzWriter = new Tsrg2Utils.MappingsIO2LorenzWriter(0, false)) {
-			TsrgReader.read(new StringReader(content), lorenzWriter);
-			set = lorenzWriter.read();
-			MemoryMappingTree mojmapTree = readTsrg2ToTinyTree(mojmap.get());
+		for (MappingTree.ClassMapping classDef : mojmapTree.getClasses()) {
+			for (MappingTree.MethodMapping methodDef : classDef.getMethods()) {
+				String name = methodDef.getSrcName();
 
-			for (MappingTree.ClassMapping classDef : mojmapTree.getClasses()) {
-				for (MappingTree.MethodMapping methodDef : classDef.getMethods()) {
-					String name = methodDef.getSrcName();
-
-					if (name.indexOf('<') != 0 && name.equals(methodDef.getDstName(0))) {
-						addRegardlessSrgs.computeIfAbsent(classDef.getSrcName(), $ -> new ArrayList<>()).add(methodDef);
-					}
+				if (name.indexOf('<') != 0 && name.equals(methodDef.getDstName(0))) {
+					addRegardlessSrgs.computeIfAbsent(classDef.getSrcName(), $ -> new ArrayList<>()).add(methodDef);
 				}
+			}
 
-				for (MappingTree.FieldMapping fieldDef : classDef.getFields()) {
-					if (fieldDef.getSrcName().equals(fieldDef.getDstName(0))) {
-						addRegardlessSrgs.computeIfAbsent(classDef.getSrcName(), $ -> new ArrayList<>()).add(fieldDef);
-					}
+			for (MappingTree.FieldMapping fieldDef : classDef.getFields()) {
+				if (fieldDef.getSrcName().equals(fieldDef.getDstName(0))) {
+					addRegardlessSrgs.computeIfAbsent(classDef.getSrcName(), $ -> new ArrayList<>()).add(fieldDef);
 				}
 			}
 		}
 
-		return set;
+		return tsrg2;
 	}
 
 	private static MemoryMappingTree readTsrg2ToTinyTree(Path path) throws IOException {
@@ -163,12 +151,14 @@ public final class SrgMerger {
 		return tree;
 	}
 
-	private static void classToTiny(Map<String, List<MappingTreeView.MemberMappingView>> addRegardlessSrgs, MappingTree foss, List<String> namespaces, ClassMapping<?, ?> klass, Consumer<TinyClass> classConsumer, boolean lenient) {
-		String obf = klass.getFullObfuscatedName();
-		String srg = klass.getFullDeobfuscatedName();
-		MappingTree.ClassMapping classDef = foss.getClass(obf);
+	private static void classToTiny(Map<String, List<MappingTreeView.MemberMappingView>> addRegardlessSrgs, MappingTree.ClassMapping klass, MemoryMappingTree foss, RegularAsFlatMappingVisitor flatOutput, MemoryMappingTree output, boolean lenient)
+			throws IOException {
+		String obf = klass.getSrcName();
+		String srg = klass.getDstName(0);
+		MappingTree.ClassMapping fossClass = foss.getClass(obf);
+		int srgId = output.getNamespaceId("srg");
 
-		if (classDef == null) {
+		if (fossClass == null) {
 			if (lenient) {
 				return;
 			} else {
@@ -176,85 +166,63 @@ public final class SrgMerger {
 			}
 		}
 
-		List<String> classNames = CollectionUtil.map(
-				namespaces,
-				namespace -> "srg".equals(namespace) ? srg : classDef.getName(namespace)
-		);
+		flatOutput.visitClass(obf, output.getDstNamespaces().stream().map(ns ->
+				ns.equals("srg") ? srg : fossClass.getName(ns)).toArray(String[]::new));
 
-		List<TinyMethod> methods = new ArrayList<>();
-		List<TinyField> fields = new ArrayList<>();
-
-		for (MethodMapping method : klass.getMethodMappings()) {
-			MappingTree.MethodMapping def = CollectionUtil.find(
-					classDef.getMethods(),
-					m -> m.getName("official").equals(method.getObfuscatedName()) && m.getDesc("official").equals(method.getObfuscatedDescriptor())
+		for (MappingTree.MethodMapping method : klass.getMethods()) {
+			MappingTree.MethodMapping fossMethod = CollectionUtil.find(
+					fossClass.getMethods(),
+					m -> m.getSrcName().equals(method.getSrcName()) && m.getSrcDesc().equals(method.getSrcDesc())
 			).orElse(null);
 
-			if (def == null) {
-				if (tryMatchRegardlessSrgs(addRegardlessSrgs, namespaces, obf, methods, method)) continue;
+			if (fossMethod == null) {
+				if (tryMatchRegardlessSrgs(addRegardlessSrgs, obf, method)) {
+					flatOutput.visitMethod(obf, method.getSrcName(), method.getSrcDesc(), output.getDstNamespaces().stream().map(ns ->
+							ns.equals("srg") ? method.getDstName(0) : method.getSrcName()).toArray(String[]::new));
+					continue;
+				}
 
 				if (!lenient) {
-					throw new MappingException("Missing method: " + method.getFullObfuscatedName() + " (srg: " + method.getFullDeobfuscatedName() + ")");
+					throw new MappingException("Missing method: " + method.getSrcName() + " (srg: " + method.getDstName(0) + ")");
 				}
+
+				System.out.println("Missing method: " + method.getSrcName() + method.getSrcDesc() + " (srg: " + method.getDstName(0) + ") " + fossClass.getMethods().size() + " methods in the original class:");
 
 				continue;
 			}
 
-			List<String> methodNames = CollectionUtil.map(
-					namespaces,
-					namespace -> "srg".equals(namespace) ? method.getDeobfuscatedName() : def.getName(namespace)
-			);
+			flatOutput.visitMethod(obf, fossMethod.getSrcName(), fossMethod.getSrcDesc(), output.getDstNamespaces().stream().map(ns ->
+					ns.equals("srg") ? method.getDstName(0) : fossMethod.getName(ns)).toArray(String[]::new));
 
-			methods.add(new TinyMethod(
-					def.getDesc("official"), methodNames,
-					/* parameters */ Collections.emptyList(),
-					/* locals */ Collections.emptyList(),
-					/* comments */ Collections.emptyList()
-			));
+			for (MappingTree.MethodArgMapping arg : fossMethod.getArgs()) {
+				flatOutput.visitMethodArg(obf, fossMethod.getSrcName(), fossMethod.getSrcDesc(), arg.getArgPosition(),
+						arg.getLvIndex(), arg.getSrcName(), output.getDstNamespaces().stream().map(ns ->
+								ns.equals("srg") ? arg.getName("named") : arg.getName(ns)).toArray(String[]::new));
+			}
 		}
 
-		for (FieldMapping field : klass.getFieldMappings()) {
-			MappingTree.FieldMapping def = CollectionUtil.find(
-					classDef.getFields(),
-					f -> f.getName("official").equals(field.getObfuscatedName())
-			).orElse(nullOrThrow(lenient, () -> new MappingException("Missing field: " + field.getFullObfuscatedName() + " (srg: " + field.getFullDeobfuscatedName() + ")")));
+		for (MappingTree.FieldMapping field : klass.getFields()) {
+			MappingTree.FieldMapping fossField = CollectionUtil.find(
+					fossClass.getFields(),
+					f -> f.getSrcName().equals(field.getSrcName())
+			).orElse(nullOrThrow(lenient, () -> new MappingException("Missing field: " + field.getSrcName() + " (srg: " + field.getDstName(0) + ")")));
 
-			if (def == null) continue;
+			if (fossField == null) {
+				System.out.println("Missing field: " + field.getSrcName() + " (srg: " + field.getDstName(0) + ") " + fossClass.getFields().size() + " fields in the original class:");
+				continue;
+			}
 
-			List<String> fieldNames = CollectionUtil.map(
-					namespaces,
-					namespace -> "srg".equals(namespace) ? field.getDeobfuscatedName() : def.getName(namespace)
-			);
-
-			fields.add(new TinyField(def.getDesc("official"), fieldNames, Collections.emptyList()));
-		}
-
-		TinyClass tinyClass = new TinyClass(classNames, methods, fields, Collections.emptyList());
-		classConsumer.accept(tinyClass);
-
-		for (InnerClassMapping innerKlass : klass.getInnerClassMappings()) {
-			classToTiny(addRegardlessSrgs, foss, namespaces, innerKlass, classConsumer, lenient);
+			flatOutput.visitField(obf, fossField.getSrcName(), fossField.getSrcDesc(), output.getDstNamespaces().stream().map(ns ->
+					ns.equals("srg") ? field.getDstName(0) : fossField.getName(ns)).toArray(String[]::new));
 		}
 	}
 
-	private static boolean tryMatchRegardlessSrgs(Map<String, List<MappingTreeView.MemberMappingView>> addRegardlessSrgs, List<String> namespaces, String obf,
-			List<TinyMethod> methods, MethodMapping method) {
+	private static boolean tryMatchRegardlessSrgs(Map<String, List<MappingTreeView.MemberMappingView>> addRegardlessSrgs, String obf, MappingTree.MethodMapping method) {
 		List<MappingTreeView.MemberMappingView> mutableDescriptoredList = addRegardlessSrgs.get(obf);
 
-		if (!method.getDeobfuscatedName().equals(method.getObfuscatedName())) {
+		if (!Objects.equals(method.getDstName(0), method.getSrcName())) {
 			for (MappingTreeView.MemberMappingView descriptored : MoreObjects.firstNonNull(mutableDescriptoredList, Collections.<MappingTreeView.MemberMappingView>emptyList())) {
-				if (descriptored instanceof MappingTreeView.MethodMappingView && descriptored.getSrcName().equals(method.getObfuscatedName()) && descriptored.getSrcDesc().equals(method.getObfuscatedDescriptor())) {
-					List<String> methodNames = CollectionUtil.map(
-							namespaces,
-							namespace -> "srg".equals(namespace) ? method.getDeobfuscatedName() : method.getObfuscatedName()
-					);
-
-					methods.add(new TinyMethod(
-							method.getObfuscatedDescriptor(), methodNames,
-							/* parameters */ Collections.emptyList(),
-							/* locals */ Collections.emptyList(),
-							/* comments */ Collections.emptyList()
-					));
+				if (descriptored instanceof MappingTreeView.MethodMappingView && descriptored.getSrcName().equals(method.getSrcName()) && descriptored.getSrcDesc().equals(method.getSrcDesc())) {
 					return true;
 				}
 			}
