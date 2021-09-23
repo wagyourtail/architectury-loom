@@ -299,10 +299,10 @@ public class MinecraftMappedProvider extends DependencyProvider {
 
 	public Set<IMappingProvider> getMappings(@Nullable Set<String> fromClassNames, String fromM, String toM, Mutable<MemoryMappingTree> mappings) throws IOException {
 		Set<IMappingProvider> providers = new HashSet<>();
-		mappings.setValue((true || fromM.equals("srg") || toM.equals("srg")) && getExtension().isForge() ? getExtension().getMappingsProvider().getMappingsWithSrg() : getExtension().getMappingsProvider().getMappings());
+		mappings.setValue(getExtension().isForge() ? getExtension().getMappingsProvider().getMappingsWithSrg() : getExtension().getMappingsProvider().getMappings());
 		providers.add(TinyRemapperHelper.create(mappings.getValue(), fromM, toM, true));
 
-		if (getExtension().isForge() && (true || fromM.equals("srg") || toM.equals("srg"))) {
+		if (getExtension().isForge()) {
 			if (fromClassNames != null) {
 				providers.add(InnerClassRemapper.of(fromClassNames, getExtension().getMappingsProvider().getMappingsWithSrg(), fromM, toM));
 			}
