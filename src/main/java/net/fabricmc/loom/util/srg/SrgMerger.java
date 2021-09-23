@@ -1,7 +1,7 @@
 /*
  * This file is part of fabric-loom, licensed under the MIT License (MIT).
  *
- * Copyright (c) 2020-2021 FabricMC
+ * Copyright (c) 2016, 2017, 2018 FabricMC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,7 +35,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -46,8 +45,8 @@ import org.gradle.api.logging.Logger;
 import org.jetbrains.annotations.Nullable;
 
 import net.fabricmc.loom.util.function.CollectionUtil;
+import net.fabricmc.mappingio.FlatMappingVisitor;
 import net.fabricmc.mappingio.MappingReader;
-import net.fabricmc.mappingio.adapter.MappingDstNsReorder;
 import net.fabricmc.mappingio.adapter.RegularAsFlatMappingVisitor;
 import net.fabricmc.mappingio.format.Tiny2Writer;
 import net.fabricmc.mappingio.format.TsrgReader;
@@ -73,9 +72,18 @@ public final class SrgMerger {
 	 *                          or if an element mentioned in the SRG file does not have tiny mappings
 	 */
 	public static void mergeSrg(Logger logger, Supplier<Path> mojmap, Path srg, Path tiny, Path out, boolean lenient) throws IOException, MappingException {
+		MemoryMappingTree tree = mergeSrg(logger, mojmap, srg, tiny, lenient);
+
+		try (Tiny2Writer writer = new Tiny2Writer(Files.newBufferedWriter(out), false)) {
+			tree.accept(writer);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public static MemoryMappingTree mergeSrg(Logger logger, Supplier<Path> mojmap, Path srg, Path tiny, boolean lenient) throws IOException, MappingException {
 		Map<String, List<MappingTreeView.MemberMappingView>> addRegardlessSrgs = new HashMap<>();
 		MemoryMappingTree arr = readSrg(srg, mojmap, addRegardlessSrgs);
-		addRegardlessSrgs.clear();
 		MemoryMappingTree foss = new MemoryMappingTree();
 
 		try (BufferedReader reader = Files.newBufferedReader(tiny)) {
@@ -87,19 +95,14 @@ public final class SrgMerger {
 		}
 
 		MemoryMappingTree output = new MemoryMappingTree();
-		output.visitNamespaces(foss.getSrcNamespace(), Stream.concat(foss.getDstNamespaces().stream(), Stream.of("srg")).collect(Collectors.toList()));
+		output.visitNamespaces(foss.getSrcNamespace(), Stream.concat(Stream.of("srg"), foss.getDstNamespaces().stream()).collect(Collectors.toList()));
 		RegularAsFlatMappingVisitor flatMappingVisitor = new RegularAsFlatMappingVisitor(output);
 
 		for (MappingTree.ClassMapping klass : arr.getClasses()) {
-			classToTiny(logger,  addRegardlessSrgs, klass, foss, flatMappingVisitor, output, lenient);
+			classToTiny(logger, addRegardlessSrgs, foss, klass, output, flatMappingVisitor, lenient);
 		}
 
-		try (Tiny2Writer writer = new Tiny2Writer(Files.newBufferedWriter(out), false)) {
-			MappingDstNsReorder reorder = new MappingDstNsReorder(writer, Stream.concat(Stream.of("srg"), foss.getDstNamespaces().stream()).collect(Collectors.toList()));
-			output.accept(reorder);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		return output;
 	}
 
 	private static MemoryMappingTree readSrg(Path srg, Supplier<Path> mojmap, Map<String, List<MappingTreeView.MemberMappingView>> addRegardlessSrgs)
@@ -107,20 +110,17 @@ public final class SrgMerger {
 		try (BufferedReader reader = Files.newBufferedReader(srg)) {
 			String content = IOUtils.toString(reader);
 
-			if (content.startsWith("tsrg2")) {
-				return readTsrg2(content, mojmap, addRegardlessSrgs);
-			} else {
-				MemoryMappingTree tsrg = new MemoryMappingTree();
-				TsrgReader.read(new StringReader(content), tsrg);
-				return tsrg;
+			if (content.startsWith("tsrg2") && mojmap != null) {
+				addRegardlessSrgs(mojmap, addRegardlessSrgs);
 			}
+
+			MemoryMappingTree tsrg = new MemoryMappingTree();
+			TsrgReader.read(new StringReader(content), tsrg);
+			return tsrg;
 		}
 	}
 
-	private static MemoryMappingTree readTsrg2(String content, Supplier<Path> mojmap, Map<String, List<MappingTreeView.MemberMappingView>> addRegardlessSrgs)
-			throws IOException {
-		MemoryMappingTree tsrg2 = new MemoryMappingTree();
-		TsrgReader.read(new StringReader(content), tsrg2);
+	private static void addRegardlessSrgs(Supplier<Path> mojmap, Map<String, List<MappingTreeView.MemberMappingView>> addRegardlessSrgs) throws IOException {
 		MemoryMappingTree mojmapTree = readTsrg2ToTinyTree(mojmap.get());
 
 		for (MappingTree.ClassMapping classDef : mojmapTree.getClasses()) {
@@ -138,8 +138,6 @@ public final class SrgMerger {
 				}
 			}
 		}
-
-		return tsrg2;
 	}
 
 	private static MemoryMappingTree readTsrg2ToTinyTree(Path path) throws IOException {
@@ -152,14 +150,13 @@ public final class SrgMerger {
 		return tree;
 	}
 
-	private static void classToTiny(Logger logger, Map<String, List<MappingTreeView.MemberMappingView>> addRegardlessSrgs, MappingTree.ClassMapping klass, MemoryMappingTree foss, RegularAsFlatMappingVisitor flatOutput, MemoryMappingTree output, boolean lenient)
+	private static void classToTiny(Logger logger, Map<String, List<MappingTreeView.MemberMappingView>> addRegardlessSrgs, MappingTree foss, MappingTree.ClassMapping klass, MappingTree output, FlatMappingVisitor flatOutput, boolean lenient)
 			throws IOException {
 		String obf = klass.getSrcName();
 		String srg = klass.getDstName(0);
-		MappingTree.ClassMapping fossClass = foss.getClass(obf);
-		int srgId = output.getNamespaceId("srg");
+		MappingTree.ClassMapping classDef = foss.getClass(obf);
 
-		if (fossClass == null) {
+		if (classDef == null) {
 			if (lenient) {
 				return;
 			} else {
@@ -167,63 +164,92 @@ public final class SrgMerger {
 			}
 		}
 
-		flatOutput.visitClass(obf, output.getDstNamespaces().stream().map(ns ->
-				ns.equals("srg") ? srg : fossClass.getName(ns)).toArray(String[]::new));
+		List<String> classNames = CollectionUtil.map(
+				output.getDstNamespaces(),
+				namespace -> "srg".equals(namespace) ? srg : classDef.getName(namespace)
+		);
+
+		flatOutput.visitClass(obf, classNames.toArray(new String[0]));
 
 		for (MappingTree.MethodMapping method : klass.getMethods()) {
-			MappingTree.MethodMapping fossMethod = CollectionUtil.find(
-					fossClass.getMethods(),
-					m -> m.getSrcName().equals(method.getSrcName()) && m.getSrcDesc().equals(method.getSrcDesc())
+			MappingTree.MethodMapping def = CollectionUtil.find(
+					classDef.getMethods(),
+					m -> m.getName("official").equals(method.getSrcName()) && m.getDesc("official").equals(method.getSrcDesc())
 			).orElse(null);
 
-			if (fossMethod == null) {
-				if (tryMatchRegardlessSrgs(addRegardlessSrgs, obf, method)) {
-					flatOutput.visitMethod(obf, method.getSrcName(), method.getSrcDesc(), output.getDstNamespaces().stream().map(ns ->
-							ns.equals("srg") ? method.getDstName(0) : method.getSrcName()).toArray(String[]::new));
-					continue;
-				}
+			if (def == null) {
+				if (tryMatchRegardlessSrgsMethod(addRegardlessSrgs, obf, output, flatOutput, method)) continue;
 
 				if (!lenient) {
 					throw new MappingException("Missing method: " + method.getSrcName() + " (srg: " + method.getDstName(0) + ")");
 				}
 
-				logger.debug("Missing method: " + method.getSrcName() + method.getSrcDesc() + " (srg: " + method.getDstName(0) + ") " + fossClass.getMethods().size() + " methods in the original class");
-
 				continue;
 			}
 
-			flatOutput.visitMethod(obf, fossMethod.getSrcName(), fossMethod.getSrcDesc(), output.getDstNamespaces().stream().map(ns ->
-					ns.equals("srg") ? method.getDstName(0) : fossMethod.getName(ns)).toArray(String[]::new));
+			List<String> methodNames = CollectionUtil.map(
+					output.getDstNamespaces(),
+					namespace -> "srg".equals(namespace) ? method.getDstName(0) : def.getName(namespace)
+			);
 
-			for (MappingTree.MethodArgMapping arg : fossMethod.getArgs()) {
-				flatOutput.visitMethodArg(obf, fossMethod.getSrcName(), fossMethod.getSrcDesc(), arg.getArgPosition(),
-						arg.getLvIndex(), arg.getSrcName(), output.getDstNamespaces().stream().map(ns ->
-								ns.equals("srg") ? arg.getName("named") : arg.getName(ns)).toArray(String[]::new));
-			}
+			flatOutput.visitMethod(obf, def.getName("official"), def.getDesc("official"), methodNames.toArray(new String[0]));
 		}
 
 		for (MappingTree.FieldMapping field : klass.getFields()) {
-			MappingTree.FieldMapping fossField = CollectionUtil.find(
-					fossClass.getFields(),
-					f -> f.getSrcName().equals(field.getSrcName())
+			MappingTree.FieldMapping def = CollectionUtil.find(
+					classDef.getFields(),
+					f -> f.getName("official").equals(field.getSrcName())
 			).orElse(nullOrThrow(lenient, () -> new MappingException("Missing field: " + field.getSrcName() + " (srg: " + field.getDstName(0) + ")")));
 
-			if (fossField == null) {
-				logger.debug("Missing field: " + field.getSrcName() + " (srg: " + field.getDstName(0) + ") " + fossClass.getFields().size() + " fields in the original class");
+			if (def == null) {
+				if (tryMatchRegardlessSrgsField(addRegardlessSrgs, obf, output, flatOutput, field)) continue;
+
 				continue;
 			}
 
-			flatOutput.visitField(obf, fossField.getSrcName(), fossField.getSrcDesc(), output.getDstNamespaces().stream().map(ns ->
-					ns.equals("srg") ? field.getDstName(0) : fossField.getName(ns)).toArray(String[]::new));
+			List<String> fieldNames = CollectionUtil.map(
+					output.getDstNamespaces(),
+					namespace -> "srg".equals(namespace) ? field.getDstName(0) : def.getName(namespace)
+			);
+
+			flatOutput.visitField(obf, def.getName("official"), def.getDesc("official"), fieldNames.toArray(new String[0]));
 		}
 	}
 
-	private static boolean tryMatchRegardlessSrgs(Map<String, List<MappingTreeView.MemberMappingView>> addRegardlessSrgs, String obf, MappingTree.MethodMapping method) {
+	private static boolean tryMatchRegardlessSrgsMethod(Map<String, List<MappingTreeView.MemberMappingView>> addRegardlessSrgs, String obf,
+			MappingTree output, FlatMappingVisitor flatOutput, MappingTree.MethodMapping method) throws IOException {
 		List<MappingTreeView.MemberMappingView> mutableDescriptoredList = addRegardlessSrgs.get(obf);
 
-		if (!Objects.equals(method.getDstName(0), method.getSrcName())) {
+		if (!method.getDstName(0).equals(method.getSrcName())) {
 			for (MappingTreeView.MemberMappingView descriptored : MoreObjects.firstNonNull(mutableDescriptoredList, Collections.<MappingTreeView.MemberMappingView>emptyList())) {
-				if (descriptored instanceof MappingTreeView.MethodMappingView && descriptored.getSrcName().equals(method.getSrcName()) && descriptored.getSrcDesc().equals(method.getSrcDesc())) {
+				if (descriptored instanceof MappingTree.MethodMapping && descriptored.getSrcName().equals(method.getSrcName()) && descriptored.getSrcDesc().equals(method.getSrcDesc())) {
+					List<String> methodNames = CollectionUtil.map(
+							output.getDstNamespaces(),
+							namespace -> "srg".equals(namespace) ? method.getDstName(0) : method.getSrcName()
+					);
+
+					flatOutput.visitMethod(obf, method.getSrcName(), method.getSrcDesc(), methodNames.toArray(new String[0]));
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	private static boolean tryMatchRegardlessSrgsField(Map<String, List<MappingTreeView.MemberMappingView>> addRegardlessSrgs, String obf,
+			MappingTree output, FlatMappingVisitor flatOutput, MappingTree.FieldMapping field) throws IOException {
+		List<MappingTreeView.MemberMappingView> mutableDescriptoredList = addRegardlessSrgs.get(obf);
+
+		if (!field.getDstName(0).equals(field.getSrcName())) {
+			for (MappingTreeView.MemberMappingView descriptored : MoreObjects.firstNonNull(mutableDescriptoredList, Collections.<MappingTreeView.MemberMappingView>emptyList())) {
+				if (descriptored instanceof MappingTree.FieldMapping && descriptored.getSrcName().equals(field.getSrcName())) {
+					List<String> fieldNames = CollectionUtil.map(
+							output.getDstNamespaces(),
+							namespace -> "srg".equals(namespace) ? field.getDstName(0) : field.getSrcName()
+					);
+
+					flatOutput.visitField(obf, field.getSrcName(), field.getSrcDesc(), fieldNames.toArray(new String[0]));
 					return true;
 				}
 			}

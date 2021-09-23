@@ -71,7 +71,7 @@ public final class TinyRemapperHelper {
 
 		TinyRemapper remapper = _getTinyRemapper(project, fixRecords).getKey();
 		remapper.replaceMappings(ImmutableSet.of(
-				TinyRemapperHelper.create(extension.isForge() ? extension.getMappingsProvider().getMappingsWithSrg() : extension.getMappingsProvider().getMappings(), fromM, toM, true),
+				TinyRemapperHelper.create((fromM.equals("srg") || toM.equals("srg")) && extension.isForge() ? extension.getMappingsProvider().getMappingsWithSrg() : extension.getMappingsProvider().getMappings(), fromM, toM, true),
 				out -> TinyRemapperHelper.JSR_TO_JETBRAINS.forEach(out::acceptClass)
 		));
 		return remapper;

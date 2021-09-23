@@ -184,7 +184,7 @@ public class SourceRemapper {
 
 		MappingSet mappings = extension.getOrCreateSrcMappingCache(id, () -> {
 			try {
-				MemoryMappingTree m = extension.shouldGenerateSrgTiny() ? mappingsProvider.getMappingsWithSrg() : mappingsProvider.getMappings();
+				MemoryMappingTree m = (from.equals("srg") || to.equals("srg")) && extension.shouldGenerateSrgTiny() ? mappingsProvider.getMappingsWithSrg() : mappingsProvider.getMappings();
 				project.getLogger().info(":loading " + from + " -> " + to + " source mappings");
 				return new TinyMappingsReader(m, from, to).read();
 			} catch (Exception e) {

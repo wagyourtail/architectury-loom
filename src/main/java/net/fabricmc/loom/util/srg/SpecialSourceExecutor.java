@@ -103,6 +103,7 @@ public class SpecialSourceExecutor {
 
 		Path output = extension.getFiles().getProjectBuildCache().toPath().resolve(officialJar.getFileName().toString().substring(0, officialJar.getFileName().toString().length() - 4) + "-srg-output.jar");
 		Files.deleteIfExists(output);
+		stopwatch = Stopwatch.createStarted();
 
 		if (specialSource) {
 			String[] args = new String[] {
@@ -134,6 +135,8 @@ public class SpecialSourceExecutor {
 					spec.setErrorOutput(NullOutputStream.NULL_OUTPUT_STREAM);
 				}
 			}).rethrowFailure().assertNormalExitValue();
+
+			project.getLogger().lifecycle(":remapped minecraft (SpecialSource, " + side + ", official -> srg) in " + stopwatch.stop());
 		} else {
 			List<String> args = new ArrayList<>(Arrays.asList(
 					"--jar-in",
@@ -172,6 +175,8 @@ public class SpecialSourceExecutor {
 					spec.setErrorOutput(NullOutputStream.NULL_OUTPUT_STREAM);
 				}
 			}).rethrowFailure().assertNormalExitValue();
+
+			project.getLogger().lifecycle(":remapped minecraft (Vignette, " + side + ", official -> mojang) in " + stopwatch.stop());
 		}
 
 		Files.deleteIfExists(stripped);

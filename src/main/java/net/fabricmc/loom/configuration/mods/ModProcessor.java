@@ -148,7 +148,7 @@ public class ModProcessor {
 		Stopwatch stopwatch = Stopwatch.createStarted();
 		project.getLogger().lifecycle(":remapping " + remapList.size() + " mods (TinyRemapper, " + fromM + " -> " + toM + ")");
 
-		MemoryMappingTree mappings = extension.isForge() ? mappingsProvider.getMappingsWithSrg() : mappingsProvider.getMappings();
+		MemoryMappingTree mappings = (fromM.equals("srg") || toM.equals("srg")) && extension.isForge() ? mappingsProvider.getMappingsWithSrg() : mappingsProvider.getMappings();
 		LoggerFilter.replaceSystemOut();
 		TinyRemapper remapper = TinyRemapper.newRemapper()
 				.logger(project.getLogger()::lifecycle)

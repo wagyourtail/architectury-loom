@@ -156,7 +156,7 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 		if (getExtension().shouldGenerateSrgTiny()) {
 			if (Files.notExists(tinyMappingsWithSrg) || isRefreshDeps()) {
 				// Merge tiny mappings with srg
-				SrgMerger.mergeSrg(getProject().getLogger(), this::getMojmapSrgFileIfPossible, getRawSrgFile(), tinyMappings, tinyMappingsWithSrg, true);
+				SrgMerger.mergeSrg(getProject().getLogger(), null, getRawSrgFile(), tinyMappings, tinyMappingsWithSrg, true);
 			}
 
 			mappingTreeWithSrg = readMappings(tinyMappingsWithSrg);
@@ -241,7 +241,7 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 		return extension.getSrgProvider().getSrg();
 	}
 
-	protected Path getMojmapSrgFileIfPossible() {
+	public Path getMojmapSrgFileIfPossible() {
 		try {
 			LoomGradleExtension extension = getExtension();
 			return SrgProvider.getMojmapTsrg2(getProject(), extension);

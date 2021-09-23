@@ -48,39 +48,39 @@ public class Tsrg2Writer {
 	}
 
 	private static void writeClass(List<String> namespaces, MappingTree.ClassMapping def, StringBuilder builder) {
-		writeMapped(false, namespaces, def, builder);
+		writeMapped(null, namespaces, def, builder);
 
 		for (MappingTree.MethodMapping method : def.getMethods()) {
 			writeMethod(namespaces, method, builder);
 		}
 
 		for (MappingTree.FieldMapping field : def.getFields()) {
-			writeMapped(true, namespaces, field, builder);
+			writeMapped('\t', namespaces, field, builder);
 		}
 	}
 
 	private static void writeMethod(List<String> namespaces, MappingTree.MethodMapping def, StringBuilder builder) {
-		writeMapped(true, namespaces, def, builder);
+		writeMapped('\t', namespaces, def, builder);
 
 		for (MappingTree.MethodArgMapping arg : def.getArgs()) {
 			builder.append("\t\t").append(arg.getLvIndex());
-			writeMapped(true, namespaces, arg, builder);
+			writeMapped(' ', namespaces, arg, builder);
 		}
 	}
 
 	private static void writeField(List<String> namespaces, MappingTree.FieldMapping def, StringBuilder builder) {
-		writeMapped(true, namespaces, def, builder);
+		writeMapped('\t', namespaces, def, builder);
 	}
 
-	private static void writeMapped(boolean needFirst, List<String> namespaces, MappingTreeView.ElementMappingView mapped, StringBuilder builder) {
+	private static void writeMapped(Character first, List<String> namespaces, MappingTreeView.ElementMappingView mapped, StringBuilder builder) {
 		String[] names = namespaces.stream().map(mapped::getName).toArray(String[]::new);
 
 		for (int i = 0; i < names.length; ++i) {
 			String name = names[i];
 
 			if (i == 0) {
-				if (needFirst) {
-					builder.append('\t');
+				if (first != null) {
+					builder.append(first);
 				}
 			} else {
 				builder.append(' ');

@@ -165,7 +165,7 @@ public class RemapJarTask extends Jar {
 	}
 
 	private ReferenceRemapper createReferenceRemapper(LoomGradleExtension extension, String from, String to) throws IOException {
-		MappingTree mappings = extension.shouldGenerateSrgTiny() ? extension.getMappingsProvider().getMappingsWithSrg() : extension.getMappingsProvider().getMappings();
+		MappingTree mappings = (from.equals("srg") || to.equals("srg")) && extension.shouldGenerateSrgTiny() ? extension.getMappingsProvider().getMappingsWithSrg() : extension.getMappingsProvider().getMappings();
 
 		return new SimpleReferenceRemapper(new SimpleReferenceRemapper.Remapper() {
 			@Override
@@ -248,7 +248,7 @@ public class RemapJarTask extends Jar {
 		if (isMainRemapTask) {
 			jarRemapper.addToClasspath(getRemapClasspath());
 
-			jarRemapper.addMappings(TinyRemapperHelper.create(extension.shouldGenerateSrgTiny() ? mappingsProvider.getMappingsWithSrg() : mappingsProvider.getMappings(), fromM, toM, false));
+			jarRemapper.addMappings(TinyRemapperHelper.create((fromM.equals("srg") || toM.equals("srg")) && extension.shouldGenerateSrgTiny() ? mappingsProvider.getMappingsWithSrg() : mappingsProvider.getMappings(), fromM, toM, false));
 		}
 
 		for (File mixinMapFile : extension.getAllMixinMappings()) {
@@ -403,7 +403,7 @@ public class RemapJarTask extends Jar {
 	}
 
 	private IMappingProvider remapToSrg(LoomGradleExtension extension, IMappingProvider parent, String from, String to) throws IOException {
-		MappingTree mappings = extension.shouldGenerateSrgTiny() ? extension.getMappingsProvider().getMappingsWithSrg() : extension.getMappingsProvider().getMappings();
+		MappingTree mappings = (from.equals("srg") || to.equals("srg")) && extension.shouldGenerateSrgTiny() ? extension.getMappingsProvider().getMappingsWithSrg() : extension.getMappingsProvider().getMappings();
 
 		return sink -> {
 			parent.load(new IMappingProvider.MappingAcceptor() {
@@ -503,7 +503,7 @@ public class RemapJarTask extends Jar {
 			}
 
 			LoomGradleExtension extension = LoomGradleExtension.get(getProject());
-			MappingTree mappings = extension.shouldGenerateSrgTiny() ? extension.getMappingsProvider().getMappingsWithSrg() : extension.getMappingsProvider().getMappings();
+			MappingTree mappings = (fromM.get().equals("srg") || toM.get().equals("srg")) && extension.shouldGenerateSrgTiny() ? extension.getMappingsProvider().getMappingsWithSrg() : extension.getMappingsProvider().getMappings();
 
 			try (TinyMappingsReader reader = new TinyMappingsReader(mappings, fromM.get(), toM.get())) {
 				MappingSet mappingSet = reader.read();
