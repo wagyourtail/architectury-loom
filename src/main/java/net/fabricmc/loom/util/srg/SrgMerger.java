@@ -235,7 +235,7 @@ public final class SrgMerger {
 				String srgName = srgVar != null ? srgVar.getDstName(0) : null;
 				List<String> varNames = CollectionUtil.map(
 						output.getDstNamespaces(),
-						namespace -> "srg".equals(namespace) ? srgName : srgVar.getName(namespace)
+						namespace -> "srg".equals(namespace) ? srgName : var.getName(namespace)
 				);
 
 				flatOutput.visitMethodVar(obf, def.getName("official"), def.getDesc("official"), var.getLvtRowIndex(), var.getLvIndex(), var.getStartOpIdx(), var.getName("official"), varNames.toArray(new String[0]));
