@@ -128,20 +128,22 @@ public class RemapJarTask extends Jar {
 
 	public RemapJarTask() {
 		super();
+		LoomGradleExtension extension = LoomGradleExtension.get(getProject());
 		input = getProject().getObjects().fileProperty();
-		addNestedDependencies = getProject().getObjects().property(Boolean.class);
-		addDefaultNestedDependencies = getProject().getObjects().property(Boolean.class);
-		remapAccessWidener = getProject().getObjects().property(Boolean.class);
-		fromM = getProject().getObjects().property(String.class);
-		toM = getProject().getObjects().property(String.class);
-		atAccessWideners = getProject().getObjects().setProperty(String.class).empty();
-		fromM.set("named");
-		toM.set(SourceRemapper.intermediary(getProject()));
-		// false by default, I have no idea why I have to do it for this property and not the other one
-		remapAccessWidener.set(false);
-		addDefaultNestedDependencies.set(true);
+		addNestedDependencies = getProject().getObjects().property(Boolean.class)
+				.convention(false);
+		addDefaultNestedDependencies = getProject().getObjects().property(Boolean.class)
+				.convention(true);
+		remapAccessWidener = getProject().getObjects().property(Boolean.class)
+				.convention(false);
+		fromM = getProject().getObjects().property(String.class)
+				.convention("named");
+		toM = getProject().getObjects().property(String.class)
+				.convention(SourceRemapper.intermediary(getProject()));
+		atAccessWideners = getProject().getObjects().setProperty(String.class)
+				.empty();
 
-		if (!LoomGradleExtension.get(getProject()).getMixin().getUseLegacyMixinAp().get()) {
+		if (!extension.getMixin().getUseLegacyMixinAp().get()) {
 			remapOptions.add(b -> b.extension(new MixinExtension()));
 		}
 	}
