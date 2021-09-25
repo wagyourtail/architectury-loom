@@ -204,45 +204,25 @@ public final class SrgMerger {
 				continue;
 			}
 
-			List<String> methodNames = CollectionUtil.map(
-					output.getDstNamespaces(),
-					namespace -> "srg".equals(namespace) ? method.getDstName(0) : def.getName(namespace)
-			);
+			methodToTiny(obf, method, null, def, output, flatOutput);
+		}
 
-			flatOutput.visitMethod(obf, def.getName("official"), def.getDesc("official"), methodNames.toArray(new String[0]));
-
-			if (def.getComment() != null) {
-				flatOutput.visitMethodComment(obf, def.getName("official"), def.getDesc("official"), def.getComment());
+		// TODO: This second iteration seems a bit wasteful.
+		//  Is it possible to just iterate this and leave SRG out?
+		for (MappingTree.MethodMapping def : classDef.getMethods()) {
+			// If obf = some other name: some special name that srg might not contain.
+			// This includes constructors and overridden JDK methods.
+			if (!def.getSrcName().equals(def.getDstName(0))) {
+				continue;
 			}
 
-			for (MappingTree.MethodArgMapping arg : def.getArgs()) {
-				MappingTree.MethodArgMapping srgArg = method.getArg(arg.getArgPosition(), arg.getLvIndex(), arg.getName("official"));
-				String srgName = srgArg != null ? srgArg.getDstName(0) : null;
-				List<String> argNames = CollectionUtil.map(
-						output.getDstNamespaces(),
-						namespace -> "srg".equals(namespace) ? srgName : arg.getName(namespace)
-				);
+			MappingTree.MethodMapping method = CollectionUtil.find(
+					klass.getMethods(),
+					m -> m.getName("official").equals(def.getSrcName()) && m.getDesc("official").equals(def.getSrcDesc())
+			).orElse(null);
 
-				flatOutput.visitMethodArg(obf, def.getName("official"), def.getDesc("official"), arg.getArgPosition(), arg.getLvIndex(), arg.getName("official"), argNames.toArray(new String[0]));
-
-				if (arg.getComment() != null) {
-					flatOutput.visitMethodArgComment(obf, def.getName("official"), def.getDesc("official"), arg.getArgPosition(), arg.getLvIndex(), arg.getName("official"), arg.getComment());
-				}
-			}
-
-			for (MappingTree.MethodVarMapping var : def.getVars()) {
-				MappingTree.MethodVarMapping srgVar = method.getVar(var.getLvtRowIndex(), var.getLvIndex(), var.getStartOpIdx(), var.getName("official"));
-				String srgName = srgVar != null ? srgVar.getDstName(0) : null;
-				List<String> varNames = CollectionUtil.map(
-						output.getDstNamespaces(),
-						namespace -> "srg".equals(namespace) ? srgName : var.getName(namespace)
-				);
-
-				flatOutput.visitMethodVar(obf, def.getName("official"), def.getDesc("official"), var.getLvtRowIndex(), var.getLvIndex(), var.getStartOpIdx(), var.getName("official"), varNames.toArray(new String[0]));
-
-				if (var.getComment() != null) {
-					flatOutput.visitMethodVarComment(obf, def.getName("official"), def.getDesc("official"), var.getLvtRowIndex(), var.getLvIndex(), var.getStartOpIdx(), var.getName("official"), var.getComment());
-				}
+			if (method == null) {
+				methodToTiny(obf, null, def.getSrcName(), def, output, flatOutput);
 			}
 		}
 
@@ -267,6 +247,54 @@ public final class SrgMerger {
 
 			if (def.getComment() != null) {
 				flatOutput.visitFieldComment(obf, def.getName("official"), def.getDesc("official"), def.getComment());
+			}
+		}
+	}
+
+	private static void methodToTiny(String obfClassName, @Nullable MappingTree.MethodMapping srgMethod, @Nullable String srgMethodName, MappingTree.MethodMapping actualMethod, MappingTree output, FlatMappingVisitor flatOutput) throws IOException {
+		if (srgMethod != null) {
+			srgMethodName = srgMethod.getDstName(0);
+		}
+
+		String finalSrgMethodName = srgMethodName;
+		List<String> methodNames = CollectionUtil.map(
+				output.getDstNamespaces(),
+				namespace -> "srg".equals(namespace) ? finalSrgMethodName : actualMethod.getName(namespace)
+		);
+
+		flatOutput.visitMethod(obfClassName, actualMethod.getName("official"), actualMethod.getDesc("official"), methodNames.toArray(new String[0]));
+
+		if (actualMethod.getComment() != null) {
+			flatOutput.visitMethodComment(obfClassName, actualMethod.getName("official"), actualMethod.getDesc("official"), actualMethod.getComment());
+		}
+
+		for (MappingTree.MethodArgMapping arg : actualMethod.getArgs()) {
+			MappingTree.MethodArgMapping srgArg = srgMethod != null ? srgMethod.getArg(arg.getArgPosition(), arg.getLvIndex(), arg.getName("official")) : null;
+			String srgName = srgArg != null ? srgArg.getDstName(0) : null;
+			List<String> argNames = CollectionUtil.map(
+					output.getDstNamespaces(),
+					namespace -> "srg".equals(namespace) ? srgName : arg.getName(namespace)
+			);
+
+			flatOutput.visitMethodArg(obfClassName, actualMethod.getName("official"), actualMethod.getDesc("official"), arg.getArgPosition(), arg.getLvIndex(), arg.getName("official"), argNames.toArray(new String[0]));
+
+			if (arg.getComment() != null) {
+				flatOutput.visitMethodArgComment(obfClassName, actualMethod.getName("official"), actualMethod.getDesc("official"), arg.getArgPosition(), arg.getLvIndex(), arg.getName("official"), arg.getComment());
+			}
+		}
+
+		for (MappingTree.MethodVarMapping var : actualMethod.getVars()) {
+			MappingTree.MethodVarMapping srgVar = srgMethod != null ? srgMethod.getVar(var.getLvtRowIndex(), var.getLvIndex(), var.getStartOpIdx(), var.getName("official")) : null;
+			String srgName = srgVar != null ? srgVar.getDstName(0) : null;
+			List<String> varNames = CollectionUtil.map(
+					output.getDstNamespaces(),
+					namespace -> "srg".equals(namespace) ? srgName : var.getName(namespace)
+			);
+
+			flatOutput.visitMethodVar(obfClassName, actualMethod.getName("official"), actualMethod.getDesc("official"), var.getLvtRowIndex(), var.getLvIndex(), var.getStartOpIdx(), var.getName("official"), varNames.toArray(new String[0]));
+
+			if (var.getComment() != null) {
+				flatOutput.visitMethodVarComment(obfClassName, actualMethod.getName("official"), actualMethod.getDesc("official"), var.getLvtRowIndex(), var.getLvIndex(), var.getStartOpIdx(), var.getName("official"), var.getComment());
 			}
 		}
 	}
