@@ -36,8 +36,6 @@ if (!isSnapshot) {
 	version = baseVersion + "-PR." + System.getenv("PR_NUM") + "." + runNumber
 }
 
-version = '0.10.0-srgmappings.2'
-
 logger.lifecycle(":building plugin v${version}")
 
 repositories {
