@@ -163,10 +163,6 @@ task mainJar(type: Jar, dependsOn: jar) {
 	from zipTree(jar.archiveFile)
 	archiveClassifier = "main"
 
-	manifest {
-		attributes 'Implementation-Version': project.version + ' Build(' + buildNum + ')'
-	}
-
 	from configurations.bootstrap.collect { it.isDirectory() ? it : zipTree(it) }
 }
 
@@ -176,6 +172,10 @@ task downgradeJava(type: BridgeTransformingTask, dependsOn: mainJar) {
 	toVersion = JavaVersion.VERSION_11
 	classpath.from configurations.compileClasspath
 	flags.add "insertRecordConstructorProperties"
+
+	manifest {
+		attributes 'Implementation-Version': project.version
+	}
 }
 
 task sourcesJar(type: Jar, dependsOn: classes) {
