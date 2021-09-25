@@ -218,7 +218,7 @@ public final class SrgMerger {
 
 			MappingTree.MethodMapping method = CollectionUtil.find(
 					klass.getMethods(),
-					m -> m.getName("official").equals(def.getSrcName()) && m.getDesc("official").equals(def.getSrcDesc())
+					m -> m.getSrcName().equals(def.getName("official")) && m.getSrcDesc().equals(def.getDesc("official"))
 			).orElse(null);
 
 			if (method == null) {
