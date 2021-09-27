@@ -96,7 +96,6 @@ import net.fabricmc.loom.util.TinyRemapperHelper;
 import net.fabricmc.loom.util.function.FsPathConsumer;
 import net.fabricmc.loom.util.srg.InnerClassRemapper;
 import net.fabricmc.loom.util.srg.SpecialSourceExecutor;
-import net.fabricmc.loom.util.srg.SrgMerger;
 import net.fabricmc.mappingio.tree.MemoryMappingTree;
 
 public class MinecraftPatchedProvider extends DependencyProvider {
@@ -309,13 +308,7 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 
 	private TinyRemapper buildRemapper(Path input) throws IOException {
 		Path[] libraries = TinyRemapperHelper.getMinecraftDependencies(getProject());
-		MemoryMappingTree mappingsWithSrg;
-
-		if (getExtension().isForgeAndOfficial()) {
-			mappingsWithSrg = SrgMerger.mergeSrg(getProject().getLogger(), getExtension().getMappingsProvider()::getMojmapSrgFileIfPossible, getExtension().getSrgProvider().getMergedMojangTrimmed(), getExtension().getMappingsProvider().tinyMappings, true);
-		} else {
-			mappingsWithSrg = getExtension().getMappingsProvider().getMappingsWithSrg();
-		}
+		MemoryMappingTree mappingsWithSrg = getExtension().getMappingsProvider().getMappingsWithSrg();
 
 		TinyRemapper remapper = TinyRemapper.newRemapper()
 				.logger(getProject().getLogger()::lifecycle)

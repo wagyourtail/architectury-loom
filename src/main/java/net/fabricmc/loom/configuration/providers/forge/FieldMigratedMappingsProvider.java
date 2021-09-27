@@ -41,6 +41,7 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import com.google.common.reflect.TypeToken;
@@ -106,6 +107,7 @@ public class FieldMigratedMappingsProvider extends MappingsProviderImpl {
 
 	@Override
 	public void manipulateMappings(Path mappingsJar) throws IOException {
+		Stopwatch stopwatch = Stopwatch.createStarted();
 		LoomGradleExtension extension = getExtension();
 		this.rawTinyMappings = tinyMappings;
 		this.rawTinyMappingsWithSrg = tinyMappingsWithSrg;
@@ -114,7 +116,7 @@ public class FieldMigratedMappingsProvider extends MappingsProviderImpl {
 		if (getExtension().shouldGenerateSrgTiny()) {
 			if (Files.notExists(rawTinyMappingsWithSrg) || isRefreshDeps()) {
 				// Merge tiny mappings with srg
-				SrgMerger.mergeSrg(getProject().getLogger(), null, getRawSrgFile(), rawTinyMappings, rawTinyMappingsWithSrg, true);
+				SrgMerger.mergeSrg(getProject().getLogger(), getExtension().getMappingsProvider()::getMojmapSrgFileIfPossible, getRawSrgFile(), rawTinyMappings, rawTinyMappingsWithSrg, true);
 			}
 		}
 
@@ -126,6 +128,8 @@ public class FieldMigratedMappingsProvider extends MappingsProviderImpl {
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		}
+
+		getProject().getLogger().info(":migrated srg fields in " + stopwatch.stop());
 	}
 
 	public void updateFieldMigration() throws IOException {
