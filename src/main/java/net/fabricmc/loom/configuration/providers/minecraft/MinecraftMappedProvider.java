@@ -289,6 +289,7 @@ public class MinecraftMappedProvider extends DependencyProvider {
 
 			// Bit ugly but whatever, the whole issue is a bit ugly :)
 			AtomicReference<Map<String, String>> remappedSignatures = new AtomicReference<>();
+
 			if (fixSignatures) {
 				postApply.add(new TinyRemapper.ApplyVisitorProvider() {
 					@Override
