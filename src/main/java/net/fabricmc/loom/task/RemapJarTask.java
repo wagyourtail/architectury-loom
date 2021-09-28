@@ -30,38 +30,23 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.Reader;
 import java.io.Writer;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.jar.Manifest;
 import java.util.zip.ZipEntry;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonObject;
-import dev.architectury.refmapremapper.RefmapRemapper;
-import dev.architectury.refmapremapper.remapper.MappingsRemapper;
-import dev.architectury.refmapremapper.remapper.ReferenceRemapper;
-import dev.architectury.refmapremapper.remapper.Remapper;
-import dev.architectury.refmapremapper.remapper.SimpleReferenceRemapper;
 import dev.architectury.tinyremapper.IMappingProvider;
 import dev.architectury.tinyremapper.TinyRemapper;
 import dev.architectury.tinyremapper.TinyUtils;
@@ -82,7 +67,6 @@ import org.gradle.api.tasks.InputFile;
 import org.gradle.api.tasks.TaskAction;
 import org.gradle.jvm.tasks.Jar;
 import org.jetbrains.annotations.ApiStatus;
-import org.jetbrains.annotations.Nullable;
 import org.zeroturnaround.zip.ZipUtil;
 import org.zeroturnaround.zip.transform.StreamZipEntryTransformer;
 import org.zeroturnaround.zip.transform.ZipEntryTransformerEntry;
@@ -166,72 +150,6 @@ public class RemapJarTask extends Jar {
 		convertAwToAt();
 	}
 
-	private ReferenceRemapper createReferenceRemapper(LoomGradleExtension extension, String from, String to) throws IOException {
-		MappingTree mappings = (from.equals("srg") || to.equals("srg")) && extension.shouldGenerateSrgTiny() ? extension.getMappingsProvider().getMappingsWithSrg() : extension.getMappingsProvider().getMappings();
-
-		return new SimpleReferenceRemapper(new SimpleReferenceRemapper.Remapper() {
-			@Override
-			@Nullable
-			public String mapClass(String value) {
-				return mappings.getClasses().stream()
-						.filter(classDef -> Objects.equals(classDef.getName(from), value))
-						.findFirst()
-						.map(classDef -> classDef.getName(to))
-						.orElse(null);
-			}
-
-			@Override
-			@Nullable
-			public String mapMethod(@Nullable String className, String methodName, String methodDescriptor) {
-				if (className != null) {
-					Optional<MappingTree.ClassMapping> classDef = (Optional<MappingTree.ClassMapping>) mappings.getClasses().stream()
-							.filter(c -> Objects.equals(c.getName(from), className))
-							.findFirst();
-
-					if (classDef.isPresent()) {
-						for (MappingTree.MethodMapping methodDef : classDef.get().getMethods()) {
-							if (Objects.equals(methodDef.getName(from), methodName) && Objects.equals(methodDef.getDesc(from), methodDescriptor)) {
-								return methodDef.getName(to);
-							}
-						}
-					}
-				}
-
-				return mappings.getClasses().stream()
-						.flatMap(classDef -> classDef.getMethods().stream())
-						.filter(methodDef -> Objects.equals(methodDef.getName(from), methodName) && Objects.equals(methodDef.getDesc(from), methodDescriptor))
-						.findFirst()
-						.map(methodDef -> methodDef.getName(to))
-						.orElse(null);
-			}
-
-			@Override
-			@Nullable
-			public String mapField(@Nullable String className, String fieldName, String fieldDescriptor) {
-				if (className != null) {
-					Optional<MappingTree.ClassMapping> classDef = (Optional<MappingTree.ClassMapping>) mappings.getClasses().stream()
-							.filter(c -> Objects.equals(c.getName(from), className))
-							.findFirst();
-
-					if (classDef.isPresent()) {
-						for (MappingTree.FieldMapping fieldDef : classDef.get().getFields()) {
-							if (Objects.equals(fieldDef.getName(from), fieldName) && Objects.equals(fieldDef.getDesc(from), fieldDescriptor)) {
-								return fieldDef.getName(to);
-							}
-						}
-					}
-				}
-
-				return mappings.getClasses().stream()
-						.flatMap(classDef -> classDef.getFields().stream())
-						.filter(fieldDef -> Objects.equals(fieldDef.getName(from), fieldName) && Objects.equals(fieldDef.getDesc(from), fieldDescriptor))
-						.findFirst()
-						.map(fieldDef -> fieldDef.getName(to))
-						.orElse(null);
-			}
-		});
-	}
-
 	public void scheduleRemap(boolean isMainRemapTask) throws Throwable {
 		Project project = getProject();
 		LoomGradleExtension extension = LoomGradleExtension.get(getProject());
@@ -297,14 +215,6 @@ public class RemapJarTask extends Jar {
 						if (MixinRefmapHelper.addRefmapName(project, output)) {
 							project.getLogger().debug("Transformed mixin reference maps in output JAR!");
 						}
-
-						if (!toM.equals("intermediary")) {
-							try {
-								remapRefmap(extension, output, "intermediary", toM);
-							} catch (IOException e) {
-								throw new RuntimeException("Failed to remap refmap jar", e);
-							}
-						}
 					} else if (extension.isForge()) {
 						throw new RuntimeException("Forge must have useLegacyMixinAp enabled");
 					}
@@ -345,40 +255,6 @@ public class RemapJarTask extends Jar {
 						}
 					}
 				});
-	}
-
-	private void remapRefmap(LoomGradleExtension extension, Path output, String from, String to) throws IOException {
-		try (FileSystem fs = FileSystems.newFileSystem(URI.create("jar:" + output.toUri()), ImmutableMap.of("create", false))) {
-			Path refmapPath = fs.getPath(extension.getMixin().getDefaultRefmapName().get());
-
-			if (Files.exists(refmapPath)) {
-				try (Reader refmapReader = Files.newBufferedReader(refmapPath, StandardCharsets.UTF_8)) {
-					Gson gson = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create();
-					JsonObject refmapElement = gson.fromJson(refmapReader, JsonObject.class);
-					refmapElement = RefmapRemapper.remap(new Remapper() {
-						ReferenceRemapper remapper = createReferenceRemapper(extension, from, to);
-
-						@Override
-						@Nullable
-						public MappingsRemapper remapMappings() {
-							return className -> remapper;
-						}
-
-						@Override
-						@Nullable
-						public Map.Entry<String, @Nullable MappingsRemapper> remapMappingsData(String data) {
-							if (Objects.equals(data, "named:intermediary")) {
-								return new AbstractMap.SimpleEntry<>(Objects.equals(to, "srg") ? "searge" : data, remapMappings());
-							}
-
-							return null;
-						}
-					}, refmapElement);
-					Files.delete(refmapPath);
-					Files.write(refmapPath, gson.toJson(refmapElement).getBytes(StandardCharsets.UTF_8));
-				}
-			}
-		}
 	}
 
 	private NestedJarProvider getNestedJarProvider() {

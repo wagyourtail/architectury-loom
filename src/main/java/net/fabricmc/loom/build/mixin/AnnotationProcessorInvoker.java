@@ -26,6 +26,7 @@ package net.fabricmc.loom.build.mixin;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -81,8 +82,9 @@ public abstract class AnnotationProcessorInvoker<T extends Task> {
 		try {
 			LoomGradleExtension loom = LoomGradleExtension.get(project);
 			String refmapName = Objects.requireNonNull(MixinExtension.getMixinInformationContainer(sourceSet)).refmapNameProvider().get();
+			Path mappings = loom.isForge() ? loom.getMappingsProvider().mixinTinyMappingsWithSrg : loom.getMappingsProvider().tinyMappings;
 			Map<String, String> args = new HashMap<>() {{
-					put(Constants.MixinArguments.IN_MAP_FILE_NAMED_INTERMEDIARY, loom.getMappingsProvider().tinyMappings.toFile().getCanonicalPath());
+					put(Constants.MixinArguments.IN_MAP_FILE_NAMED_INTERMEDIARY, mappings.toFile().getCanonicalPath());
 					put(Constants.MixinArguments.OUT_MAP_FILE_NAMED_INTERMEDIARY, loom.getNextMixinMappings().getCanonicalPath());
 					put(Constants.MixinArguments.OUT_REFMAP_FILE, getRefmapDestination(task, refmapName));
 					put(Constants.MixinArguments.DEFAULT_OBFUSCATION_ENV, "named:intermediary");

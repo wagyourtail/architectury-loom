@@ -124,7 +124,7 @@ public class GenerateSourcesTask extends AbstractLoomTask {
 	}
 
 	private Path getMappings() {
-		Path baseMappings = getExtension().getMappingsProvider().tinyMappings;
+		Path baseMappings = getExtension().isForge() ? getExtension().getMappingsProvider().tinyMappingsWithSrg : getExtension().getMappingsProvider().tinyMappings;
 
 		if (getExtension().getEnableTransitiveAccessWideners().get()) {
 			List<AccessWidenerFile> accessWideners = getExtension().getTransitiveAccessWideners();
