@@ -38,18 +38,21 @@ import java.util.Objects;
 import java.util.Set;
 
 import org.gradle.api.Action;
+import org.gradle.api.Project;
 import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.artifacts.ExternalDependency;
 import org.gradle.api.artifacts.ExternalModuleDependency;
 import org.gradle.api.artifacts.ModuleIdentifier;
 import org.gradle.api.artifacts.ModuleVersionIdentifier;
 import org.gradle.api.artifacts.MutableVersionConstraint;
+import org.gradle.api.artifacts.FileCollectionDependency;
 import org.gradle.api.artifacts.SelfResolvingDependency;
 import org.gradle.api.artifacts.VersionConstraint;
 import org.gradle.api.internal.artifacts.DefaultModuleIdentifier;
 import org.gradle.api.internal.artifacts.ModuleVersionSelectorStrictSpec;
 import org.gradle.api.internal.artifacts.dependencies.AbstractModuleDependency;
 import org.gradle.api.internal.artifacts.dependencies.DefaultMutableVersionConstraint;
+import org.gradle.api.file.FileCollection;
 import org.gradle.api.tasks.TaskDependency;
 import org.zeroturnaround.zip.ByteSource;
 import org.zeroturnaround.zip.ZipEntrySource;
@@ -64,16 +67,18 @@ import net.fabricmc.mappingio.adapter.MappingSourceNsSwitch;
 import net.fabricmc.mappingio.format.Tiny2Writer;
 import net.fabricmc.mappingio.tree.MemoryMappingTree;
 
-public class LayeredMappingsDependency extends AbstractModuleDependency implements SelfResolvingDependency, ExternalModuleDependency {
+public class LayeredMappingsDependency extends AbstractModuleDependency implements SelfResolvingDependency, ExternalModuleDependency, FileCollectionDependency {
 	private static final String GROUP = "loom";
 	private static final String MODULE = "mappings";
 
+	private final Project project;
 	private final MappingContext mappingContext;
 	private final LayeredMappingSpec layeredMappingSpec;
 	private final String version;
 
-	public LayeredMappingsDependency(MappingContext mappingContext, LayeredMappingSpec layeredMappingSpec, String version) {
+	public LayeredMappingsDependency(Project project, MappingContext mappingContext, LayeredMappingSpec layeredMappingSpec, String version) {
 		super(null);
+		this.project = project;
 		this.mappingContext = mappingContext;
 		this.layeredMappingSpec = layeredMappingSpec;
 		this.version = version;
@@ -203,7 +208,7 @@ public class LayeredMappingsDependency extends AbstractModuleDependency implemen
 
 	@Override
 	public ExternalModuleDependency copy() {
-		return new LayeredMappingsDependency(mappingContext, layeredMappingSpec, version);
+		return new LayeredMappingsDependency(project, mappingContext, layeredMappingSpec, version);
 	}
 
 	@Override
@@ -217,5 +222,10 @@ public class LayeredMappingsDependency extends AbstractModuleDependency implemen
 
 	@Override
 	public void because(String s) {
+	}
+
+	@Override
+	public FileCollection getFiles() {
+		return project.files(resolve());
 	}
 }
