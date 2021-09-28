@@ -27,7 +27,10 @@ package net.fabricmc.loom.util;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
 import com.google.common.collect.ImmutableMap;
@@ -37,6 +40,7 @@ import dev.architectury.tinyremapper.TinyRemapper;
 import org.apache.commons.lang3.mutable.Mutable;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.lang3.tuple.Triple;
 import org.gradle.api.Project;
 
 import net.fabricmc.loom.LoomGradleExtension;
@@ -63,13 +67,13 @@ public final class TinyRemapperHelper {
 	}
 
 	public static TinyRemapper getTinyRemapper(Project project, String fromM, String toM) throws IOException {
-		return getTinyRemapper(project, fromM, toM, false);
+		return getTinyRemapper(project, fromM, toM, false, (builder) -> { });
 	}
 
-	public static TinyRemapper getTinyRemapper(Project project, String fromM, String toM, boolean fixRecords) throws IOException {
+	public static TinyRemapper getTinyRemapper(Project project, String fromM, String toM, boolean fixRecords, Consumer<TinyRemapper.Builder> builderConsumer) throws IOException {
 		LoomGradleExtension extension = LoomGradleExtension.get(project);
 
-		TinyRemapper remapper = _getTinyRemapper(project, fixRecords).getKey();
+		TinyRemapper remapper = _getTinyRemapper(project, fixRecords, builderConsumer).getLeft();
 		remapper.replaceMappings(ImmutableSet.of(
 				TinyRemapperHelper.create((fromM.equals("srg") || toM.equals("srg")) && extension.isForge() ? extension.getMappingsProvider().getMappingsWithSrg() : extension.getMappingsProvider().getMappings(), fromM, toM, true),
 				out -> TinyRemapperHelper.JSR_TO_JETBRAINS.forEach(out::acceptClass)
@@ -77,9 +81,10 @@ public final class TinyRemapperHelper {
 		return remapper;
 	}
 
-	public static Pair<TinyRemapper, Mutable<MemoryMappingTree>> _getTinyRemapper(Project project, boolean fixRecords) throws IOException {
+	public static Triple<TinyRemapper, Mutable<MemoryMappingTree>, List<TinyRemapper.ApplyVisitorProvider>> _getTinyRemapper(Project project, boolean fixRecords, Consumer<TinyRemapper.Builder> builderConsumer) throws IOException {
 		LoomGradleExtension extension = LoomGradleExtension.get(project);
 		Mutable<MemoryMappingTree> mappings = new MutableObject<>();
+		List<TinyRemapper.ApplyVisitorProvider> postApply = new ArrayList<>();
 
 		TinyRemapper.Builder builder = TinyRemapper.newRemapper()
 				.renameInvalidLocals(true)
@@ -97,22 +102,30 @@ public final class TinyRemapperHelper {
 			builder.fixPackageAccess(true);
 		}
 
-		TinyRemapper remapper = builder.invalidLvNamePattern(MC_LV_PATTERN)
-				.extraPreApplyVisitor((cls, next) -> {
-					if (fixRecords && !cls.isRecord() && "java/lang/Record".equals(cls.getSuperName()) && mappings.getValue() != null) {
-						return new RecordComponentFixVisitor(next, mappings.getValue(), mappings.getValue().getNamespaceId(MappingsNamespace.INTERMEDIARY.toString()));
-					}
+		builder.invalidLvNamePattern(MC_LV_PATTERN);
+		builder.extraPreApplyVisitor((cls, next) -> {
+			if (fixRecords && !cls.isRecord() && "java/lang/Record".equals(cls.getSuperName()) && mappings.getValue() != null) {
+				return new RecordComponentFixVisitor(next, mappings.getValue(), mappings.getValue().getNamespaceId(MappingsNamespace.INTERMEDIARY.toString()));
+			}
 
-					return next;
-				})
-				.build();
-		return Pair.of(remapper, mappings);
+			return next;
+		});
+		builder.extraPostApplyVisitor((trClass, classVisitor) -> {
+			for (TinyRemapper.ApplyVisitorProvider provider : postApply) {
+				classVisitor = provider.insertApplyVisitor(trClass, classVisitor);
+			}
+
+			return classVisitor;
+		});
+
+		builderConsumer.accept(builder);
+		return Triple.of(builder.build(), mappings, postApply);
 	}
 
-	public static Pair<TinyRemapper, Mutable<MemoryMappingTree>> getTinyRemapper(Project project, boolean fixRecords) throws IOException {
-		Pair<TinyRemapper, Mutable<MemoryMappingTree>> remapper = _getTinyRemapper(project, fixRecords);
-		remapper.getKey().readClassPath(getMinecraftDependencies(project));
-		remapper.getKey().prepareClasses();
+	public static Triple<TinyRemapper, Mutable<MemoryMappingTree>, List<TinyRemapper.ApplyVisitorProvider>> getTinyRemapper(Project project, boolean fixRecords, Consumer<TinyRemapper.Builder> builderConsumer) throws IOException {
+		Triple<TinyRemapper, Mutable<MemoryMappingTree>, List<TinyRemapper.ApplyVisitorProvider>> remapper = _getTinyRemapper(project, fixRecords, builderConsumer);
+		remapper.getLeft().readClassPath(getMinecraftDependencies(project));
+		remapper.getLeft().prepareClasses();
 		return remapper;
 	}
 

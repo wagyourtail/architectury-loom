@@ -37,6 +37,7 @@ import net.fabricmc.loom.api.mappings.layered.spec.MappingsSpec;
 import net.fabricmc.loom.api.mappings.layered.spec.ParchmentMappingsSpecBuilder;
 import net.fabricmc.loom.api.LoomGradleExtensionAPI;
 import net.fabricmc.loom.configuration.providers.mappings.crane.CraneMappingsSpec;
+import net.fabricmc.loom.configuration.providers.mappings.extras.signatures.SignatureFixesSpec;
 import net.fabricmc.loom.configuration.providers.mappings.intermediary.IntermediaryMappingsSpec;
 import net.fabricmc.loom.configuration.providers.mappings.mojmap.MojangMappingsSpec;
 import net.fabricmc.loom.configuration.providers.mappings.parchment.ParchmentMappingsSpecBuilderImpl;
@@ -73,6 +74,11 @@ public class LayeredMappingSpecBuilderImpl implements LayeredMappingSpecBuilder 
 	public LayeredMappingSpecBuilder crane(Object object) {
 		layers.add(new CraneMappingsSpec(FileSpec.create(object)));
 		return this;
+	}
+
+	@Override
+	public LayeredMappingSpecBuilder signatureFix(Object object) {
+		return addLayer(new SignatureFixesSpec(FileSpec.create(object)));
 	}
 
 	public LayeredMappingSpec build() {

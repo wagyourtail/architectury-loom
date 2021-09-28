@@ -74,7 +74,7 @@ public class LoomGradlePlugin implements BootstrappedPlugin {
 			project.getLogger().lifecycle("You are using an unstable version of Architectury Loom! Please report any issues found!");
 		}
 
-		refreshDeps = project.getGradle().getStartParameter().isRefreshDependencies() || "true".equals(System.getProperty("loom.refresh"));
+		refreshDeps = project.getGradle().getStartParameter().isRefreshDependencies() || Boolean.getBoolean("loom.refresh");
 
 		if (refreshDeps) {
 			project.getLogger().lifecycle("Refresh dependencies is in use, loom will be significantly slower.");

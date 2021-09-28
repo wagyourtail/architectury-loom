@@ -30,9 +30,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 import com.google.common.base.Stopwatch;
@@ -41,10 +45,13 @@ import dev.architectury.tinyremapper.InputTag;
 import dev.architectury.tinyremapper.NonClassCopyMode;
 import dev.architectury.tinyremapper.OutputConsumerPath;
 import dev.architectury.tinyremapper.TinyRemapper;
+import dev.architectury.tinyremapper.api.TrClass;
 import org.apache.commons.lang3.mutable.Mutable;
-import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.lang3.tuple.Triple;
 import org.gradle.api.Project;
 import org.jetbrains.annotations.Nullable;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.commons.Remapper;
 
 import net.fabricmc.loom.api.mappings.layered.MappingsNamespace;
 import net.fabricmc.loom.configuration.DependencyProvider;
@@ -230,8 +237,8 @@ public class MinecraftMappedProvider extends DependencyProvider {
 		Info vanilla = new Info(vanillaAssets, input, outputMapped, outputIntermediary, outputSrg);
 		Info forge = getExtension().isForgeAndNotOfficial() ? new Info(forgeAssets, inputForge, forgeOutputMapped, forgeOutputIntermediary, forgeOutputSrg) : null;
 
-		Pair<TinyRemapper, Mutable<MemoryMappingTree>> pair = TinyRemapperHelper.getTinyRemapper(getProject(), true);
-		TinyRemapper remapper = remapperArray[0] = pair.getKey();
+		Triple<TinyRemapper, Mutable<MemoryMappingTree>, List<TinyRemapper.ApplyVisitorProvider>> pair = TinyRemapperHelper.getTinyRemapper(getProject(), true, builder -> { });
+		TinyRemapper remapper = remapperArray[0] = pair.getLeft();
 
 		assetsOut(input, vanillaAssets);
 
@@ -239,7 +246,7 @@ public class MinecraftMappedProvider extends DependencyProvider {
 			assetsOut(inputForge, forgeAssets);
 		}
 
-		remap(remapper, pair.getValue(), vanilla, forge, MappingsNamespace.OFFICIAL.toString());
+		remap(remapper, pair.getMiddle(), pair.getRight(), vanilla, forge, MappingsNamespace.OFFICIAL.toString());
 	}
 
 	public static class Info {
@@ -258,7 +265,7 @@ public class MinecraftMappedProvider extends DependencyProvider {
 		}
 	}
 
-	public void remap(TinyRemapper remapper, Mutable<MemoryMappingTree> mappings, Info vanilla, @Nullable Info forge, String fromM) throws IOException {
+	public void remap(TinyRemapper remapper, Mutable<MemoryMappingTree> mappings, List<TinyRemapper.ApplyVisitorProvider> postApply, Info vanilla, @Nullable Info forge, String fromM) throws IOException {
 		Set<String> classNames = getExtension().isForge() ? InnerClassRemapper.readClassNames(vanilla.input) : null;
 
 		for (String toM : getExtension().isForge() ? Arrays.asList(MappingsNamespace.INTERMEDIARY.toString(), MappingsNamespace.SRG.toString(), MappingsNamespace.NAMED.toString()) : Arrays.asList(MappingsNamespace.INTERMEDIARY.toString(), MappingsNamespace.NAMED.toString())) {
@@ -267,6 +274,7 @@ public class MinecraftMappedProvider extends DependencyProvider {
 			InputTag vanillaTag = remapper.createInputTag();
 			InputTag forgeTag = remapper.createInputTag();
 			Stopwatch stopwatch = Stopwatch.createStarted();
+			final boolean fixSignatures = getExtension().getMappingsProvider().getSignatureFixes() != null;
 			getProject().getLogger().lifecycle(":remapping minecraft (TinyRemapper, " + fromM + " -> " + toM + ")");
 
 			remapper.readInputs(vanillaTag, vanilla.input);
@@ -277,6 +285,55 @@ public class MinecraftMappedProvider extends DependencyProvider {
 
 			remapper.replaceMappings(getMappings(classNames, fromM, toM, mappings));
 			if (!MappingsNamespace.INTERMEDIARY.toString().equals(toM)) mappings.setValue(null);
+			postApply.clear();
+
+			// Bit ugly but whatever, the whole issue is a bit ugly :)
+			AtomicReference<Map<String, String>> remappedSignatures = new AtomicReference<>();
+			if (fixSignatures) {
+				postApply.add(new TinyRemapper.ApplyVisitorProvider() {
+					@Override
+					public ClassVisitor insertApplyVisitor(TrClass cls, ClassVisitor next) {
+						return new ClassVisitor(Constants.ASM_VERSION, next) {
+							@Override
+							public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
+								Map<String, String> signatureFixes = Objects.requireNonNull(remappedSignatures.get(), "Could not get remapped signatures");
+
+								if (signature == null) {
+									signature = signatureFixes.getOrDefault(name, null);
+
+									if (signature != null) {
+										getProject().getLogger().info("Replaced signature for {} with {}", name, signature);
+									}
+								}
+
+								super.visit(version, access, name, signature, superName, interfaces);
+							}
+						};
+					}
+				});
+
+				if (MappingsNamespace.INTERMEDIARY.toString().equals(toM)) {
+					// No need to remap, as these are already intermediary
+					remappedSignatures.set(getExtension().getMappingsProvider().getSignatureFixes());
+				} else {
+					// Remap the sig fixes from intermediary to the target namespace
+					final Map<String, String> remapped = new HashMap<>();
+					final TinyRemapper sigTinyRemapper = TinyRemapperHelper.getTinyRemapper(getProject(), fromM, toM);
+					final Remapper sigAsmRemapper = sigTinyRemapper.getRemapper();
+
+					// Remap the class names and the signatures using a new tiny remapper instance.
+					for (Map.Entry<String, String> entry : getExtension().getMappingsProvider().getSignatureFixes().entrySet()) {
+						remapped.put(
+								sigAsmRemapper.map(entry.getKey()),
+								sigAsmRemapper.mapSignature(entry.getValue(), false)
+						);
+					}
+
+					sigTinyRemapper.finish();
+					remappedSignatures.set(remapped);
+				}
+			}
+
 			OutputRemappingHandler.remap(remapper, vanilla.assets, output, null, vanillaTag);
 
 			if (forge != null) {
