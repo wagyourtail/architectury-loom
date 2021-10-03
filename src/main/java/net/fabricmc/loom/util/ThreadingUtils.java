@@ -58,7 +58,7 @@ public class ThreadingUtils {
 
 	public static void run(Collection<UnsafeRunnable> jobs) {
 		try {
-			ExecutorService service = Executors.newFixedThreadPool(Math.min(jobs.size(), Runtime.getRuntime().availableProcessors() / 2));
+			ExecutorService service = Executors.newFixedThreadPool(Math.max(1, Math.min(jobs.size(), Runtime.getRuntime().availableProcessors())));
 			List<Future<?>> futures = new LinkedList<>();
 
 			for (UnsafeRunnable runnable : jobs) {
@@ -94,7 +94,7 @@ public class ThreadingUtils {
 
 	public static <T> List<T> get(Collection<UnsafeCallable<T>> jobs) {
 		try {
-			ExecutorService service = Executors.newFixedThreadPool(Math.min(jobs.size(), Runtime.getRuntime().availableProcessors() / 2));
+			ExecutorService service = Executors.newFixedThreadPool(Math.max(1, Math.min(jobs.size(), Runtime.getRuntime().availableProcessors())));
 			List<Future<T>> futures = new LinkedList<>();
 			List<T> result = new ArrayList<>();
 
@@ -138,7 +138,7 @@ public class ThreadingUtils {
 	public static class TaskCompleter implements Function<Throwable, Void> {
 		Stopwatch stopwatch = Stopwatch.createUnstarted();
 		List<CompletableFuture<?>> tasks = new ArrayList<>();
-		ExecutorService service = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+		ExecutorService service = Executors.newFixedThreadPool(Math.max(1, Runtime.getRuntime().availableProcessors()));
 		List<UnsafeConsumer<Stopwatch>> completionListener = new ArrayList<>();
 
 		public TaskCompleter add(UnsafeRunnable job) {
