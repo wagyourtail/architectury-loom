@@ -198,7 +198,7 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 			}
 		}
 
-		addDependency(tinyMappingsJar.toFile(), Constants.Configurations.MAPPINGS_FINAL);
+		addDependency(getProject().getDependencies().module("loom.resolved:mappings:" + getMinecraftProvider().minecraftVersion() + "/" + getExtension().getMappingsProvider().mappingsIdentifier()), Constants.Configurations.MAPPINGS_FINAL);
 
 		LoomGradleExtension extension = getExtension();
 
