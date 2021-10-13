@@ -96,14 +96,14 @@ dependencies {
 	implementation 'net.fabricmc:access-widener:2.0.0'
 	implementation 'net.fabricmc:mapping-io:0.2.1'
 
-	implementation ('net.fabricmc:lorenz-tiny:4.0.1') {
+	implementation ('net.fabricmc:lorenz-tiny:4.0.2') {
 		transitive = false
 	}
 	implementation "dev.architectury:refmap-remapper:1.0.5"
 
 	// decompilers
 	implementation ('net.fabricmc:fabric-fernflower:1.4.1')
-	implementation ('org.benf:cfr:0.151')
+	implementation ('net.fabricmc:cfr:0.0.8')
 
 	// source code remapping
 	implementation ('org.cadixdev:mercury:0.2.9-architectury')

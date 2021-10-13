@@ -112,9 +112,9 @@ public class RemapConfiguration {
 		assert remapJarTask != null;
 
 		if (!remapJarTask.getInput().isPresent() && isDefaultRemap) {
-			jarTask.setClassifier("dev");
-			remapJarTask.setClassifier("");
-			remapJarTask.getInput().set(jarTask.getArchivePath());
+			jarTask.getArchiveClassifier().convention("dev");
+			remapJarTask.getArchiveClassifier().convention("");
+			remapJarTask.getInput().convention(jarTask.getArchiveFile());
 		}
 
 		if (extension.isForge()) {
@@ -201,10 +201,10 @@ public class RemapConfiguration {
 
 			RemapSourcesJarTask remapSourcesJarTask = (RemapSourcesJarTask) project.getTasks().findByName(remapSourcesJarTaskName);
 			Preconditions.checkNotNull(remapSourcesJarTask, "Could not find " + remapSourcesJarTaskName + " in " + project.getName());
-			remapSourcesJarTask.getOutput().set(sourcesTask.getArchiveFile());
+			remapSourcesJarTask.getOutput().convention(sourcesTask.getArchiveFile());
 			String sourcesTaskClassifer = sourcesTask.getArchiveClassifier().get();
 			sourcesTask.getArchiveClassifier().set(sourcesTaskClassifer == null ? "dev" : sourcesTaskClassifer + "-dev");
-			remapSourcesJarTask.getInput().set(sourcesTask.getArchiveFile());
+			remapSourcesJarTask.getInput().convention(sourcesTask.getArchiveFile());
 			remapSourcesJarTask.dependsOn(sourcesTask);
 
 			if (isDefaultRemap) {

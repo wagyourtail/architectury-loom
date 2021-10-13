@@ -27,6 +27,7 @@ package net.fabricmc.loom.task;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -101,7 +102,7 @@ public class GenVsCodeProjectTask extends AbstractLoomTask {
 				continue;
 			}
 
-			launch.add(RunConfig.runConfig(project, settings));
+			launch.add(project, RunConfig.runConfig(project, settings));
 			settings.makeRunDir();
 		}
 
@@ -151,9 +152,9 @@ public class GenVsCodeProjectTask extends AbstractLoomTask {
 		public String version = "0.2.0";
 		public List<VsCodeConfiguration> configurations = new ArrayList<>();
 
-		public void add(RunConfig runConfig) {
+		public void add(Project project, RunConfig runConfig) {
 			if (configurations.stream().noneMatch(config -> Objects.equals(config.name, runConfig.configName))) {
-				VsCodeConfiguration configuration = new VsCodeConfiguration(runConfig);
+				VsCodeConfiguration configuration = new VsCodeConfiguration(project, runConfig);
 				configurations.add(configuration);
 
 				if (!configuration.tasksBeforeRun.isEmpty()) {
@@ -176,6 +177,7 @@ public class GenVsCodeProjectTask extends AbstractLoomTask {
 
 	@SuppressWarnings("unused")
 	private static class VsCodeConfiguration {
+		public transient Project project;
 		public String type = "java";
 		public String name;
 		public String request = "launch";
@@ -190,7 +192,7 @@ public class GenVsCodeProjectTask extends AbstractLoomTask {
 		public String preLaunchTask = null;
 		public String projectName = null;
 
-		VsCodeConfiguration(RunConfig runConfig) {
+		VsCodeConfiguration(Project project, RunConfig runConfig) {
 			this.name = runConfig.configName;
 			this.mainClass = runConfig.mainClass;
 			this.vmArgs = runConfig.vmArgs;
@@ -199,6 +201,14 @@ public class GenVsCodeProjectTask extends AbstractLoomTask {
 			this.projectName = runConfig.vscodeProjectName;
 			this.env.putAll(runConfig.envVariables);
 			this.tasksBeforeRun.addAll(runConfig.vscodeBeforeRun);
+
+			if (project.getRootProject() != project) {
+				Path rootPath = project.getRootDir().toPath();
+				Path projectPath = project.getProjectDir().toPath();
+				String relativePath = rootPath.relativize(projectPath).toString();
+
+				this.cwd = "${workspaceFolder}/%s/%s".formatted(relativePath, runConfig.runDir);
+			}
 		}
 	}
 

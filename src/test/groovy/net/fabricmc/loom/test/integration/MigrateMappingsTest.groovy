@@ -1,7 +1,7 @@
 /*
  * This file is part of fabric-loom, licensed under the MIT License (MIT).
  *
- * Copyright (c) 2018-2020 FabricMC
+ * Copyright (c) 2021 FabricMC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,21 +22,29 @@
  * SOFTWARE.
  */
 
-package net.fabricmc.loom.decompilers;
+package net.fabricmc.loom.test.integration
 
-import org.gradle.api.Project;
+import net.fabricmc.loom.test.util.GradleProjectTestTrait
+import spock.lang.Specification
+import spock.lang.Unroll
 
-import net.fabricmc.loom.LoomGradleExtension;
-import net.fabricmc.loom.decompilers.cfr.LoomCFRDecompiler;
-import net.fabricmc.loom.decompilers.fernflower.FabricFernFlowerDecompiler;
+import static net.fabricmc.loom.test.LoomTestConstants.STANDARD_TEST_VERSIONS
+import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 
-public final class DecompilerConfiguration {
-	private DecompilerConfiguration() {
-	}
+class MigrateMappingsTest extends Specification implements GradleProjectTestTrait {
+    @Unroll
+    def "Migrate mappings (gradle #version)"() {
+        setup:
+            def gradle = gradleProject(project: "java16", version: version)
 
-	public static void setup(Project project) {
-		LoomGradleExtension extension = LoomGradleExtension.get(project);
-		extension.getGameDecompilers().add(new FabricFernFlowerDecompiler());
-		extension.getGameDecompilers().add(new LoomCFRDecompiler());
-	}
+        when:
+            def result = gradle.run(tasks: ["migrateMappings", "--mappings", "21w38a+build.10"])
+
+        then:
+            result.task(":migrateMappings").outcome == SUCCESS
+            // TODO check it actually did something
+
+        where:
+            version << STANDARD_TEST_VERSIONS
+    }
 }
