@@ -84,6 +84,9 @@ public class RemapConfiguration {
 				// It doesn't seem to hurt, but I'm not sure if the file-level duplicates cause issues.
 				Configuration configuration = project.getConfigurations().getByName(JavaPlugin.SOURCES_ELEMENTS_CONFIGURATION_NAME);
 				configuration.getArtifacts().removeIf(a -> a != artifact && artifact.getFile().equals(a.getFile()));
+				// Architectury Loom Patch
+				// Since we make sourcesJar and remapSourcesJar output files separate, we have to remove the dev sources jar file here
+				configuration.getArtifacts().removeIf(a -> a != artifact && task.getInput().get().getAsFile().equals(a.getFile()));
 			});
 
 			// Remove -dev jars from the default jar task
@@ -201,7 +204,7 @@ public class RemapConfiguration {
 
 			RemapSourcesJarTask remapSourcesJarTask = (RemapSourcesJarTask) project.getTasks().findByName(remapSourcesJarTaskName);
 			Preconditions.checkNotNull(remapSourcesJarTask, "Could not find " + remapSourcesJarTaskName + " in " + project.getName());
-			remapSourcesJarTask.getOutput().convention(sourcesTask.getArchiveFile());
+			remapSourcesJarTask.getOutput().convention(sourcesTask.getArchiveFile().get());
 			String sourcesTaskClassifer = sourcesTask.getArchiveClassifier().get();
 			sourcesTask.getArchiveClassifier().set(sourcesTaskClassifer == null ? "dev" : sourcesTaskClassifer + "-dev");
 			remapSourcesJarTask.getInput().convention(sourcesTask.getArchiveFile());
