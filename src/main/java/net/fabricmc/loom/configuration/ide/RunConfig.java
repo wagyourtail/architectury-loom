@@ -39,6 +39,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import org.apache.tools.ant.util.StringUtils;
 import org.gradle.api.Project;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.plugins.ide.eclipse.model.EclipseModel;
@@ -121,7 +122,7 @@ public class RunConfig {
 	private static void populate(Project project, LoomGradleExtension extension, RunConfig runConfig, String environment) {
 		runConfig.configName += extension.isRootProject() ? "" : " (" + project.getPath() + ")";
 		runConfig.eclipseProjectName = project.getExtensions().getByType(EclipseModel.class).getProject().getName();
-		runConfig.vscodeProjectName = extension.isRootProject() ? "" : project.getPath();
+		runConfig.vscodeProjectName = extension.isRootProject() ? "" : StringUtils.removePrefix(project.getPath(), ":");
 		runConfig.vmArgs = "";
 		runConfig.programArgs = "";
 
