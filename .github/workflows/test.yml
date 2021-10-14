@@ -40,7 +40,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: [7.0.0- jdk16 , 7.2-jdk17]
+        version: [7.0.0-jdk16 , 7.2-jdk17]
         test: ${{ fromJson(needs.prepare_test_matrix.outputs.matrix) }}
 
     runs-on: ubuntu-20.04
