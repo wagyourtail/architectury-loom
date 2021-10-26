@@ -35,7 +35,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -49,7 +48,6 @@ import org.w3c.dom.Node;
 
 import net.fabricmc.loom.LoomGradleExtension;
 import net.fabricmc.loom.configuration.InstallerData;
-import net.fabricmc.loom.util.OperatingSystem;
 
 public class RunConfig {
 	public String configName;
@@ -59,8 +57,8 @@ public class RunConfig {
 	public String mainClass;
 	public String runDirIdeaUrl;
 	public String runDir;
-	public String vmArgs;
-	public String programArgs;
+	public List<String> vmArgs = new ArrayList<>();
+	public List<String> programArgs = new ArrayList<>();
 	public List<String> vscodeBeforeRun = new ArrayList<>();
 	public final Map<String, String> envVariables = new HashMap<>();
 	public SourceSet sourceSet;
@@ -73,12 +71,12 @@ public class RunConfig {
 		this.addXml(root, "option", ImmutableMap.of("name", "MAIN_CLASS_NAME", "value", mainClass));
 		this.addXml(root, "option", ImmutableMap.of("name", "WORKING_DIRECTORY", "value", runDirIdeaUrl));
 
-		if (!Strings.isNullOrEmpty(vmArgs)) {
-			this.addXml(root, "option", ImmutableMap.of("name", "VM_PARAMETERS", "value", vmArgs));
+		if (!vmArgs.isEmpty()) {
+			this.addXml(root, "option", ImmutableMap.of("name", "VM_PARAMETERS", "value", joinArguments(vmArgs)));
 		}
 
-		if (!Strings.isNullOrEmpty(programArgs)) {
-			this.addXml(root, "option", ImmutableMap.of("name", "PROGRAM_PARAMETERS", "value", programArgs));
+		if (!programArgs.isEmpty()) {
+			this.addXml(root, "option", ImmutableMap.of("name", "PROGRAM_PARAMETERS", "value", joinArguments(programArgs)));
 		}
 
 		if (!envVariables.isEmpty()) {
@@ -123,11 +121,10 @@ public class RunConfig {
 		runConfig.configName += extension.isRootProject() ? "" : " (" + project.getPath() + ")";
 		runConfig.eclipseProjectName = project.getExtensions().getByType(EclipseModel.class).getProject().getName();
 		runConfig.vscodeProjectName = extension.isRootProject() ? "" : StringUtils.removePrefix(project.getPath(), ":");
-		runConfig.vmArgs = "";
-		runConfig.programArgs = "";
 
 		runConfig.mainClass = "net.fabricmc.devlaunchinjector.Main";
-		runConfig.vmArgs = "-Dfabric.dli.config=" + encodeEscaped(extension.getFiles().getDevLauncherConfig().getAbsolutePath()) + " -Dfabric.dli.env=" + environment.toLowerCase();
+		runConfig.vmArgs.add("-Dfabric.dli.config=" + encodeEscaped(extension.getFiles().getDevLauncherConfig().getAbsolutePath()));
+		runConfig.vmArgs.add("-Dfabric.dli.env=" + environment.toLowerCase());
 	}
 
 	// Turns camelCase/PascalCase into Capital Case
@@ -184,19 +181,9 @@ public class RunConfig {
 		runConfig.sourceSet = sourceSet;
 
 		// Custom parameters
-		for (String progArg : settings.getProgramArgs()) {
-			runConfig.programArgs += " " + progArg;
-		}
-
-		for (String vmArg : settings.getVmArgs()) {
-			runConfig.vmArgs += " " + vmArg;
-		}
-
-		runConfig.vmArgs += " -Dfabric.dli.main=" + getMainClass(environment, extension, defaultMain);
-
-		// Remove unnecessary leading/trailing whitespaces we might have generated
-		runConfig.programArgs = runConfig.programArgs.trim();
-		runConfig.vmArgs = runConfig.vmArgs.trim();
+		runConfig.programArgs.addAll(settings.getProgramArgs());
+		runConfig.vmArgs.addAll(settings.getVmArgs());
+		runConfig.vmArgs.add("-Dfabric.dli.main=" + getMainClass(environment, extension, defaultMain));
 
 		for (Consumer<RunConfig> consumer : extension.getSettingsPostEdit()) {
 			consumer.accept(runConfig);
@@ -227,8 +214,8 @@ public class RunConfig {
 		dummyConfig = dummyConfig.replace("%ECLIPSE_PROJECT%", eclipseProjectName);
 		dummyConfig = dummyConfig.replace("%IDEA_MODULE%", ideaModuleName);
 		dummyConfig = dummyConfig.replace("%RUN_DIRECTORY%", runDir);
-		dummyConfig = dummyConfig.replace("%PROGRAM_ARGS%", programArgs.replaceAll("\"", "&quot;"));
-		dummyConfig = dummyConfig.replace("%VM_ARGS%", vmArgs.replaceAll("\"", "&quot;"));
+		dummyConfig = dummyConfig.replace("%PROGRAM_ARGS%", joinArguments(programArgs).replaceAll("\"", "&quot;"));
+		dummyConfig = dummyConfig.replace("%VM_ARGS%", joinArguments(vmArgs).replaceAll("\"", "&quot;"));
 
 		String envs = "";
 
@@ -252,12 +239,20 @@ public class RunConfig {
 		return dummyConfig;
 	}
 
-	public static String getOSClientJVMArgs() {
-		if (OperatingSystem.getOS().equalsIgnoreCase("osx")) {
-			return " -XstartOnFirstThread";
+	public static String joinArguments(List<String> args) {
+		final var sb = new StringBuilder();
+		boolean first = true;
+
+		for (String arg : args) {
+			if (!first) {
+				sb.append(" ");
+			}
+
+			first = false;
+			sb.append("\"").append(arg).append("\"");
 		}
 
-		return "";
+		return sb.toString();
 	}
 
 	private static String getMainClass(String side, LoomGradleExtension extension, String defaultMainClass) {

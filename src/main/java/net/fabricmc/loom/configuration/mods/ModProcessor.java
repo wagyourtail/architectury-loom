@@ -27,6 +27,7 @@ package net.fabricmc.loom.configuration.mods;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -49,9 +50,6 @@ import dev.architectury.tinyremapper.OutputConsumerPath;
 import dev.architectury.tinyremapper.TinyRemapper;
 import org.gradle.api.Project;
 import org.objectweb.asm.commons.Remapper;
-import org.zeroturnaround.zip.ZipUtil;
-import org.zeroturnaround.zip.transform.StringZipEntryTransformer;
-import org.zeroturnaround.zip.transform.ZipEntryTransformerEntry;
 
 import net.fabricmc.accesswidener.AccessWidenerReader;
 import net.fabricmc.accesswidener.AccessWidenerRemapper;
@@ -66,7 +64,9 @@ import net.fabricmc.loom.configuration.providers.minecraft.MinecraftMappedProvid
 import net.fabricmc.loom.util.Constants;
 import net.fabricmc.loom.util.LoggerFilter;
 import net.fabricmc.loom.util.TinyRemapperHelper;
+import net.fabricmc.loom.util.ZipUtils;
 import net.fabricmc.loom.util.srg.AtRemapper;
+import net.fabricmc.tinyremapper.NonClassCopyMode;
 import net.fabricmc.loom.util.srg.CoreModClassRemapper;
 import net.fabricmc.mappingio.tree.MemoryMappingTree;
 
@@ -104,14 +104,14 @@ public class ModProcessor {
 	private static void stripNestedJars(File file) {
 		if (!ZipUtil.containsEntry(file, "fabric.mod.json")) return;
 		// Strip out all contained jar info as we dont want loader to try and load the jars contained in dev.
-		ZipUtil.transformEntries(file, new ZipEntryTransformerEntry[]{(new ZipEntryTransformerEntry("fabric.mod.json", new StringZipEntryTransformer() {
-			@Override
-			protected String transform(ZipEntry zipEntry, String input) {
-				JsonObject json = LoomGradlePlugin.GSON.fromJson(input, JsonObject.class);
+		try {
+			ZipUtils.transformJson(JsonObject.class, file.toPath(), Map.of("fabric.mod.json", json -> {
 				json.remove("jars");
-				return LoomGradlePlugin.GSON.toJson(json);
-			}
-		}))});
+				return json;
+			}));
+		} catch (IOException e) {
+			throw new UncheckedIOException("Failed to strip nested jars from %s".formatted(file), e);
+		}
 	}
 
 	/**
@@ -194,12 +194,12 @@ public class ModProcessor {
 			try {
 				OutputConsumerPath outputConsumer = new OutputConsumerPath.Builder(info.getRemappedOutput().toPath()).build();
 
-				outputConsumer.addNonClassFiles(info.getInputFile().toPath());
+				outputConsumer.addNonClassFiles(info.getInputFile().toPath(), NonClassCopyMode.FIX_META_INF, remapper);
 				outputConsumerMap.put(info, outputConsumer);
 				String accessWidener = info.getAccessWidener();
 
 				if (accessWidener != null) {
-					accessWidenerMap.put(info, remapAccessWidener(ZipUtil.unpackEntry(info.inputFile, accessWidener), remapper.getRemapper()));
+					accessWidenerMap.put(info, remapAccessWidener(ZipUtils.unpack(info.inputFile.toPath(), accessWidener), remapper.getRemapper()));
 				}
 
 				remapper.apply(outputConsumer, tagMap.get(info));
@@ -219,7 +219,7 @@ public class ModProcessor {
 			byte[] accessWidener = accessWidenerMap.get(info);
 
 			if (accessWidener != null) {
-				ZipUtil.replaceEntry(info.getRemappedOutput(), info.getAccessWidener(), accessWidener);
+				ZipUtils.replace(info.getRemappedOutput().toPath(), info.getAccessWidener(), accessWidener);
 			}
 
 			if (extension.isForge()) {

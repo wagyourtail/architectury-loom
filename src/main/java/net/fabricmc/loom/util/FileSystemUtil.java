@@ -1,17 +1,25 @@
 /*
- * Copyright 2016 FabricMC
+ * This file is part of fabric-loom, licensed under the MIT License (MIT).
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Copyright (c) 2016-2017 FabricMC
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  */
 
 package net.fabricmc.loom.util;
@@ -24,50 +32,40 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystemAlreadyExistsException;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.Map;
+import java.util.function.Supplier;
 
 public final class FileSystemUtil {
-	public static class FileSystemDelegate implements AutoCloseable {
-		private final FileSystem fileSystem;
-		private final boolean owner;
-
-		public FileSystemDelegate(FileSystem fileSystem, boolean owner) {
-			this.fileSystem = fileSystem;
-			this.owner = owner;
-		}
-
-		public FileSystem get() {
-			return fileSystem;
-		}
-
+	public record Delegate(FileSystem fs, boolean owner) implements AutoCloseable, Supplier<FileSystem> {
 		@Override
 		public void close() throws IOException {
 			if (owner) {
-				fileSystem.close();
+				fs.close();
 			}
+		}
+
+		@Override
+		public FileSystem get() {
+			return fs;
 		}
 	}
 
 	private FileSystemUtil() {
 	}
 
-	private static final Map<String, String> jfsArgsCreate = new HashMap<>();
-	private static final Map<String, String> jfsArgsEmpty = new HashMap<>();
+	private static final Map<String, String> jfsArgsCreate = Map.of("create", "true");
+	private static final Map<String, String> jfsArgsEmpty = Collections.emptyMap();
 
-	static {
-		jfsArgsCreate.put("create", "true");
-	}
-
-	public static FileSystemDelegate getJarFileSystem(File file, boolean create) throws IOException {
+	public static Delegate getJarFileSystem(File file, boolean create) throws IOException {
 		return getJarFileSystem(file.toURI(), create);
 	}
 
-	public static FileSystemDelegate getJarFileSystem(Path path, boolean create) throws IOException {
+	public static Delegate getJarFileSystem(Path path, boolean create) throws IOException {
 		return getJarFileSystem(path.toUri(), create);
 	}
 
-	public static FileSystemDelegate getJarFileSystem(URI uri, boolean create) throws IOException {
+	public static Delegate getJarFileSystem(URI uri, boolean create) throws IOException {
 		URI jarUri;
 
 		try {
@@ -77,9 +75,9 @@ public final class FileSystemUtil {
 		}
 
 		try {
-			return new FileSystemDelegate(FileSystems.newFileSystem(jarUri, create ? jfsArgsCreate : jfsArgsEmpty), true);
+			return new Delegate(FileSystems.newFileSystem(jarUri, create ? jfsArgsCreate : jfsArgsEmpty), true);
 		} catch (FileSystemAlreadyExistsException e) {
-			return new FileSystemDelegate(FileSystems.getFileSystem(jarUri), false);
+			return new Delegate(FileSystems.getFileSystem(jarUri), false);
 		} catch (IOException e) {
 			throw new IOException("Could not create JAR file system for " + uri + " (create: " + create + ")", e);
 		}

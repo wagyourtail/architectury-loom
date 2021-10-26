@@ -54,14 +54,12 @@ import org.gradle.api.internal.artifacts.dependencies.AbstractModuleDependency;
 import org.gradle.api.internal.artifacts.dependencies.DefaultMutableVersionConstraint;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.tasks.TaskDependency;
-import org.zeroturnaround.zip.ByteSource;
-import org.zeroturnaround.zip.ZipEntrySource;
-import org.zeroturnaround.zip.ZipUtil;
 
 import net.fabricmc.loom.LoomGradlePlugin;
 import net.fabricmc.loom.api.mappings.layered.MappingContext;
 import net.fabricmc.loom.api.mappings.layered.MappingLayer;
 import net.fabricmc.loom.api.mappings.layered.MappingsNamespace;
+import net.fabricmc.loom.util.ZipUtils;
 import net.fabricmc.mappingio.adapter.MappingDstNsReorder;
 import net.fabricmc.mappingio.adapter.MappingSourceNsSwitch;
 import net.fabricmc.mappingio.format.Tiny2Writer;
@@ -116,9 +114,8 @@ public class LayeredMappingsDependency extends AbstractModuleDependency implemen
 			MappingSourceNsSwitch nsSwitch = new MappingSourceNsSwitch(nsReorder, MappingsNamespace.INTERMEDIARY.toString(), true);
 			mappings.accept(nsSwitch);
 
-			ZipUtil.pack(new ZipEntrySource[] {
-					new ByteSource("mappings/mappings.tiny", writer.toString().getBytes(StandardCharsets.UTF_8))
-			}, mappingsFile.toFile());
+			Files.deleteIfExists(mappingsFile);
+			ZipUtils.add(mappingsFile, "mappings/mappings.tiny", writer.toString().getBytes(StandardCharsets.UTF_8));
 		}
 	}
 
@@ -131,10 +128,7 @@ public class LayeredMappingsDependency extends AbstractModuleDependency implemen
 
 		byte[] data = LoomGradlePlugin.OBJECT_MAPPER.writeValueAsString(signatureFixes).getBytes(StandardCharsets.UTF_8);
 
-		ZipUtil.addEntry(
-				mappingsFile.toFile(),
-				new ByteSource("extras/record_signatures.json", data)
-		);
+		ZipUtils.add(mappingsFile, "extras/record_signatures.json", data);
 	}
 
 	@Override

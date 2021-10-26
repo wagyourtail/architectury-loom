@@ -63,6 +63,7 @@ import net.fabricmc.loom.configuration.accesswidener.TransitiveAccessWidenerMapp
 import net.fabricmc.loom.configuration.providers.mappings.MappingsProviderImpl;
 import net.fabricmc.loom.decompilers.LineNumberRemapper;
 import net.fabricmc.loom.util.Constants;
+import net.fabricmc.loom.util.FileSystemUtil;
 import net.fabricmc.loom.util.IOStringConsumer;
 import net.fabricmc.loom.util.OperatingSystem;
 import net.fabricmc.loom.util.gradle.ThreadedProgressLoggerConsumer;
@@ -70,7 +71,6 @@ import net.fabricmc.loom.util.gradle.ThreadedSimpleProgressLogger;
 import net.fabricmc.loom.util.gradle.WorkerDaemonClientsManagerHelper;
 import net.fabricmc.loom.util.ipc.IPCClient;
 import net.fabricmc.loom.util.ipc.IPCServer;
-import net.fabricmc.stitch.util.StitchUtil;
 
 public abstract class GenerateSourcesTask extends AbstractLoomTask {
 	public final LoomDecompiler decompiler;
@@ -149,13 +149,15 @@ public abstract class GenerateSourcesTask extends AbstractLoomTask {
 			params.getClassPath().setFrom(getProject().getConfigurations().getByName(Constants.Configurations.MINECRAFT_DEPENDENCIES));
 		});
 
-		workQueue.await();
+		try {
+			workQueue.await();
+		} finally {
+			if (useProcessIsolation()) {
+				boolean stopped = WorkerDaemonClientsManagerHelper.stopIdleJVM(getWorkerDaemonClientsManager(), jvmMarkerValue);
 
-		if (useProcessIsolation()) {
-			boolean stopped = WorkerDaemonClientsManagerHelper.stopIdleJVM(getWorkerDaemonClientsManager(), jvmMarkerValue);
-
-			if (!stopped) {
-				throw new RuntimeException("Failed to stop decompile worker JVM");
+				if (!stopped) {
+					throw new RuntimeException("Failed to stop decompile worker JVM");
+				}
 			}
 		}
 	}
@@ -264,8 +266,8 @@ public abstract class GenerateSourcesTask extends AbstractLoomTask {
 			LineNumberRemapper remapper = new LineNumberRemapper();
 			remapper.readMappings(linemap.toFile());
 
-			try (StitchUtil.FileSystemDelegate inFs = StitchUtil.getJarFileSystem(oldCompiledJar.toFile(), true);
-					StitchUtil.FileSystemDelegate outFs = StitchUtil.getJarFileSystem(linemappedJarDestination.toFile(), true)) {
+			try (FileSystemUtil.Delegate inFs = FileSystemUtil.getJarFileSystem(oldCompiledJar.toFile(), true);
+					FileSystemUtil.Delegate outFs = FileSystemUtil.getJarFileSystem(linemappedJarDestination.toFile(), true)) {
 				remapper.process(logger, inFs.get().getPath("/"), outFs.get().getPath("/"));
 			}
 		}
