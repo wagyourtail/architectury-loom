@@ -38,7 +38,6 @@ import com.google.common.collect.HashBiMap;
 import dev.architectury.tinyremapper.IMappingProvider;
 
 import net.fabricmc.loom.util.FileSystemUtil;
-import net.fabricmc.loom.util.FileSystemUtil.FileSystemDelegate;
 import net.fabricmc.mappingio.tree.MappingTree;
 
 public class InnerClassRemapper {
@@ -51,7 +50,7 @@ public class InnerClassRemapper {
 	public static Set<String> readClassNames(Path jar) {
 		Set<String> set = new HashSet<>();
 
-		try (FileSystemDelegate system = FileSystemUtil.getJarFileSystem(jar, false)) {
+		try (FileSystemUtil.Delegate system = FileSystemUtil.getJarFileSystem(jar, false)) {
 			Iterator<Path> iterator = Files.walk(system.get().getPath("/")).iterator();
 
 			while (iterator.hasNext()) {

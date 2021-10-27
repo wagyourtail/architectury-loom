@@ -205,7 +205,7 @@ public class FieldMigratedMappingsProvider extends MappingsProviderImpl {
 
 		for (MinecraftPatchedProvider.Environment environment : MinecraftPatchedProvider.Environment.values()) {
 			File patchedSrgJar = environment.patchedSrgJar.apply(extension.getMappingsProvider().patchedProvider);
-			FileSystemUtil.FileSystemDelegate system = FileSystemUtil.getJarFileSystem(patchedSrgJar, false);
+			FileSystemUtil.Delegate system = FileSystemUtil.getJarFileSystem(patchedSrgJar, false);
 			completer.onComplete(value -> system.close());
 
 			for (Path fsPath : (Iterable<? extends Path>) Files.walk(system.get().getPath("/"))::iterator) {

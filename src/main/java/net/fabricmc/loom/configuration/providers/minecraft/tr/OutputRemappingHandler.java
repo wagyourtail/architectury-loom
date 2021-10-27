@@ -36,7 +36,6 @@ import dev.architectury.tinyremapper.InputTag;
 import dev.architectury.tinyremapper.TinyRemapper;
 
 import net.fabricmc.loom.util.FileSystemUtil;
-import net.fabricmc.loom.util.FileSystemUtil.FileSystemDelegate;
 import net.fabricmc.loom.util.ThreadingUtils;
 
 public class OutputRemappingHandler {
@@ -51,7 +50,7 @@ public class OutputRemappingHandler {
 	public static void remap(TinyRemapper remapper, Path assets, Path output, BiConsumer<String, byte[]> then, InputTag... inputTags) throws IOException {
 		Files.copy(assets, output, StandardCopyOption.REPLACE_EXISTING);
 
-		try (FileSystemDelegate system = FileSystemUtil.getJarFileSystem(output, true)) {
+		try (FileSystemUtil.Delegate system = FileSystemUtil.getJarFileSystem(output, true)) {
 			ThreadingUtils.TaskCompleter taskCompleter = ThreadingUtils.taskCompleter();
 
 			remapper.apply((path, bytes) -> {

@@ -197,7 +197,7 @@ public class ForgeUserdevProvider extends DependencyProvider {
 				File output = outputs.file(input.getName() + "-alfd-transformed.jar");
 				Files.copy(input.toPath(), output.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
-				try (FileSystemUtil.FileSystemDelegate fs = FileSystemUtil.getJarFileSystem(output, false)) {
+				try (FileSystemUtil.Delegate fs = FileSystemUtil.getJarFileSystem(output, false)) {
 					Path path = fs.get().getPath("META-INF/services/cpw.mods.modlauncher.api.INameMappingService");
 					Files.deleteIfExists(path);
 				}

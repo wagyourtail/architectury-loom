@@ -181,7 +181,7 @@ public class MinecraftMappedProvider extends DependencyProvider {
 	private byte[][] inputBytes(Path input) throws IOException {
 		List<byte[]> inputByteList = new ArrayList<>();
 
-		try (FileSystemUtil.FileSystemDelegate inputFs = FileSystemUtil.getJarFileSystem(input, false)) {
+		try (FileSystemUtil.Delegate inputFs = FileSystemUtil.getJarFileSystem(input, false)) {
 			ThreadingUtils.TaskCompleter taskCompleter = ThreadingUtils.taskCompleter();
 
 			for (Path path : (Iterable<? extends Path>) Files.walk(inputFs.get().getPath("/"))::iterator) {

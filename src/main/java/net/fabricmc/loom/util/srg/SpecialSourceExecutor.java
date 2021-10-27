@@ -70,8 +70,8 @@ public class SpecialSourceExecutor {
 
 		Stopwatch stopwatch = Stopwatch.createStarted();
 
-		try (FileSystemUtil.FileSystemDelegate output = FileSystemUtil.getJarFileSystem(stripped, true)) {
-			try (FileSystemUtil.FileSystemDelegate fs = FileSystemUtil.getJarFileSystem(officialJar, false)) {
+		try (FileSystemUtil.Delegate output = FileSystemUtil.getJarFileSystem(stripped, true)) {
+			try (FileSystemUtil.Delegate fs = FileSystemUtil.getJarFileSystem(officialJar, false)) {
 				ThreadingUtils.TaskCompleter completer = ThreadingUtils.taskCompleter();
 
 				for (Path path : (Iterable<? extends Path>) Files.walk(fs.get().getPath("/"))::iterator) {

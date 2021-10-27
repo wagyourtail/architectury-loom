@@ -48,7 +48,6 @@ import org.gradle.api.Project;
 import org.gradle.api.artifacts.ResolvedArtifact;
 import org.gradle.api.logging.LogLevel;
 import org.gradle.api.logging.configuration.ShowStacktrace;
-import org.zeroturnaround.zip.ZipUtil;
 
 import net.fabricmc.loom.LoomGradleExtension;
 import net.fabricmc.loom.build.ModCompileRemapper;
@@ -59,6 +58,7 @@ import net.fabricmc.loom.util.FileSystemUtil;
 import net.fabricmc.loom.util.SourceRemapper;
 import net.fabricmc.loom.util.ThreadingUtils;
 import net.fabricmc.loom.util.TinyRemapperHelper;
+import net.fabricmc.loom.util.ZipUtils;
 import net.fabricmc.lorenztiny.TinyMappingsReader;
 
 public class ForgeSourcesRemapper {
@@ -71,7 +71,7 @@ public class ForgeSourcesRemapper {
 	}
 
 	public static void addForgeSources(Project project, Path sourcesJar) throws IOException {
-		try (FileSystemUtil.FileSystemDelegate delegate = FileSystemUtil.getJarFileSystem(sourcesJar, true)) {
+		try (FileSystemUtil.Delegate delegate = FileSystemUtil.getJarFileSystem(sourcesJar, true)) {
 			ThreadingUtils.TaskCompleter taskCompleter = ThreadingUtils.taskCompleter();
 
 			provideForgeSources(project, (path, bytes) -> {
@@ -120,7 +120,7 @@ public class ForgeSourcesRemapper {
 		tmpOutput.delete();
 		tmpOutput.deleteOnExit();
 
-		try (FileSystemUtil.FileSystemDelegate delegate = FileSystemUtil.getJarFileSystem(tmpInput, true)) {
+		try (FileSystemUtil.Delegate delegate = FileSystemUtil.getJarFileSystem(tmpInput, true)) {
 			ThreadingUtils.TaskCompleter taskCompleter = ThreadingUtils.taskCompleter();
 
 			for (Map.Entry<String, byte[]> entry : sources.entrySet()) {
@@ -156,7 +156,7 @@ public class ForgeSourcesRemapper {
 		tmpInput.delete();
 		int[] failedToRemap = {0};
 
-		try (FileSystemUtil.FileSystemDelegate delegate = FileSystemUtil.getJarFileSystem(tmpOutput, false)) {
+		try (FileSystemUtil.Delegate delegate = FileSystemUtil.getJarFileSystem(tmpOutput, false)) {
 			ThreadingUtils.TaskCompleter taskCompleter = ThreadingUtils.taskCompleter();
 
 			for (Map.Entry<String, byte[]> entry : new HashSet<>(sources.entrySet())) {
@@ -223,10 +223,10 @@ public class ForgeSourcesRemapper {
 			// create tmp directory
 			isSrcTmp = true;
 			tmpInput = Files.createTempDirectory("fabric-loom-src");
-			ZipUtil.unpack(tmpInput1.toFile(), tmpInput.toFile());
+			ZipUtils.unpackAll(tmpInput1, tmpInput);
 		}
 
-		try (FileSystemUtil.FileSystemDelegate outputFs = FileSystemUtil.getJarFileSystem(tmpOutput, true)) {
+		try (FileSystemUtil.Delegate outputFs = FileSystemUtil.getJarFileSystem(tmpOutput, true)) {
 			Path outputFsRoot = outputFs.get().getPath("/");
 			mercury.rewrite(tmpInput, outputFsRoot);
 		} catch (Exception e) {
@@ -243,7 +243,7 @@ public class ForgeSourcesRemapper {
 		ThreadingUtils.TaskCompleter taskCompleter = ThreadingUtils.taskCompleter();
 
 		for (Path path : forgeInstallerSources) {
-			FileSystemUtil.FileSystemDelegate system = FileSystemUtil.getJarFileSystem(path, false);
+			FileSystemUtil.Delegate system = FileSystemUtil.getJarFileSystem(path, false);
 			taskCompleter.onComplete(stopwatch -> system.close());
 
 			for (Path filePath : (Iterable<? extends Path>) Files.walk(system.get().getPath("/"))::iterator) {

@@ -24,11 +24,8 @@
 
 package net.fabricmc.loom.configuration.providers.forge;
 
-import java.io.BufferedWriter;
-import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -37,16 +34,14 @@ import java.util.function.Consumer;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import org.apache.commons.io.IOUtils;
 import org.gradle.api.Project;
-import org.zeroturnaround.zip.ZipUtil;
 
 import net.fabricmc.loom.configuration.DependencyProvider;
 import net.fabricmc.loom.util.Constants;
-import net.fabricmc.loom.util.FileSystemUtil;
+import net.fabricmc.loom.util.ZipUtils;
 
 public class McpConfigProvider extends DependencyProvider {
-	private File mcp;
+	private Path mcp;
 	private Path configJson;
 	private Path mappings;
 	private Boolean official;
@@ -62,12 +57,9 @@ public class McpConfigProvider extends DependencyProvider {
 
 		Path mcpZip = dependency.resolveFile().orElseThrow(() -> new RuntimeException("Could not resolve MCPConfig")).toPath();
 
-		if (!mcp.exists() || !Files.exists(configJson) || isRefreshDeps()) {
-			Files.copy(mcpZip, mcp.toPath(), StandardCopyOption.REPLACE_EXISTING);
-
-			try (FileSystemUtil.FileSystemDelegate fs = FileSystemUtil.getJarFileSystem(mcp, false)) {
-				Files.copy(fs.get().getPath("config.json"), configJson, StandardCopyOption.REPLACE_EXISTING);
-			}
+		if (!Files.exists(mcp) || !Files.exists(configJson) || isRefreshDeps()) {
+			Files.copy(mcpZip, mcp, StandardCopyOption.REPLACE_EXISTING);
+			Files.write(configJson, ZipUtils.unpack(mcp, "config.json"), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 		}
 
 		JsonObject json;
@@ -81,10 +73,10 @@ public class McpConfigProvider extends DependencyProvider {
 	}
 
 	private void init(String version) throws IOException {
-		File dir = getMinecraftProvider().dir("mcp/" + version);
-		mcp = new File(dir, "mcp.zip");
-		configJson = dir.toPath().resolve("mcp-config.json");
-		mappings = dir.toPath().resolve("mcp-config-mappings.txt");
+		Path dir = getMinecraftProvider().dir("mcp/" + version).toPath();
+		mcp = dir.resolve("mcp.zip");
+		configJson = dir.resolve("mcp-config.json");
+		mappings = dir.resolve("mcp-config-mappings.txt");
 
 		if (isRefreshDeps()) {
 			Files.deleteIfExists(mappings);
@@ -93,19 +85,17 @@ public class McpConfigProvider extends DependencyProvider {
 
 	public Path getMappings() {
 		if (Files.notExists(mappings)) {
-			if (!ZipUtil.handle(getMcp(), getMappingsPath(), (in, zipEntry) -> {
-				try (BufferedWriter writer = Files.newBufferedWriter(mappings, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
-					IOUtils.copy(in, writer, StandardCharsets.UTF_8);
-				}
-			})) {
-				throw new IllegalStateException("Failed to find mappings '" + getMappingsPath() + "' in " + getMcp().getAbsolutePath() + "!");
+			try {
+				Files.write(mappings, ZipUtils.unpack(getMcp(), getMappingsPath()), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+			} catch (IOException e) {
+				throw new IllegalStateException("Failed to find mappings '" + getMappingsPath() + "' in " + getMcp() + "!");
 			}
 		}
 
 		return mappings;
 	}
 
-	public File getMcp() {
+	public Path getMcp() {
 		return mcp;
 	}
 

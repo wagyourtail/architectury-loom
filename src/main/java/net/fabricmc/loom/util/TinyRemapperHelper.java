@@ -102,8 +102,8 @@ public final class TinyRemapperHelper {
 		}
 
 		builder.invalidLvNamePattern(MC_LV_PATTERN);
-		builder.inferNameFromSameLvIndex(true)
-				.extraPreApplyVisitor((cls, next) -> {
+		builder.inferNameFromSameLvIndex(true);
+		builder.extraPreApplyVisitor((cls, next) -> {
 			if (fixRecords && !cls.isRecord() && "java/lang/Record".equals(cls.getSuperName()) && mappings.getValue() != null) {
 				return new RecordComponentFixVisitor(next, mappings.getValue(), mappings.getValue().getNamespaceId(MappingsNamespace.INTERMEDIARY.toString()));
 			}

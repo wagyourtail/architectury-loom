@@ -24,9 +24,9 @@
 
 package net.fabricmc.loom.task;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -233,22 +233,22 @@ public class RemapJarTask extends Jar {
 					if (!extension.isForge()) {
 						// Add data to the manifest
 						try {
-						int count = ZipUtils.transform(data.output, Map.of(MANIFEST_PATH, bytes -> {
-										var manifest = new Manifest(new ByteArrayInputStream(bytes));
-										var manifestConfiguration = new JarManifestConfiguration(project);
+							int count = ZipUtils.transform(data.output, Map.of(MANIFEST_PATH, bytes -> {
+								var manifest = new Manifest(new ByteArrayInputStream(bytes));
+								var manifestConfiguration = new JarManifestConfiguration(project);
 
-										manifestConfiguration.configure(manifest);
-										manifest.getMainAttributes().putValue("Fabric-Mapping-Namespace", toM);
+								manifestConfiguration.configure(manifest);
+								manifest.getMainAttributes().putValue("Fabric-Mapping-Namespace", toM);
 
-							ByteArrayOutputStream out = new ByteArrayOutputStream();
-										manifest.write(out);
-							return out.toByteArray();
-						}));
+								ByteArrayOutputStream out = new ByteArrayOutputStream();
+								manifest.write(out);
+								return out.toByteArray();
+							}));
 
-						Preconditions.checkState(count > 0, "Did not transform any jar manifest");
-					} catch (IOException e) {
-						throw new UncheckedIOException("Failed to transform jar manifest", e);
-									}
+							Preconditions.checkState(count > 0, "Did not transform any jar manifest");
+						} catch (IOException e) {
+							throw new UncheckedIOException("Failed to transform jar manifest", e);
+						}
 					}
 
 					if (isReproducibleFileOrder() || !isPreserveFileTimestamps()) {
@@ -362,7 +362,7 @@ public class RemapJarTask extends Jar {
 		AccessTransformSet at = AccessTransformSet.create();
 		File jar = getArchiveFile().get().getAsFile();
 
-		try (FileSystemUtil.FileSystemDelegate fileSystem = FileSystemUtil.getJarFileSystem(jar, false)) {
+		try (FileSystemUtil.Delegate fileSystem = FileSystemUtil.getJarFileSystem(jar, false)) {
 			FileSystem fs = fileSystem.get();
 			Path atPath = fs.getPath(Constants.Forge.ACCESS_TRANSFORMER_PATH);
 

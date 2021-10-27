@@ -24,6 +24,8 @@
 
 package net.fabricmc.loom.configuration.mods;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -41,11 +43,13 @@ import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 
 import com.google.common.base.Stopwatch;
 import com.google.gson.JsonObject;
 import dev.architectury.tinyremapper.InputTag;
+import dev.architectury.tinyremapper.NonClassCopyMode;
 import dev.architectury.tinyremapper.OutputConsumerPath;
 import dev.architectury.tinyremapper.TinyRemapper;
 import org.gradle.api.Project;
@@ -62,11 +66,11 @@ import net.fabricmc.loom.configuration.processors.dependency.ModDependencyInfo;
 import net.fabricmc.loom.configuration.providers.mappings.MappingsProviderImpl;
 import net.fabricmc.loom.configuration.providers.minecraft.MinecraftMappedProvider;
 import net.fabricmc.loom.util.Constants;
+import net.fabricmc.loom.util.FileSystemUtil;
 import net.fabricmc.loom.util.LoggerFilter;
 import net.fabricmc.loom.util.TinyRemapperHelper;
 import net.fabricmc.loom.util.ZipUtils;
 import net.fabricmc.loom.util.srg.AtRemapper;
-import net.fabricmc.tinyremapper.NonClassCopyMode;
 import net.fabricmc.loom.util.srg.CoreModClassRemapper;
 import net.fabricmc.mappingio.tree.MemoryMappingTree;
 
@@ -102,7 +106,8 @@ public class ModProcessor {
 	}
 
 	private static void stripNestedJars(File file) {
-		if (!ZipUtil.containsEntry(file, "fabric.mod.json")) return;
+		if (!ZipUtils.contains(file.toPath(), "fabric.mod.json")) return;
+
 		// Strip out all contained jar info as we dont want loader to try and load the jars contained in dev.
 		try {
 			ZipUtils.transformJson(JsonObject.class, file.toPath(), Map.of("fabric.mod.json", json -> {
@@ -226,25 +231,35 @@ public class ModProcessor {
 				AtRemapper.remap(project.getLogger(), info.getRemappedOutput().toPath(), mappings);
 				CoreModClassRemapper.remapJar(info.getRemappedOutput().toPath(), mappings, project.getLogger());
 
-				if (ZipUtil.containsEntry(info.getRemappedOutput(), "META-INF/MANIFEST.MF")) {
-					ZipUtil.transformEntry(info.getRemappedOutput(), "META-INF/MANIFEST.MF", (in, zipEntry, out) -> {
-						Manifest manifest = new Manifest(in);
-						fixManifest(manifest);
-						out.putNextEntry(new ZipEntry(zipEntry.getName()));
-						manifest.write(out);
-						out.closeEntry();
-					});
-				}
+				ZipUtils.transform(info.getRemappedOutput().toPath(), Map.of("META-INF/MANIFEST.MF", bytes -> {
+					Manifest manifest = new Manifest(new ByteArrayInputStream(bytes));
+					fixManifest(manifest);
+					ByteArrayOutputStream out = new ByteArrayOutputStream();
+					manifest.write(out);
+					return out.toByteArray();
+				}));
 
-				List<String> filesToRemove = new ArrayList<>();
-				ZipUtil.iterate(info.getRemappedOutput(), (in, zipEntry) -> {
-					if (zipEntry.getName().toLowerCase(Locale.ROOT).endsWith(".rsa") || zipEntry.getName().toLowerCase(Locale.ROOT).endsWith(".sf")) {
-						if (zipEntry.getName().startsWith("META-INF")) {
-							filesToRemove.add(zipEntry.getName());
+				try (FileSystemUtil.Delegate fs = FileSystemUtil.getJarFileSystem(info.getRemappedOutput().toPath(), false);
+						Stream<Path> walk = Files.walk(fs.get().getPath("/"))) {
+					List<Path> filesToRemove = new ArrayList<>();
+					Iterator<Path> iterator = walk.iterator();
+
+					while (iterator.hasNext()) {
+						Path fsPath = iterator.next();
+						if (!Files.isRegularFile(fsPath)) continue;
+						String fileName = fsPath.toString();
+
+						if (fileName.toLowerCase(Locale.ROOT).endsWith(".rsa") || fileName.toLowerCase(Locale.ROOT).endsWith(".sf")) {
+							if (fileName.startsWith("META-INF")) {
+								filesToRemove.add(fsPath);
+							}
 						}
 					}
-				});
-				ZipUtil.removeEntries(info.getRemappedOutput(), filesToRemove.toArray(new String[0]));
+
+					for (Path fileToRemove : filesToRemove) {
+						Files.delete(fileToRemove);
+					}
+				}
 			}
 
 			info.finaliseRemapping();

@@ -40,7 +40,7 @@ public record CraneMappingLayer(Path craneJar) implements MappingLayer {
 
 	@Override
 	public void visit(MappingVisitor visitor) throws IOException {
-		try (FileSystemUtil.FileSystemDelegate fs = FileSystemUtil.getJarFileSystem(craneJar(), false)) {
+		try (FileSystemUtil.Delegate fs = FileSystemUtil.getJarFileSystem(craneJar(), false)) {
 			try (BufferedReader reader = Files.newBufferedReader(fs.get().getPath(TINY_FILE_NAME), StandardCharsets.UTF_8)) {
 				Tiny2Reader.read(reader, visitor);
 			}

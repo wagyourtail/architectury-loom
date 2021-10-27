@@ -24,6 +24,7 @@
 
 package net.fabricmc.loom.configuration.providers.forge;
 
+import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -83,7 +84,6 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
-import org.zeroturnaround.zip.ZipUtil;
 
 import net.fabricmc.loom.configuration.DependencyProvider;
 import net.fabricmc.loom.configuration.providers.MinecraftProviderImpl;
@@ -93,6 +93,7 @@ import net.fabricmc.loom.util.FileSystemUtil;
 import net.fabricmc.loom.util.MappingsProviderVerbose;
 import net.fabricmc.loom.util.ThreadingUtils;
 import net.fabricmc.loom.util.TinyRemapperHelper;
+import net.fabricmc.loom.util.ZipUtils;
 import net.fabricmc.loom.util.function.FsPathConsumer;
 import net.fabricmc.loom.util.srg.InnerClassRemapper;
 import net.fabricmc.loom.util.srg.SpecialSourceExecutor;
@@ -458,26 +459,25 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 		return getExtension().getForgeUserdevProvider().getUserdevJar();
 	}
 
-	private boolean isPatchedJarUpToDate(File jar) {
+	private boolean isPatchedJarUpToDate(File jar) throws IOException {
 		if (!jar.exists()) return false;
 
-		boolean[] upToDate = {false};
+		byte[] manifestBytes = ZipUtils.unpackNullable(jar.toPath(), "META-INF/MANIFEST.MF");
 
-		if (!ZipUtil.handle(jar, "META-INF/MANIFEST.MF", (in, zipEntry) -> {
-			Manifest manifest = new Manifest(in);
-			Attributes attributes = manifest.getMainAttributes();
-			String value = attributes.getValue(LOOM_PATCH_VERSION_KEY);
-
-			if (Objects.equals(value, CURRENT_LOOM_PATCH_VERSION)) {
-				upToDate[0] = true;
-			} else {
-				getProject().getLogger().lifecycle(":forge patched jars not up to date. current version: " + value);
-			}
-		})) {
+		if (manifestBytes == null) {
 			return false;
 		}
 
-		return upToDate[0];
+		Manifest manifest = new Manifest(new ByteArrayInputStream(manifestBytes));
+		Attributes attributes = manifest.getMainAttributes();
+		String value = attributes.getValue(LOOM_PATCH_VERSION_KEY);
+
+		if (Objects.equals(value, CURRENT_LOOM_PATCH_VERSION)) {
+			return true;
+		} else {
+			getProject().getLogger().lifecycle(":forge patched jars not up to date. current version: " + value);
+			return false;
+		}
 	}
 
 	private void accessTransformForge(Logger logger) throws Exception {
@@ -499,17 +499,14 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 		args.add(target.getAbsolutePath());
 
 		for (File jar : ImmutableList.of(getForgeJar(), getForgeUserdevJar(), minecraftMergedPatchedSrgJar)) {
-			try (FileSystemUtil.FileSystemDelegate fs = FileSystemUtil.getJarFileSystem(jar, false)) {
-				Path atPath = fs.get().getPath(Constants.Forge.ACCESS_TRANSFORMER_PATH);
+			byte[] atBytes = ZipUtils.unpackNullable(jar.toPath(), Constants.Forge.ACCESS_TRANSFORMER_PATH);
 
-				if (Files.exists(atPath)) {
-					File tmpFile = File.createTempFile("at-conf", ".cfg");
-					tmpFile.delete();
-					toDelete.add(tmpFile);
-					Files.copy(atPath, tmpFile.toPath());
-					args.add("--atFile");
-					args.add(tmpFile.getAbsolutePath());
-				}
+			if (atBytes != null) {
+				File tmpFile = File.createTempFile("at-conf", ".cfg");
+				toDelete.add(tmpFile);
+				Files.write(tmpFile.toPath(), atBytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+				args.add("--atFile");
+				args.add(tmpFile.getAbsolutePath());
 			}
 		}
 
@@ -664,8 +661,8 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 
 	private void walkFileSystems(File source, File target, Predicate<Path> filter, Function<FileSystem, Iterable<Path>> toWalk, FsPathConsumer action)
 			throws IOException {
-		try (FileSystemUtil.FileSystemDelegate sourceFs = FileSystemUtil.getJarFileSystem(source, false);
-					FileSystemUtil.FileSystemDelegate targetFs = FileSystemUtil.getJarFileSystem(target, false)) {
+		try (FileSystemUtil.Delegate sourceFs = FileSystemUtil.getJarFileSystem(source, false);
+					FileSystemUtil.Delegate targetFs = FileSystemUtil.getJarFileSystem(target, false)) {
 			for (Path sourceDir : toWalk.apply(sourceFs.get())) {
 				Path dir = sourceDir.toAbsolutePath();
 				if (!Files.exists(dir)) continue;
@@ -749,7 +746,7 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 	}
 
 	public void applyLoomPatchVersion(Path target) throws IOException {
-		try (FileSystemUtil.FileSystemDelegate delegate = FileSystemUtil.getJarFileSystem(target, false)) {
+		try (FileSystemUtil.Delegate delegate = FileSystemUtil.getJarFileSystem(target, false)) {
 			Path manifestPath = delegate.get().getPath("META-INF/MANIFEST.MF");
 
 			Preconditions.checkArgument(Files.exists(manifestPath), "META-INF/MANIFEST.MF does not exist in patched srg jar!");
