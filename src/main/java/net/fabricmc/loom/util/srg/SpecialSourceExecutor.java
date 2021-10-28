@@ -123,7 +123,7 @@ public class SpecialSourceExecutor {
 				spec.setArgs(Arrays.asList(args));
 				spec.setClasspath(classpath);
 				spec.workingDir(workingDir.toFile());
-				spec.setMain("net.md_5.specialsource.SpecialSource");
+				spec.getMainClass().set("net.md_5.specialsource.SpecialSource");
 
 				// if running with INFO or DEBUG logging
 				if (project.getGradle().getStartParameter().getShowStacktrace() != ShowStacktrace.INTERNAL_EXCEPTIONS
@@ -163,7 +163,7 @@ public class SpecialSourceExecutor {
 				spec.setArgs(args);
 				spec.setClasspath(classpath);
 				spec.workingDir(workingDir.toFile());
-				spec.setMain("org.cadixdev.vignette.VignetteMain");
+				spec.getMainClass().set("org.cadixdev.vignette.VignetteMain");
 
 				// if running with INFO or DEBUG logging
 				if (project.getGradle().getStartParameter().getShowStacktrace() != ShowStacktrace.INTERNAL_EXCEPTIONS

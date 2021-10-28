@@ -518,7 +518,7 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 		}
 
 		getProject().javaexec(spec -> {
-			spec.setMain("net.minecraftforge.accesstransformer.TransformerProcessor");
+			spec.getMainClass().set("net.minecraftforge.accesstransformer.TransformerProcessor");
 			spec.setArgs(args);
 			spec.setClasspath(classpath);
 
