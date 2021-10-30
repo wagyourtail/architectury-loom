@@ -103,6 +103,10 @@ public final class CompileConfiguration {
 		}
 
 		extension.createLazyConfiguration(Constants.Configurations.MAPPING_CONSTANTS);
+		extension.createLazyConfiguration(Constants.Configurations.NAMED_ELEMENTS).configure(configuration -> {
+			configuration.setCanBeConsumed(true);
+			configuration.setCanBeResolved(false);
+		});
 
 		extendsFrom(JavaPlugin.COMPILE_ONLY_CONFIGURATION_NAME, Constants.Configurations.MAPPING_CONSTANTS, project);
 
@@ -110,6 +114,8 @@ public final class CompileConfiguration {
 		extension.createLazyConfiguration(Constants.Configurations.MAPPINGS_FINAL);
 		extension.createLazyConfiguration(Constants.Configurations.LOOM_DEVELOPMENT_DEPENDENCIES);
 		extension.createLazyConfiguration(Constants.Configurations.UNPICK_CLASSPATH);
+		extension.createLazyConfiguration(Constants.Configurations.LOCAL_RUNTIME);
+		extendsFrom(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME, Constants.Configurations.LOCAL_RUNTIME, project);
 
 		for (RemappedConfigurationEntry entry : Constants.MOD_COMPILE_ENTRIES) {
 			extension.createLazyConfiguration(entry.sourceConfiguration())
@@ -209,6 +215,9 @@ public final class CompileConfiguration {
 				setupMixinAp(project, mixin);
 			}
 		});
+
+		// Add the "dev" jar to the "namedElements" configuration
+		p.artifacts(artifactHandler -> artifactHandler.add(Constants.Configurations.NAMED_ELEMENTS, p.getTasks().getByName("jar")));
 
 		if (p.getPluginManager().hasPlugin("org.jetbrains.kotlin.kapt")) {
 			// If loom is applied after kapt, then kapt will use the AP arguments too early for loom to pass the arguments we need for mixin.
