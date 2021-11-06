@@ -166,6 +166,12 @@ public class MinecraftGradleExtension implements LoomGradleExtensionAPI {
 	}
 
 	@Override
+	public Property<String> getIntermediaryUrl() {
+		reportDeprecation();
+		return parent.getIntermediaryUrl();
+	}
+
+	@Override
 	public void silentMojangMappingsLicense() {
 		reportDeprecation();
 		parent.silentMojangMappingsLicense();
