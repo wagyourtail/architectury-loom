@@ -298,8 +298,13 @@ public class MinecraftProviderImpl extends DependencyProvider implements Minecra
 			}
 
 			String jarPath = null;
+			String[] versions = versionsList.split("\n");
 
-			for (String version : versionsList.split("\n")) {
+			if (versions.length != 1) {
+				throw new UnsupportedOperationException("Expected only 1 version in META-INF/versions.list, but got %d".formatted(versions.length));
+			}
+
+			for (String version : versions) {
 				if (version.isBlank()) continue;
 
 				String[] split = version.split("\t");
@@ -310,10 +315,9 @@ public class MinecraftProviderImpl extends DependencyProvider implements Minecra
 				final String id = split[1];
 				final String path = split[2];
 
-				if (minecraftVersion().equals(id)) {
-					jarPath = path;
-					break;
-				}
+				// Take the first (only) version we find.
+				jarPath = path;
+				break;
 			}
 
 			Objects.requireNonNull(jarPath, "Could not find minecraft server jar for " + minecraftVersion());
