@@ -445,22 +445,18 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 		Stopwatch stopwatch = Stopwatch.createStarted();
 		project.getLogger().info(":merging mappings");
 
-		MemoryMappingTree intermediaryTree = new MemoryMappingTree();
-		readIntermediaryTree().accept(new MappingSourceNsSwitch(intermediaryTree, MappingsNamespace.INTERMEDIARY.toString()));
+		MemoryMappingTree tree = new MemoryMappingTree();
+		MappingSourceNsSwitch sourceNsSwitch = new MappingSourceNsSwitch(tree, MappingsNamespace.OFFICIAL.toString());
+		readIntermediaryTree().accept(sourceNsSwitch);
 
 		try (BufferedReader reader = Files.newBufferedReader(from, StandardCharsets.UTF_8)) {
-			Tiny2Reader.read(reader, intermediaryTree);
+			Tiny2Reader.read(reader, tree);
 		}
 
-		MemoryMappingTree officialTree = new MemoryMappingTree();
-		MappingNsCompleter nsCompleter = new MappingNsCompleter(officialTree, Map.of(MappingsNamespace.OFFICIAL.toString(), MappingsNamespace.INTERMEDIARY.toString()));
-		MappingSourceNsSwitch nsSwitch = new MappingSourceNsSwitch(nsCompleter, MappingsNamespace.OFFICIAL.toString());
-		intermediaryTree.accept(nsSwitch);
-
-		inheritMappedNamesOfEnclosingClasses(officialTree);
+		inheritMappedNamesOfEnclosingClasses(tree);
 
 		try (Tiny2Writer writer = new Tiny2Writer(Files.newBufferedWriter(out, StandardCharsets.UTF_8), false)) {
-			officialTree.accept(writer);
+			tree.accept(writer);
 		}
 
 		project.getLogger().info(":merged mappings in " + stopwatch.stop());
