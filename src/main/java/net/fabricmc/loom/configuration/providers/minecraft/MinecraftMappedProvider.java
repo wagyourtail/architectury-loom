@@ -416,6 +416,10 @@ public class MinecraftMappedProvider extends DependencyProvider {
 		return minecraftMappedJar;
 	}
 
+	public final File getBaseMappedJar() {
+		return minecraftMappedJar;
+	}
+
 	public File getForgeIntermediaryJar() {
 		return forgeIntermediaryJar;
 	}
