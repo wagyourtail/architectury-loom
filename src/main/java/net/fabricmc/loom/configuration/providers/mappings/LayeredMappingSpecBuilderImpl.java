@@ -34,12 +34,13 @@ import org.jetbrains.annotations.Nullable;
 import net.fabricmc.loom.api.mappings.layered.spec.FileSpec;
 import net.fabricmc.loom.api.mappings.layered.spec.LayeredMappingSpecBuilder;
 import net.fabricmc.loom.api.mappings.layered.spec.MappingsSpec;
+import net.fabricmc.loom.api.mappings.layered.spec.MojangMappingsSpecBuilder;
 import net.fabricmc.loom.api.mappings.layered.spec.ParchmentMappingsSpecBuilder;
 import net.fabricmc.loom.api.LoomGradleExtensionAPI;
 import net.fabricmc.loom.configuration.providers.mappings.crane.CraneMappingsSpec;
 import net.fabricmc.loom.configuration.providers.mappings.extras.signatures.SignatureFixesSpec;
 import net.fabricmc.loom.configuration.providers.mappings.intermediary.IntermediaryMappingsSpec;
-import net.fabricmc.loom.configuration.providers.mappings.mojmap.MojangMappingsSpec;
+import net.fabricmc.loom.configuration.providers.mappings.mojmap.MojangMappingsSpecBuilderImpl;
 import net.fabricmc.loom.configuration.providers.mappings.parchment.ParchmentMappingsSpecBuilderImpl;
 
 public class LayeredMappingSpecBuilderImpl implements LayeredMappingSpecBuilder {
@@ -58,8 +59,10 @@ public class LayeredMappingSpecBuilderImpl implements LayeredMappingSpecBuilder 
 	}
 
 	@Override
-	public LayeredMappingSpecBuilder officialMojangMappings() {
-		layers.add(new MojangMappingsSpec(() -> extension != null && extension.isSilentMojangMappingsLicenseEnabled()));
+	public LayeredMappingSpecBuilder officialMojangMappings(Action<MojangMappingsSpecBuilder> action) {
+		MojangMappingsSpecBuilderImpl builder = MojangMappingsSpecBuilderImpl.builder();
+		action.execute(builder);
+		layers.add(builder.build(() -> extension != null && extension.isSilentMojangMappingsLicenseEnabled()));
 		return this;
 	}
 

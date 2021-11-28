@@ -22,13 +22,33 @@
  * SOFTWARE.
  */
 
-package net.fabricmc.loom.test
+package net.fabricmc.loom.configuration.providers.mappings.mojmap;
 
-import org.gradle.util.GradleVersion
+import net.fabricmc.loom.api.mappings.layered.spec.MojangMappingsSpecBuilder;
 
-class LoomTestConstants {
-    public final static String DEFAULT_GRADLE = GradleVersion.current().getVersion()
-    public final static String PRE_RELEASE_GRADLE = "7.4-20211124232407+0000"
+public class MojangMappingsSpecBuilderImpl implements MojangMappingsSpecBuilder {
+	// TODO 0.11 loom change default to false
+	private boolean nameSyntheticMembers = true;
 
-    public final static String[] STANDARD_TEST_VERSIONS = [DEFAULT_GRADLE, PRE_RELEASE_GRADLE]
+	private MojangMappingsSpecBuilderImpl() {
+	}
+
+	public static MojangMappingsSpecBuilderImpl builder() {
+		return new MojangMappingsSpecBuilderImpl();
+	}
+
+	@Override
+	public MojangMappingsSpecBuilder setNameSyntheticMembers(boolean value) {
+		nameSyntheticMembers = value;
+		return this;
+	}
+
+	@Override
+	public boolean getNameSyntheticMembers() {
+		return nameSyntheticMembers;
+	}
+
+	public MojangMappingsSpec build() {
+		return new MojangMappingsSpec(nameSyntheticMembers);
+	}
 }

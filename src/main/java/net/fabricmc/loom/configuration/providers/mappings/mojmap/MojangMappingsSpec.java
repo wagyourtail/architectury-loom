@@ -28,7 +28,7 @@ import net.fabricmc.loom.api.mappings.layered.MappingContext;
 import net.fabricmc.loom.api.mappings.layered.spec.MappingsSpec;
 import net.fabricmc.loom.configuration.providers.minecraft.MinecraftVersionMeta;
 
-public record MojangMappingsSpec(SilenceLicenseOption silenceLicense) implements MappingsSpec<MojangMappingLayer> {
+public record MojangMappingsSpec(SilenceLicenseOption silenceLicense, boolean nameSyntheticMembers) implements MappingsSpec<MojangMappingLayer> {
 	// Keys in dependency manifest
 	private static final String MANIFEST_CLIENT_MAPPINGS = "client_mappings";
 	private static final String MANIFEST_SERVER_MAPPINGS = "server_mappings";
@@ -82,6 +82,7 @@ public record MojangMappingsSpec(SilenceLicenseOption silenceLicense) implements
 				versionInfo.download(MANIFEST_CLIENT_MAPPINGS),
 				versionInfo.download(MANIFEST_SERVER_MAPPINGS),
 				context.workingDirectory("mojang"),
+				nameSyntheticMembers(),
 				context.getLogger(),
 				silenceLicense()
 		);

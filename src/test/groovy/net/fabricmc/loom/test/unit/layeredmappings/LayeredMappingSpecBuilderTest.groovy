@@ -41,7 +41,7 @@ class LayeredMappingSpecBuilderTest extends LayeredMappingsSpecification {
             }
             def layers = spec.layers()
         then:
-            spec.getVersion() == "layered+hash.2198"
+            spec.version == "layered+hash.2192"
             layers.size() == 2
             layers[0].class == IntermediaryMappingsSpec
             layers[1].class == MojangMappingsSpec
@@ -56,7 +56,7 @@ class LayeredMappingSpecBuilderTest extends LayeredMappingsSpecification {
             def layers = spec.layers()
             def parchment = layers[2] as ParchmentMappingsSpec
         then:
-            spec.getVersion() == "layered+hash.863752751"
+            spec.version == "layered+hash.863752565"
             layers.size() == 3
             layers[0].class == IntermediaryMappingsSpec
             layers[1].class == MojangMappingsSpec
@@ -76,7 +76,7 @@ class LayeredMappingSpecBuilderTest extends LayeredMappingsSpecification {
             def layers = spec.layers()
             def parchment = layers[2] as ParchmentMappingsSpec
         then:
-            spec.getVersion() == "layered+hash.863752757"
+            spec.version == "layered+hash.863752571"
             layers.size() == 3
             layers[0].class == IntermediaryMappingsSpec
             layers[1].class == MojangMappingsSpec
@@ -96,7 +96,7 @@ class LayeredMappingSpecBuilderTest extends LayeredMappingsSpecification {
             def layers = spec.layers()
             def parchment = layers[2] as ParchmentMappingsSpec
         then:
-            spec.getVersion() == "layered+hash.1144427140"
+            spec.version == "layered+hash.1144427326"
             layers.size() == 3
             layers[0].class == IntermediaryMappingsSpec
             layers[1].class == MojangMappingsSpec

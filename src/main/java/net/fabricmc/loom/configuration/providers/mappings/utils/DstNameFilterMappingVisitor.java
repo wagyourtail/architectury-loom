@@ -22,13 +22,33 @@
  * SOFTWARE.
  */
 
-package net.fabricmc.loom.test
+package net.fabricmc.loom.configuration.providers.mappings.utils;
 
-import org.gradle.util.GradleVersion
+import java.io.IOException;
+import java.util.regex.Pattern;
 
-class LoomTestConstants {
-    public final static String DEFAULT_GRADLE = GradleVersion.current().getVersion()
-    public final static String PRE_RELEASE_GRADLE = "7.4-20211124232407+0000"
+import net.fabricmc.mappingio.MappedElementKind;
+import net.fabricmc.mappingio.MappingVisitor;
+import net.fabricmc.mappingio.adapter.ForwardingMappingVisitor;
 
-    public final static String[] STANDARD_TEST_VERSIONS = [DEFAULT_GRADLE, PRE_RELEASE_GRADLE]
+/**
+ * Filters out method and field names based on the provided regex pattern.
+ */
+public class DstNameFilterMappingVisitor extends ForwardingMappingVisitor {
+	private final Pattern pattern;
+
+	public DstNameFilterMappingVisitor(MappingVisitor next, Pattern pattern) {
+		super(next);
+
+		this.pattern = pattern;
+	}
+
+	@Override
+	public void visitDstName(MappedElementKind targetKind, int namespace, String name) throws IOException {
+		if ((targetKind == MappedElementKind.FIELD || targetKind == MappedElementKind.METHOD) && pattern.matcher(name).matches()) {
+			return;
+		}
+
+		super.visitDstName(targetKind, namespace, name);
+	}
 }

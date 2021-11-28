@@ -142,8 +142,8 @@ public final class CompileConfiguration {
 				extendsFrom(JavaPlugin.TEST_RUNTIME_CLASSPATH_CONFIGURATION_NAME, entry.getRemappedConfiguration(), project);
 			}
 
-			if (entry.hasConsumerConfiguration()) {
-				extendsFrom(entry.consumerConfiguration(), entry.sourceConfiguration(), project);
+			for (String outgoingConfiguration : entry.publishingMode().outgoingConfigurations()) {
+				extendsFrom(outgoingConfiguration, entry.sourceConfiguration(), project);
 			}
 		}
 

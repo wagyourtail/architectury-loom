@@ -22,13 +22,15 @@
  * SOFTWARE.
  */
 
-package net.fabricmc.loom.test
+package net.fabricmc.loom.api.mappings.layered.spec;
 
-import org.gradle.util.GradleVersion
+public interface MojangMappingsSpecBuilder {
+	/**
+	 * When enabled synthetic fields and methods will be mapped to name specified in the official mojang mappings.
+	 *
+	 * <p>When disabled synthetic fields and methods will not be mapped leaving them with their intermediary name.
+	 */
+	MojangMappingsSpecBuilder setNameSyntheticMembers(boolean value);
 
-class LoomTestConstants {
-    public final static String DEFAULT_GRADLE = GradleVersion.current().getVersion()
-    public final static String PRE_RELEASE_GRADLE = "7.4-20211124232407+0000"
-
-    public final static String[] STANDARD_TEST_VERSIONS = [DEFAULT_GRADLE, PRE_RELEASE_GRADLE]
+	boolean getNameSyntheticMembers();
 }
