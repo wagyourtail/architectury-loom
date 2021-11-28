@@ -253,7 +253,7 @@ public class SrgProvider extends DependencyProvider {
 
 		try {
 			FileUtils.deleteDirectory(context.workingDirectory("/").toFile());
-			MojangMappingLayer layer = new MojangMappingsSpec(() -> true).createLayer(context);
+			MojangMappingLayer layer = new MojangMappingsSpec(() -> true, true).createLayer(context);
 			layer.visit(visitor);
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);

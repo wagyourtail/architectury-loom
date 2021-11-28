@@ -33,12 +33,12 @@ public record MojangMappingsSpec(SilenceLicenseOption silenceLicense, boolean na
 	private static final String MANIFEST_CLIENT_MAPPINGS = "client_mappings";
 	private static final String MANIFEST_SERVER_MAPPINGS = "server_mappings";
 
-	public MojangMappingsSpec(SilenceLicenseSupplier supplier) {
-		this(new SilenceLicenseOption(supplier));
+	public MojangMappingsSpec(SilenceLicenseSupplier supplier, boolean nameSyntheticMembers) {
+		this(new SilenceLicenseOption(supplier), nameSyntheticMembers);
 	}
 
-	public MojangMappingsSpec() {
-		this(() -> false);
+	public MojangMappingsSpec(boolean nameSyntheticMembers) {
+		this(() -> false, nameSyntheticMembers);
 	}
 
 	@FunctionalInterface

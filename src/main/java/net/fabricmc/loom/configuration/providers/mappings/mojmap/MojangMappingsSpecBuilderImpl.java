@@ -48,7 +48,7 @@ public class MojangMappingsSpecBuilderImpl implements MojangMappingsSpecBuilder 
 		return nameSyntheticMembers;
 	}
 
-	public MojangMappingsSpec build() {
-		return new MojangMappingsSpec(nameSyntheticMembers);
+	public MojangMappingsSpec build(MojangMappingsSpec.SilenceLicenseSupplier supplier) {
+		return new MojangMappingsSpec(supplier, nameSyntheticMembers);
 	}
 }
