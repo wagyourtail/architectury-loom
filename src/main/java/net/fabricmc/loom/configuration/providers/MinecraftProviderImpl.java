@@ -52,6 +52,7 @@ import net.fabricmc.loom.util.Constants;
 import net.fabricmc.loom.util.MirrorUtil;
 import net.fabricmc.loom.util.DownloadUtil;
 import net.fabricmc.loom.util.HashedDownloadUtil;
+import net.fabricmc.loom.util.ZipUtils;
 import net.fabricmc.stitch.merge.JarMerger;
 
 public class MinecraftProviderImpl extends DependencyProvider implements MinecraftProvider {
@@ -67,6 +68,7 @@ public class MinecraftProviderImpl extends DependencyProvider implements Minecra
 	public File minecraftServerJar;
 	// The extracted server jar from the boostrap, only exists in >=21w39a
 	public File minecraftExtractedServerJar;
+	private Boolean isNewerThan21w39a;
 	private File minecraftMergedJar;
 	private File versionManifestJson;
 	private File experimentalVersionsJson;
@@ -330,6 +332,26 @@ public class MinecraftProviderImpl extends DependencyProvider implements Minecra
 
 			return minecraftExtractedServerJar;
 		}
+	}
+
+	public File getMinecraftServerJar() {
+		if (isNewerThan21w39a()) {
+			try {
+				return getServerJarToMerge(getProject().getLogger());
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+		}
+
+		return minecraftServerJar;
+	}
+
+	public boolean isNewerThan21w39a() {
+		if (isNewerThan21w39a != null) {
+			return isNewerThan21w39a;
+		}
+		
+		return isNewerThan21w39a = ZipUtils.contains(minecraftServerJar.toPath(), "META-INF/versions.list");
 	}
 
 	public File getMergedJar() {

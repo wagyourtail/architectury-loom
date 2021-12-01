@@ -135,7 +135,6 @@ public class ForgeUserdevProvider extends DependencyProvider {
 			}
 		}
 
-		// TODO: Read launch configs from the JSON too
 		// TODO: Should I copy the patches from here as well?
 		//       That'd require me to run the "MCP environment" fully up to merging.
 		for (Map.Entry<String, JsonElement> entry : json.getAsJsonObject("runs").entrySet()) {

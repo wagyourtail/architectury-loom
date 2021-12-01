@@ -30,8 +30,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -44,6 +42,7 @@ import org.gradle.api.logging.LogLevel;
 import org.gradle.api.logging.configuration.ShowStacktrace;
 
 import net.fabricmc.loom.LoomGradleExtension;
+import net.fabricmc.loom.configuration.providers.forge.McpConfigProvider.RemapAction;
 import net.fabricmc.loom.util.FileSystemUtil;
 import net.fabricmc.loom.util.ThreadingUtils;
 
@@ -58,7 +57,7 @@ public class SpecialSourceExecutor {
 		return string;
 	}
 
-	public static Path produceSrgJar(boolean specialSource, Project project, String side, FileCollection classpath, Set<File> mcLibs, Path officialJar, Path mappings)
+	public static Path produceSrgJar(RemapAction remapAction, Project project, String side, Set<File> mcLibs, Path officialJar, Path mappings)
 			throws Exception {
 		Set<String> filter = Files.readAllLines(mappings, StandardCharsets.UTF_8).stream()
 				.filter(s -> !s.startsWith("\t"))
@@ -105,79 +104,30 @@ public class SpecialSourceExecutor {
 		Files.deleteIfExists(output);
 		stopwatch = Stopwatch.createStarted();
 
-		if (specialSource) {
-			String[] args = new String[] {
-					"--in-jar",
-					stripped.toAbsolutePath().toString(),
-					"--out-jar",
-					output.toAbsolutePath().toString(),
-					"--srg-in",
-					mappings.toAbsolutePath().toString()
-			};
+		List<String> args = remapAction.getArgs(stripped, output, mappings, project.files(mcLibs));
 
-			project.getLogger().lifecycle(":remapping minecraft (SpecialSource, " + side + ", official -> srg)");
+		project.getLogger().lifecycle(":remapping minecraft (" + remapAction + ", " + side + ", official -> mojang)");
 
-			Path workingDir = tmpDir();
+		Path workingDir = tmpDir();
 
-			project.javaexec(spec -> {
-				spec.setArgs(Arrays.asList(args));
-				spec.setClasspath(classpath);
-				spec.workingDir(workingDir.toFile());
-				spec.getMainClass().set("net.md_5.specialsource.SpecialSource");
+		project.javaexec(spec -> {
+			spec.setArgs(args);
+			spec.setClasspath(remapAction.getClasspath());
+			spec.workingDir(workingDir.toFile());
+			spec.getMainClass().set(remapAction.getMainClass());
 
-				// if running with INFO or DEBUG logging
-				if (project.getGradle().getStartParameter().getShowStacktrace() != ShowStacktrace.INTERNAL_EXCEPTIONS
-						|| project.getGradle().getStartParameter().getLogLevel().compareTo(LogLevel.LIFECYCLE) < 0) {
-					spec.setStandardOutput(System.out);
-					spec.setErrorOutput(System.err);
-				} else {
-					spec.setStandardOutput(NullOutputStream.NULL_OUTPUT_STREAM);
-					spec.setErrorOutput(NullOutputStream.NULL_OUTPUT_STREAM);
-				}
-			}).rethrowFailure().assertNormalExitValue();
-
-			project.getLogger().lifecycle(":remapped minecraft (SpecialSource, " + side + ", official -> srg) in " + stopwatch.stop());
-		} else {
-			List<String> args = new ArrayList<>(Arrays.asList(
-					"--jar-in",
-					stripped.toAbsolutePath().toString(),
-					"--jar-out",
-					output.toAbsolutePath().toString(),
-					"--mapping-format",
-					"tsrg2",
-					"--mappings",
-					mappings.toAbsolutePath().toString(),
-					"--create-inits",
-					"--fix-param-annotations"
-			));
-
-			for (File file : mcLibs) {
-				args.add("-e=" + file.getAbsolutePath());
+			// if running with INFO or DEBUG logging
+			if (project.getGradle().getStartParameter().getShowStacktrace() != ShowStacktrace.INTERNAL_EXCEPTIONS
+					|| project.getGradle().getStartParameter().getLogLevel().compareTo(LogLevel.LIFECYCLE) < 0) {
+				spec.setStandardOutput(System.out);
+				spec.setErrorOutput(System.err);
+			} else {
+				spec.setStandardOutput(NullOutputStream.NULL_OUTPUT_STREAM);
+				spec.setErrorOutput(NullOutputStream.NULL_OUTPUT_STREAM);
 			}
+		}).rethrowFailure().assertNormalExitValue();
 
-			project.getLogger().lifecycle(":remapping minecraft (Vignette, " + side + ", official -> mojang)");
-
-			Path workingDir = tmpDir();
-
-			project.javaexec(spec -> {
-				spec.setArgs(args);
-				spec.setClasspath(classpath);
-				spec.workingDir(workingDir.toFile());
-				spec.getMainClass().set("org.cadixdev.vignette.VignetteMain");
-
-				// if running with INFO or DEBUG logging
-				if (project.getGradle().getStartParameter().getShowStacktrace() != ShowStacktrace.INTERNAL_EXCEPTIONS
-						|| project.getGradle().getStartParameter().getLogLevel().compareTo(LogLevel.LIFECYCLE) < 0) {
-					spec.setStandardOutput(System.out);
-					spec.setErrorOutput(System.err);
-				} else {
-					spec.setStandardOutput(NullOutputStream.NULL_OUTPUT_STREAM);
-					spec.setErrorOutput(NullOutputStream.NULL_OUTPUT_STREAM);
-				}
-			}).rethrowFailure().assertNormalExitValue();
-
-			project.getLogger().lifecycle(":remapped minecraft (Vignette, " + side + ", official -> mojang) in " + stopwatch.stop());
-		}
+		project.getLogger().lifecycle(":remapped minecraft (" + remapAction + ", " + side + ", official -> mojang) in " + stopwatch.stop());
 
 		Files.deleteIfExists(stripped);
 

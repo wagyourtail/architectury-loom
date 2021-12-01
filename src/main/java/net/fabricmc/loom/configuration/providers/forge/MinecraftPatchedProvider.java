@@ -87,6 +87,7 @@ import org.objectweb.asm.tree.ClassNode;
 
 import net.fabricmc.loom.configuration.DependencyProvider;
 import net.fabricmc.loom.configuration.providers.MinecraftProviderImpl;
+import net.fabricmc.loom.extension.LoomGradleExtensionImpl;
 import net.fabricmc.loom.util.Constants;
 import net.fabricmc.loom.util.DependencyDownloader;
 import net.fabricmc.loom.util.FileSystemUtil;
@@ -338,20 +339,17 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 
 	private void createSrgJars(Logger logger) throws Exception {
 		MinecraftProviderImpl minecraftProvider = getExtension().getMinecraftProvider();
-		String dep = getExtension().isForgeAndOfficial() ? Constants.Dependencies.VIGNETTE + Constants.Dependencies.Versions.VIGNETTE
-				: Constants.Dependencies.SPECIAL_SOURCE + Constants.Dependencies.Versions.SPECIAL_SOURCE + ":shaded";
-		FileCollection classpath = DependencyDownloader.download(getProject(), dep, true, true);
-		produceSrgJar(getExtension().isForgeAndOfficial(), minecraftProvider.minecraftClientJar.toPath(), minecraftProvider.minecraftServerJar.toPath(), classpath);
+		produceSrgJar(getExtension().isForgeAndOfficial(), minecraftProvider.minecraftClientJar.toPath(), minecraftProvider.getMinecraftServerJar().toPath());
 	}
 
-	private void produceSrgJar(boolean official, Path clientJar, Path serverJar, FileCollection classpath) throws IOException {
+	private void produceSrgJar(boolean official, Path clientJar, Path serverJar) throws IOException {
 		Path tmpSrg = getToSrgMappings();
 		Set<File> mcLibs = getProject().getConfigurations().getByName(Constants.Configurations.MINECRAFT_DEPENDENCIES).resolve();
 
 		ThreadingUtils.run(() -> {
-			Files.copy(SpecialSourceExecutor.produceSrgJar(getExtension().isForgeAndNotOfficial(), getProject(), "client", classpath, mcLibs, clientJar, tmpSrg), minecraftClientSrgJar.toPath());
+			Files.copy(SpecialSourceExecutor.produceSrgJar(getExtension().getMcpConfigProvider().getRemapAction(), getProject(), "client", mcLibs, clientJar, tmpSrg), minecraftClientSrgJar.toPath());
 		}, () -> {
-				Files.copy(SpecialSourceExecutor.produceSrgJar(getExtension().isForgeAndNotOfficial(), getProject(), "server", classpath, mcLibs, serverJar, tmpSrg), minecraftServerSrgJar.toPath());
+				Files.copy(SpecialSourceExecutor.produceSrgJar(getExtension().getMcpConfigProvider().getRemapAction(), getProject(), "server", mcLibs, serverJar, tmpSrg), minecraftServerSrgJar.toPath());
 			});
 	}
 
@@ -481,8 +479,9 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 	}
 
 	private void accessTransformForge(Logger logger) throws Exception {
+		MinecraftProviderImpl minecraftProvider = getExtension().getMinecraftProvider();
 		List<File> toDelete = new ArrayList<>();
-		String atDependency = Constants.Dependencies.ACCESS_TRANSFORMERS + Constants.Dependencies.Versions.ACCESS_TRANSFORMERS;
+		String atDependency = Constants.Dependencies.ACCESS_TRANSFORMERS + (minecraftProvider.isNewerThan21w39a() ? Constants.Dependencies.Versions.ACCESS_TRANSFORMERS_NEW : Constants.Dependencies.Versions.ACCESS_TRANSFORMERS);
 		FileCollection classpath = DependencyDownloader.download(getProject(), atDependency);
 		Stopwatch stopwatch = Stopwatch.createStarted();
 
@@ -655,7 +654,7 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 			// Copy resources
 			MinecraftProviderImpl minecraftProvider = getExtension().getMinecraftProvider();
 			copyNonClassFiles(minecraftProvider.minecraftClientJar, minecraftMergedPatchedSrgJar);
-			copyNonClassFiles(minecraftProvider.minecraftServerJar, minecraftMergedPatchedSrgJar);
+			copyNonClassFiles(minecraftProvider.getMinecraftServerJar(), minecraftMergedPatchedSrgJar);
 		}
 	}
 
