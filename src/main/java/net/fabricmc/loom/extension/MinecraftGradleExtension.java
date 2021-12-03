@@ -41,6 +41,7 @@ import net.fabricmc.loom.api.ForgeExtensionAPI;
 import net.fabricmc.loom.api.LoomGradleExtensionAPI;
 import net.fabricmc.loom.api.MixinExtensionAPI;
 import net.fabricmc.loom.api.decompilers.LoomDecompiler;
+import net.fabricmc.loom.api.decompilers.architectury.ArchitecturyLoomDecompiler;
 import net.fabricmc.loom.api.mappings.layered.spec.LayeredMappingSpecBuilder;
 import net.fabricmc.loom.configuration.ide.RunConfig;
 import net.fabricmc.loom.configuration.ide.RunConfigSettings;
@@ -169,6 +170,12 @@ public class MinecraftGradleExtension implements LoomGradleExtensionAPI {
 	public Property<String> getIntermediaryUrl() {
 		reportDeprecation();
 		return parent.getIntermediaryUrl();
+	}
+
+	@Override
+	public ListProperty<ArchitecturyLoomDecompiler> getArchGameDecompilers() {
+		reportDeprecation();
+		return parent.getArchGameDecompilers();
 	}
 
 	@Override

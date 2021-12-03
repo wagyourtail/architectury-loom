@@ -47,6 +47,7 @@ import net.fabricmc.loom.api.ForgeExtensionAPI;
 import net.fabricmc.loom.api.LoomGradleExtensionAPI;
 import net.fabricmc.loom.api.MixinExtensionAPI;
 import net.fabricmc.loom.api.decompilers.LoomDecompiler;
+import net.fabricmc.loom.api.decompilers.architectury.ArchitecturyLoomDecompiler;
 import net.fabricmc.loom.api.mappings.layered.spec.LayeredMappingSpecBuilder;
 import net.fabricmc.loom.configuration.ide.RunConfig;
 import net.fabricmc.loom.configuration.ide.RunConfigSettings;
@@ -86,6 +87,7 @@ public abstract class LoomGradleExtensionApiImpl implements LoomGradleExtensionA
 	// ===================
 	//  Architectury Loom
 	// ===================
+	private final ListProperty<ArchitecturyLoomDecompiler> archDecompilers;
 	private Provider<ModPlatform> platform;
 	private boolean silentMojangMappingsLicense = false;
 	public Boolean generateSrgTiny = null;
@@ -136,6 +138,8 @@ public abstract class LoomGradleExtensionApiImpl implements LoomGradleExtensionA
 		})::get);
 		this.launchConfigs = project.container(LaunchProviderSettings.class,
 				baseName -> new LaunchProviderSettings(project, baseName));
+		this.archDecompilers = project.getObjects().listProperty(ArchitecturyLoomDecompiler.class)
+				.empty();
 	}
 
 	@Override
@@ -284,6 +288,11 @@ public abstract class LoomGradleExtensionApiImpl implements LoomGradleExtensionA
 	@Override
 	public void forge(Action<ForgeExtensionAPI> action) {
 		action.execute(getForge());
+	}
+
+	@Override
+	public ListProperty<ArchitecturyLoomDecompiler> getArchGameDecompilers() {
+		return archDecompilers;
 	}
 
 	// This is here to ensure that LoomGradleExtensionApiImpl compiles without any unimplemented methods

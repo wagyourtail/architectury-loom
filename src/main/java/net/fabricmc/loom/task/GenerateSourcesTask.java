@@ -147,7 +147,7 @@ public abstract class GenerateSourcesTask extends AbstractLoomTask {
 			params.getSourcesDestinationJar().set(getMappedJarFileWithSuffix("-sources.jar"));
 			params.getLinemap().set(getMappedJarFileWithSuffix("-sources.lmap"));
 			params.getLinemapJar().set(getMappedJarFileWithSuffix("-linemapped.jar"));
-			params.getMappings().set(getMappings().toFile());
+			params.getMappings().set(getMappings(getProject(), getExtension()).toFile());
 
 			if (ipcPath != null) {
 				params.getIPCPath().set(ipcPath.toFile());
@@ -308,11 +308,11 @@ public abstract class GenerateSourcesTask extends AbstractLoomTask {
 		return new File(path.substring(0, path.length() - 4) + suffix);
 	}
 
-	private Path getMappings() {
-		Path baseMappings = getExtension().isForge() ? getExtension().getMappingsProvider().tinyMappingsWithSrg : getExtension().getMappingsProvider().tinyMappings;
+	static Path getMappings(Project project, LoomGradleExtension extension) {
+		Path baseMappings = extension.isForge() ? extension.getMappingsProvider().tinyMappingsWithSrg : extension.getMappingsProvider().tinyMappings;
 
-		if (getExtension().getEnableTransitiveAccessWideners().get()) {
-			List<AccessWidenerFile> accessWideners = getExtension().getTransitiveAccessWideners();
+		if (extension.getEnableTransitiveAccessWideners().get()) {
+			List<AccessWidenerFile> accessWideners = extension.getTransitiveAccessWideners();
 
 			if (accessWideners.isEmpty()) {
 				return baseMappings;
@@ -326,7 +326,7 @@ public abstract class GenerateSourcesTask extends AbstractLoomTask {
 				throw new RuntimeException("Failed to create temp file", e);
 			}
 
-			TransitiveAccessWidenerMappingsProcessor.process(baseMappings, outputMappings, accessWideners, getProject().getLogger());
+			TransitiveAccessWidenerMappingsProcessor.process(baseMappings, outputMappings, accessWideners, project.getLogger());
 
 			return outputMappings;
 		}

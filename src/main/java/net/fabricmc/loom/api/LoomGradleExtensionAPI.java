@@ -40,6 +40,7 @@ import org.gradle.api.publish.maven.MavenPublication;
 import org.jetbrains.annotations.ApiStatus;
 
 import net.fabricmc.loom.api.decompilers.LoomDecompiler;
+import net.fabricmc.loom.api.decompilers.architectury.ArchitecturyLoomDecompiler;
 import net.fabricmc.loom.api.mappings.layered.spec.LayeredMappingSpecBuilder;
 import net.fabricmc.loom.configuration.ide.RunConfig;
 import net.fabricmc.loom.configuration.ide.RunConfigSettings;
@@ -227,6 +228,12 @@ public interface LoomGradleExtensionAPI {
 	// ===================
 	//  Architectury Loom
 	// ===================
+	ListProperty<ArchitecturyLoomDecompiler> getArchGameDecompilers();
+
+	default void addArchDecompiler(ArchitecturyLoomDecompiler decompiler) {
+		getArchGameDecompilers().add(decompiler);
+	}
+
 	void silentMojangMappingsLicense();
 
 	boolean isSilentMojangMappingsLicenseEnabled();

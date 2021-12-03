@@ -350,7 +350,7 @@ public class MinecraftProviderImpl extends DependencyProvider implements Minecra
 		if (isNewerThan21w39a != null) {
 			return isNewerThan21w39a;
 		}
-		
+
 		return isNewerThan21w39a = ZipUtils.contains(minecraftServerJar.toPath(), "META-INF/versions.list");
 	}
 

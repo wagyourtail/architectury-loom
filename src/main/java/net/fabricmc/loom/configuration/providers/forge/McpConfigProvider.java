@@ -207,10 +207,10 @@ public class McpConfigProvider extends DependencyProvider {
 			List<String> args = this.args.stream()
 					.map(str -> {
 						return switch (str) {
-							case "{input}" -> input.toAbsolutePath().toString();
-							case "{output}" -> output.toAbsolutePath().toString();
-							case "{mappings}" -> mappings.toAbsolutePath().toString();
-							default -> str;
+						case "{input}" -> input.toAbsolutePath().toString();
+						case "{output}" -> output.toAbsolutePath().toString();
+						case "{mappings}" -> mappings.toAbsolutePath().toString();
+						default -> str;
 						};
 					})
 					.collect(Collectors.toList());
