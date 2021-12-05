@@ -198,7 +198,7 @@ public class RemapJarTask extends Jar {
 						}
 
 						AccessWidenerFile awFile = AccessWidenerFile.fromModJar(remapData.input);
-						Preconditions.checkNotNull(awFile, "Failed to find accessWidener in fabric.mod.json: " + remapData.input);
+						Preconditions.checkNotNull(awFile, "Failed to find accessWidener in fabric.mod.json / architectury.common.json: " + remapData.input);
 
 						return Pair.of(awFile.name(), data);
 					}

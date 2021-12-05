@@ -45,6 +45,44 @@ public record AccessWidenerFile(
 	 * Reads the access-widener contained in a mod jar, or returns null if there is none.
 	 */
 	public static AccessWidenerFile fromModJar(Path modJarPath) {
+		if (ZipUtils.contains(modJarPath, "architectury.common.json")) {
+			String awPath = null;
+			byte[] commonJsonBytes;
+
+			try {
+				commonJsonBytes = ZipUtils.unpackNullable(modJarPath, "architectury.common.json");
+			} catch (IOException e) {
+				throw new UncheckedIOException("Failed to read access-widener file from: " + modJarPath.toAbsolutePath(), e);
+			}
+
+			if (commonJsonBytes != null) {
+				JsonObject jsonObject = new Gson().fromJson(new String(commonJsonBytes, StandardCharsets.UTF_8), JsonObject.class);
+
+				if (jsonObject.has("accessWidener")) {
+					awPath = jsonObject.get("accessWidener").getAsString();
+				} else {
+					throw new IllegalArgumentException("The architectury.common.json file does not contain an accessWidener field.");
+				}
+			} else {
+				// ???????????
+				throw new IllegalArgumentException("The architectury.common.json file does not exist.");
+			}
+
+			byte[] content;
+
+			try {
+				content = ZipUtils.unpack(modJarPath, awPath);
+			} catch (IOException e) {
+				throw new UncheckedIOException("Could not find access widener file (%s) defined in the architectury.common.json file of %s".formatted(awPath, modJarPath.toAbsolutePath()), e);
+			}
+
+			return new AccessWidenerFile(
+					awPath,
+					modJarPath.getFileName().toString(),
+					content
+			);
+		}
+
 		byte[] modJsonBytes;
 
 		try {
