@@ -144,7 +144,7 @@ public class ModCompileRemapper {
 				}
 
 				try {
-					ModProcessor.processMods(project, modDependencies);
+					new ModProcessor(project).processMods(modDependencies);
 				} catch (IOException e) {
 					// Failed to remap, lets clean up to ensure we try again next time
 					modDependencies.forEach(info -> info.getRemappedOutput().delete());
