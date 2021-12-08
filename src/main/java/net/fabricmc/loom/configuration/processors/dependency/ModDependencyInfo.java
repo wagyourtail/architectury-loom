@@ -192,7 +192,18 @@ public class ModDependencyInfo {
 	}
 
 	private static AccessWidenerData tryReadAccessWidenerData(Path inputJar) throws IOException {
-		byte[] modJsonBytes = ZipUtils.unpack(inputJar, "fabric.mod.json");
+		byte[] modJsonBytes = ZipUtils.unpackNullable(inputJar, "fabric.mod.json");
+
+		if (modJsonBytes == null) {
+			modJsonBytes = ZipUtils.unpackNullable(inputJar, "architectury.common.json");
+
+			if (modJsonBytes == null) {
+				// No access widener data
+				// We can just ignore in architectury
+				return null;
+			}
+		}
+
 		JsonObject jsonObject = LoomGradlePlugin.GSON.fromJson(new String(modJsonBytes, StandardCharsets.UTF_8), JsonObject.class);
 
 		if (!jsonObject.has("accessWidener")) {
