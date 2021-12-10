@@ -631,7 +631,8 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 		ConsoleTool.main(new String[] {
 				"--clean", clean.getAbsolutePath(),
 				"--output", output.getAbsolutePath(),
-				"--apply", patches.toAbsolutePath().toString()
+				"--apply", patches.toAbsolutePath().toString(),
+				"--pack200"
 		});
 
 		try {
