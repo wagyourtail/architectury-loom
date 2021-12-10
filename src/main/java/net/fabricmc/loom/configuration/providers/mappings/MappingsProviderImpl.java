@@ -343,7 +343,7 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 		}
 
 		Path srgPath = getRawSrgFile();
-		TinyFile file = new MCPReader(intermediaryTinyPath, srgPath).read(mcpJar);
+		TinyFile file = new MCPReader(intermediaryTinyPath, srgPath, getExtension().getMcpConfigProvider().isSRG()).read(mcpJar);
 		TinyV2Writer.write(file, tinyMappings);
 	}
 

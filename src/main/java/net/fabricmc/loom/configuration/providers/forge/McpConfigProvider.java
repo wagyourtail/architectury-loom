@@ -58,8 +58,14 @@ public class McpConfigProvider extends DependencyProvider {
 	private String mappingsPath;
 	private RemapAction remapAction;
 
+	private boolean isSRG = false;
+
 	public McpConfigProvider(Project project) {
 		super(project);
+	}
+
+	public boolean isSRG() {
+		return isSRG;
 	}
 
 	@Override
@@ -67,6 +73,15 @@ public class McpConfigProvider extends DependencyProvider {
 		init(dependency.getDependency().getVersion());
 
 		Path mcpZip = dependency.resolveFile().orElseThrow(() -> new RuntimeException("Could not resolve MCPConfig")).toPath();
+
+
+		if (getExtension().getForgeProvider().isFG2()) {
+			official = false;
+			mappingsPath = ZipUtils.contains(mcpZip, "joined.srg") ? "joined.srg" : "config/joined.tsrg";
+			isSRG = mappingsPath.endsWith(".srg");
+			remapAction = new FG2RemapAction(getProject());
+			return;
+		}
 
 		if (!Files.exists(mcp) || !Files.exists(configJson) || isRefreshDeps()) {
 			Files.copy(mcpZip, mcp, StandardCopyOption.REPLACE_EXISTING);
@@ -145,6 +160,83 @@ public class McpConfigProvider extends DependencyProvider {
 		String getMainClass();
 
 		List<String> getArgs(Path input, Path output, Path mappings, FileCollection libraries);
+	}
+
+	public static class FG2RemapAction implements RemapAction {
+		private final Project project;
+		private final String name;
+		private final File mainClasspath;
+		private final FileCollection classpath;
+		private final List<String> args;
+		private boolean hasLibraries;
+
+		public FG2RemapAction(Project project) {
+			this.project = project;
+			this.name = "net.md-5:SpecialSource:1.8.3:shaded";
+			this.mainClasspath = DependencyDownloader.download(project, this.name, false, true)
+				.getSingleFile();
+			this.classpath = DependencyDownloader.download(project, this.name, true, true);
+			this.args = List.of(
+				"--in-jar",
+				"{input}",
+				"--out-jar",
+				"{output}",
+				"--srg-in",
+				"{mappings}",
+				"--kill-source"
+			);
+		}
+
+		@Override
+		public FileCollection getClasspath() {
+			return classpath;
+		}
+
+		@Override
+		public String getMainClass() {
+			try {
+				byte[] manifestBytes = ZipUtils.unpackNullable(mainClasspath.toPath(), "META-INF/MANIFEST.MF");
+
+				if (manifestBytes == null) {
+					throw new RuntimeException("Could not find MANIFEST.MF in " + mainClasspath + "!");
+				}
+
+				Manifest manifest = new Manifest(new ByteArrayInputStream(manifestBytes));
+				Attributes attributes = manifest.getMainAttributes();
+				String value = attributes.getValue(Attributes.Name.MAIN_CLASS);
+
+				if (value == null) {
+					throw new RuntimeException("Could not find main class in " + mainClasspath + "!");
+				} else {
+					return value;
+				}
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+		}
+
+		@Override
+		public List<String> getArgs(Path input, Path output, Path mappings, FileCollection libraries) {
+			List<String> args = this.args.stream()
+				.map(str -> {
+					return switch (str) {
+						case "{input}" -> input.toAbsolutePath().toString();
+						case "{output}" -> output.toAbsolutePath().toString();
+						case "{mappings}" -> mappings.toAbsolutePath().toString();
+						default -> str;
+					};
+				})
+				.collect(Collectors.toList());
+
+			if (hasLibraries) {
+				for (File file : libraries) {
+					args.add("-e=" + file.getAbsolutePath());
+				}
+			}
+
+			return args;
+		}
+
 	}
 
 	public static class ConfigDefinedRemapAction implements RemapAction {

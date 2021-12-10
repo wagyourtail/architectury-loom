@@ -71,6 +71,7 @@ import net.fabricmc.loom.util.PropertyUtil;
 public class ForgeUserdevProvider extends DependencyProvider {
 	private File userdevJar;
 	private JsonObject json;
+
 	private Consumer<Runnable> postPopulationScheduler;
 
 	public ForgeUserdevProvider(Project project) {
@@ -99,7 +100,13 @@ public class ForgeUserdevProvider extends DependencyProvider {
 			Files.copy(resolved.toPath(), userdevJar.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
 			try (FileSystem fs = FileSystems.newFileSystem(new URI("jar:" + resolved.toURI()), ImmutableMap.of("create", false))) {
-				Files.copy(fs.getPath("config.json"), configJson, StandardCopyOption.REPLACE_EXISTING);
+				if (Files.exists(fs.getPath("config.json"))) {
+					//fg3+
+					Files.copy(fs.getPath("config.json"), configJson, StandardCopyOption.REPLACE_EXISTING);
+				} else {
+					//fg2
+					Files.copy(fs.getPath("dev.json"), configJson, StandardCopyOption.REPLACE_EXISTING);
+				}
 			}
 		}
 
@@ -107,79 +114,124 @@ public class ForgeUserdevProvider extends DependencyProvider {
 			json = new Gson().fromJson(reader, JsonObject.class);
 		}
 
-		addDependency(json.get("mcp").getAsString(), Constants.Configurations.MCP_CONFIG);
-		addDependency(json.get("mcp").getAsString(), Constants.Configurations.SRG);
-		addDependency(json.get("universal").getAsString(), Constants.Configurations.FORGE_UNIVERSAL);
+		boolean fg2 = !json.has("mcp");
+		getExtension().getForgeProvider().setFg2(fg2);
 
-		for (JsonElement lib : json.get("libraries").getAsJsonArray()) {
-			Dependency dep = null;
 
-			if (lib.getAsString().startsWith("org.spongepowered:mixin:")) {
-				if (PropertyUtil.getAndFinalize(getExtension().getForge().getUseCustomMixin())) {
-					if (lib.getAsString().contains("0.8.2")) {
-						dep = addDependency("net.fabricmc:sponge-mixin:0.8.2+build.24", Constants.Configurations.FORGE_DEPENDENCIES);
-					} else {
-						dep = addDependency("dev.architectury:mixin-patched" + lib.getAsString().substring(lib.getAsString().lastIndexOf(":")) + ".+", Constants.Configurations.FORGE_DEPENDENCIES);
-					}
+		if (fg2) {
+			getProject().getLogger().info("FG2 Userdev, using default mcp_config/universal...");
+
+			String defaultMCPPath = "de.oceanlabs.mcp:mcp:" + getExtension().getMinecraftProvider().minecraftVersion() + ":srg@zip";
+			if (getExtension().getMinecraftProvider().minecraftVersion().equals("1.12.2")) {
+				defaultMCPPath = "de.oceanlabs.mcp:mcp_config:" + getExtension().getMinecraftProvider().minecraftVersion() + "@zip";
+			}
+			String defaultUniversalPath = "net.minecraftforge:forge:" + dependency.getResolvedVersion() + ":universal";
+
+			getProject().getLogger().info("Using default MCP path: " + defaultMCPPath);
+			getProject().getLogger().info("Using default Universal path: " + defaultUniversalPath);
+
+			addDependency(defaultMCPPath, Constants.Configurations.MCP_CONFIG);
+			addDependency(defaultMCPPath, Constants.Configurations.SRG);
+			addDependency(defaultUniversalPath, Constants.Configurations.FORGE_UNIVERSAL);
+
+			for (JsonElement lib : json.getAsJsonArray("libraries")) {
+				JsonObject libObj = lib.getAsJsonObject();
+
+				Dependency dep = addDependency(libObj.get("name").getAsString(), Constants.Configurations.FORGE_DEPENDENCIES);
+
+				if (libObj.get("name").getAsString().split(":").length < 4) {
+					((ModuleDependency) dep).attributes(attributes -> {
+						attributes.attribute(transformed, true);
+					});
 				}
 			}
 
-			if (dep == null) {
-				dep = addDependency(lib.getAsString(), Constants.Configurations.FORGE_DEPENDENCIES);
+			//TODO: hard-code fg2 run configs
+		} else {
+			getProject().getLogger().info("FG3+ Userdev");
+
+			addDependency(json.get("mcp").getAsString(), Constants.Configurations.MCP_CONFIG);
+			addDependency(json.get("mcp").getAsString(), Constants.Configurations.SRG);
+			addDependency(json.get("universal").getAsString(), Constants.Configurations.FORGE_UNIVERSAL);
+
+
+			for (JsonElement lib : json.get("libraries").getAsJsonArray()) {
+				Dependency dep = null;
+
+				if (lib.getAsString().startsWith("org.spongepowered:mixin:")) {
+					if (PropertyUtil.getAndFinalize(getExtension().getForge().getUseCustomMixin())) {
+						if (lib.getAsString().contains("0.8.2")) {
+							dep = addDependency(
+								"net.fabricmc:sponge-mixin:0.8.2+build.24",
+								Constants.Configurations.FORGE_DEPENDENCIES
+							);
+						} else {
+							dep = addDependency(
+								"dev.architectury:mixin-patched" +
+									lib.getAsString().substring(lib.getAsString().lastIndexOf(":")) + ".+",
+								Constants.Configurations.FORGE_DEPENDENCIES
+							);
+						}
+					}
+				}
+
+				if (dep == null) {
+					dep = addDependency(lib.getAsString(), Constants.Configurations.FORGE_DEPENDENCIES);
+				}
+
+				if (lib.getAsString().split(":").length < 4) {
+					((ModuleDependency) dep).attributes(attributes -> {
+						attributes.attribute(transformed, true);
+					});
+				}
 			}
 
-			if (lib.getAsString().split(":").length < 4) {
-				((ModuleDependency) dep).attributes(attributes -> {
-					attributes.attribute(transformed, true);
-				});
-			}
-		}
+			// TODO: Should I copy the patches from here as well?
+			//       That'd require me to run the "MCP environment" fully up to merging.
+			for (Map.Entry<String, JsonElement> entry : json.getAsJsonObject("runs").entrySet()) {
+				LaunchProviderSettings launchSettings = getExtension().getLaunchConfigs().findByName(entry.getKey());
+				RunConfigSettings settings = getExtension().getRunConfigs().findByName(entry.getKey());
+				JsonObject value = entry.getValue().getAsJsonObject();
 
-		// TODO: Should I copy the patches from here as well?
-		//       That'd require me to run the "MCP environment" fully up to merging.
-		for (Map.Entry<String, JsonElement> entry : json.getAsJsonObject("runs").entrySet()) {
-			LaunchProviderSettings launchSettings = getExtension().getLaunchConfigs().findByName(entry.getKey());
-			RunConfigSettings settings = getExtension().getRunConfigs().findByName(entry.getKey());
-			JsonObject value = entry.getValue().getAsJsonObject();
-
-			if (launchSettings != null) {
-				launchSettings.evaluateLater(() -> {
-					if (value.has("args")) {
-						launchSettings.arg(StreamSupport.stream(value.getAsJsonArray("args").spliterator(), false)
+				if (launchSettings != null) {
+					launchSettings.evaluateLater(() -> {
+						if (value.has("args")) {
+							launchSettings.arg(StreamSupport.stream(value.getAsJsonArray("args").spliterator(), false)
 								.map(JsonElement::getAsString)
 								.map(this::processTemplates)
 								.collect(Collectors.toList()));
-					}
-
-					if (value.has("props")) {
-						for (Map.Entry<String, JsonElement> props : value.getAsJsonObject("props").entrySet()) {
-							String string = processTemplates(props.getValue().getAsString());
-
-							launchSettings.property(props.getKey(), string);
 						}
-					}
-				});
-			}
 
-			if (settings != null) {
-				settings.evaluateLater(() -> {
-					settings.defaultMainClass(value.getAsJsonPrimitive("main").getAsString());
+						if (value.has("props")) {
+							for (Map.Entry<String, JsonElement> props : value.getAsJsonObject("props").entrySet()) {
+								String string = processTemplates(props.getValue().getAsString());
 
-					if (value.has("jvmArgs")) {
-						settings.vmArgs(StreamSupport.stream(value.getAsJsonArray("jvmArgs").spliterator(), false)
+								launchSettings.property(props.getKey(), string);
+							}
+						}
+					});
+				}
+
+				if (settings != null) {
+					settings.evaluateLater(() -> {
+						settings.defaultMainClass(value.getAsJsonPrimitive("main").getAsString());
+
+						if (value.has("jvmArgs")) {
+							settings.vmArgs(StreamSupport.stream(value.getAsJsonArray("jvmArgs").spliterator(), false)
 								.map(JsonElement::getAsString)
 								.map(this::processTemplates)
 								.collect(Collectors.toList()));
-					}
-
-					if (value.has("env")) {
-						for (Map.Entry<String, JsonElement> env : value.getAsJsonObject("env").entrySet()) {
-							String string = processTemplates(env.getValue().getAsString());
-
-							settings.envVariables.put(env.getKey(), string);
 						}
-					}
-				});
+
+						if (value.has("env")) {
+							for (Map.Entry<String, JsonElement> env : value.getAsJsonObject("env").entrySet()) {
+								String string = processTemplates(env.getValue().getAsString());
+
+								settings.envVariables.put(env.getKey(), string);
+							}
+						}
+					});
+				}
 			}
 		}
 	}

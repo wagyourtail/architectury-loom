@@ -44,6 +44,7 @@ import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
 import org.apache.commons.io.IOUtils;
 import org.cadixdev.lorenz.MappingSet;
+import org.cadixdev.lorenz.io.srg.SrgReader;
 import org.cadixdev.lorenz.io.srg.tsrg.TSrgReader;
 import org.cadixdev.lorenz.model.ClassMapping;
 import org.cadixdev.lorenz.model.FieldMapping;
@@ -66,9 +67,12 @@ public class MCPReader {
 	private final Path intermediaryTinyPath;
 	private final Path srgTsrgPath;
 
-	public MCPReader(Path intermediaryTinyPath, Path srgTsrgPath) {
+	private final boolean isSrg;
+
+	public MCPReader(Path intermediaryTinyPath, Path srgTsrgPath, boolean isSrg) {
 		this.intermediaryTinyPath = intermediaryTinyPath;
 		this.srgTsrgPath = srgTsrgPath;
+		this.isSrg = isSrg;
 	}
 
 	public TinyFile read(Path mcpJar) throws IOException {
@@ -191,7 +195,12 @@ public class MCPReader {
 			if (content.startsWith("tsrg2")) {
 				readTsrg2(tokens, content);
 			} else {
-				MappingSet mappingSet = new TSrgReader(new StringReader(content)).read();
+				MappingSet mappingSet;
+				if (isSrg) {
+					mappingSet = new SrgReader(new StringReader(content)).read();
+				} else {
+					mappingSet = new TSrgReader(new StringReader(content)).read();
+				}
 
 				for (TopLevelClassMapping classMapping : mappingSet.getTopLevelClassMappings()) {
 					appendClass(tokens, classMapping);

@@ -24,13 +24,7 @@
 
 package net.fabricmc.loom.configuration.providers.forge;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.io.StringReader;
-import java.io.UncheckedIOException;
+import java.io.*;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
@@ -87,7 +81,11 @@ public class SrgProvider extends DependencyProvider {
 			Path srgZip = dependency.resolveFile().orElseThrow(() -> new RuntimeException("Could not resolve srg")).toPath();
 
 			try (FileSystem fs = FileSystems.newFileSystem(new URI("jar:" + srgZip.toUri()), ImmutableMap.of("create", false))) {
-				Files.copy(fs.getPath("config", "joined.tsrg"), srg, StandardCopyOption.REPLACE_EXISTING);
+				try {
+					Files.copy(fs.getPath("config", "joined.tsrg"), srg, StandardCopyOption.REPLACE_EXISTING);
+				} catch (FileNotFoundException e) {
+					Files.copy(fs.getPath("joined.srg"), srg, StandardCopyOption.REPLACE_EXISTING);
+				}
 			}
 		}
 
