@@ -27,12 +27,7 @@ package net.fabricmc.loom.configuration.providers.forge;
 import java.io.*;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.nio.file.StandardOpenOption;
+import java.nio.file.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -83,7 +78,7 @@ public class SrgProvider extends DependencyProvider {
 			try (FileSystem fs = FileSystems.newFileSystem(new URI("jar:" + srgZip.toUri()), ImmutableMap.of("create", false))) {
 				try {
 					Files.copy(fs.getPath("config", "joined.tsrg"), srg, StandardCopyOption.REPLACE_EXISTING);
-				} catch (FileNotFoundException e) {
+				} catch (NoSuchFileException e) {
 					Files.copy(fs.getPath("joined.srg"), srg, StandardCopyOption.REPLACE_EXISTING);
 				}
 			}
