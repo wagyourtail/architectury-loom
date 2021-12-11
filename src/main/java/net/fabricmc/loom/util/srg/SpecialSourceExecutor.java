@@ -56,17 +56,29 @@ public class SpecialSourceExecutor {
 		return string;
 	}
 
-	public static Path produceSrgJar(RemapAction remapAction, Project project, String side, Set<File> mcLibs, Path officialJar, Path mappings)
+	public static Path produceSrgJar(RemapAction remapAction, Project project, String side, Set<File> mcLibs, Path officialJar, Path mappings, boolean isSrg)
 			throws Exception {
-		Set<String> filter = Files.readAllLines(mappings, StandardCharsets.UTF_8).stream()
+		Set<String> filter;
+		if (isSrg) {
+			filter = Files.readAllLines(mappings, StandardCharsets.UTF_8).stream()
+				.filter(s -> s.startsWith("CL:"))
+				.map(s -> s.split(" ")[1] + ".class")
+				.collect(Collectors.toSet());
+		} else {
+			filter = Files.readAllLines(mappings, StandardCharsets.UTF_8).stream()
 				.filter(s -> !s.startsWith("\t"))
 				.map(s -> s.split(" ")[0] + ".class")
 				.collect(Collectors.toSet());
+		}
 		LoomGradleExtension extension = LoomGradleExtension.get(project.getProject());
 		Path stripped = extension.getFiles().getProjectBuildCache().toPath().resolve(officialJar.getFileName().toString().substring(0, officialJar.getFileName().toString().length() - 4) + "-filtered.jar");
 		Files.deleteIfExists(stripped);
 
+		project.getLogger().info(officialJar.toString());
+
 		Stopwatch stopwatch = Stopwatch.createStarted();
+
+		int count = 0;
 
 		try (FileSystemUtil.Delegate output = FileSystemUtil.getJarFileSystem(stripped, true)) {
 			try (FileSystemUtil.Delegate fs = FileSystemUtil.getJarFileSystem(officialJar, false)) {
@@ -91,18 +103,20 @@ public class SpecialSourceExecutor {
 					completer.add(() -> {
 						Files.copy(path, to, StandardCopyOption.COPY_ATTRIBUTES);
 					});
+					count++;
 				}
 
 				completer.complete();
 			}
 		} finally {
-			project.getLogger().info("Copied class files in " + stopwatch.stop());
+			project.getLogger().info("Copied " + count + " class files in " + stopwatch.stop());
 		}
 
 		Path output = extension.getFiles().getProjectBuildCache().toPath().resolve(officialJar.getFileName().toString().substring(0, officialJar.getFileName().toString().length() - 4) + "-srg-output.jar");
 		Files.deleteIfExists(output);
 		stopwatch = Stopwatch.createStarted();
 
+		project.getLogger().info(stripped.toString());
 		List<String> args = remapAction.getArgs(stripped, output, mappings, project.files(mcLibs));
 
 		project.getLogger().lifecycle(":remapping minecraft (" + remapAction + ", " + side + ", official -> mojang)");

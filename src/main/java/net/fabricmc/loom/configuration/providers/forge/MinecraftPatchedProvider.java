@@ -341,15 +341,17 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 		produceSrgJar(getExtension().isForgeAndOfficial(), minecraftProvider.minecraftClientJar.toPath(), minecraftProvider.getMinecraftServerJar().toPath());
 	}
 
-	private void produceSrgJar(boolean official, Path clientJar, Path serverJar) throws IOException {
+	private void produceSrgJar(boolean official, Path clientJar, Path serverJar) throws Exception {
 		Path tmpSrg = getToSrgMappings();
 		Set<File> mcLibs = getProject().getConfigurations().getByName(Constants.Configurations.MINECRAFT_DEPENDENCIES).resolve();
 
-		ThreadingUtils.run(() -> {
-			Files.copy(SpecialSourceExecutor.produceSrgJar(getExtension().getMcpConfigProvider().getRemapAction(), getProject(), "client", mcLibs, clientJar, tmpSrg), minecraftClientSrgJar.toPath());
-		}, () -> {
-				Files.copy(SpecialSourceExecutor.produceSrgJar(getExtension().getMcpConfigProvider().getRemapAction(), getProject(), "server", mcLibs, serverJar, tmpSrg), minecraftServerSrgJar.toPath());
-			});
+		boolean isSrg = getExtension().getMcpConfigProvider().isSRG();
+
+//		ThreadingUtils.run(() -> {
+			Files.copy(SpecialSourceExecutor.produceSrgJar(getExtension().getMcpConfigProvider().getRemapAction(), getProject(), "client", mcLibs, clientJar, tmpSrg, isSrg), minecraftClientSrgJar.toPath());
+//		}, () -> {
+				Files.copy(SpecialSourceExecutor.produceSrgJar(getExtension().getMcpConfigProvider().getRemapAction(), getProject(), "server", mcLibs, serverJar, tmpSrg, isSrg), minecraftServerSrgJar.toPath());
+//			});
 	}
 
 	private Path getToSrgMappings() throws IOException {
@@ -605,7 +607,9 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 
 		PatchProvider patchProvider = getExtension().getPatchProvider();
 		patchJars(minecraftClientSrgJar, minecraftClientPatchedSrgJar, patchProvider.clientPatches);
-		patchJars(minecraftServerSrgJar, minecraftServerPatchedSrgJar, patchProvider.serverPatches);
+		if (!getExtension().getMcpConfigProvider().isSRG()) {
+			patchJars(minecraftServerSrgJar, minecraftServerPatchedSrgJar, patchProvider.serverPatches);
+		}
 
 		ThreadingUtils.run(Environment.values(), environment -> {
 			copyMissingClasses(environment.srgJar.apply(this), environment.patchedSrgJar.apply(this));
@@ -628,12 +632,22 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 			// Failed to replace logger filter, just ignore
 		}
 
-		ConsoleTool.main(new String[] {
+		if (getExtension().getMcpConfigProvider().isSRG()) {
+
+			ConsoleTool.main(new String[] {
 				"--clean", clean.getAbsolutePath(),
 				"--output", output.getAbsolutePath(),
 				"--apply", patches.toAbsolutePath().toString(),
-				"--pack200"
-		});
+				"--legacy"
+			});
+
+		} else {
+			ConsoleTool.main(new String[] {
+				"--clean", clean.getAbsolutePath(),
+				"--output", output.getAbsolutePath(),
+				"--apply", patches.toAbsolutePath().toString()
+			});
+		}
 
 		try {
 			System.setOut(previous);

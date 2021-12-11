@@ -80,6 +80,9 @@ public class McpConfigProvider extends DependencyProvider {
 			mappingsPath = ZipUtils.contains(mcpZip, "joined.srg") ? "joined.srg" : "config/joined.tsrg";
 			isSRG = mappingsPath.endsWith(".srg");
 			remapAction = new FG2RemapAction(getProject());
+			if (!Files.exists(mcp) || isRefreshDeps()) {
+				Files.copy(mcpZip, mcp, StandardCopyOption.REPLACE_EXISTING);
+			}
 			return;
 		}
 
@@ -172,7 +175,7 @@ public class McpConfigProvider extends DependencyProvider {
 
 		public FG2RemapAction(Project project) {
 			this.project = project;
-			this.name = "net.md-5:SpecialSource:1.8.3:shaded";
+			this.name = "net.md-5:SpecialSource:1.7.4:shaded";
 			this.mainClasspath = DependencyDownloader.download(project, this.name, false, true)
 				.getSingleFile();
 			this.classpath = DependencyDownloader.download(project, this.name, true, true);
