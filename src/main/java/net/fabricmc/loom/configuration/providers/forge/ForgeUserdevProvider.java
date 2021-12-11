@@ -122,9 +122,6 @@ public class ForgeUserdevProvider extends DependencyProvider {
 			getProject().getLogger().info("FG2 Userdev, using default mcp_config/universal...");
 
 			String defaultMCPPath = "de.oceanlabs.mcp:mcp:" + getExtension().getMinecraftProvider().minecraftVersion() + ":srg@zip";
-			if (getExtension().getMinecraftProvider().minecraftVersion().equals("1.12.2")) {
-				defaultMCPPath = "de.oceanlabs.mcp:mcp_config:" + getExtension().getMinecraftProvider().minecraftVersion() + "@zip";
-			}
 			String defaultUniversalPath = "net.minecraftforge:forge:" + dependency.getResolvedVersion() + ":universal";
 
 			getProject().getLogger().info("Using default MCP path: " + defaultMCPPath);
