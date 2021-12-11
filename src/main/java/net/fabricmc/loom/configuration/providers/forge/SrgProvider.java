@@ -58,6 +58,7 @@ import net.fabricmc.mappingio.tree.MemoryMappingTree;
 public class SrgProvider extends DependencyProvider {
 	private Path srg;
 	private Boolean isTsrgV2;
+	private boolean isLegacy;
 	private Path mergedMojangRaw;
 	private Path mergedMojang;
 	private Path mergedMojangTrimmed;
@@ -85,7 +86,9 @@ public class SrgProvider extends DependencyProvider {
 		}
 
 		try (BufferedReader reader = Files.newBufferedReader(srg)) {
-			isTsrgV2 = reader.readLine().startsWith("tsrg2");
+			String line = reader.readLine();
+			isTsrgV2 = line.startsWith("tsrg2");
+			isLegacy = line.startsWith("PK:") || line.startsWith("CL:");
 		}
 
 		if (isTsrgV2) {
@@ -208,6 +211,10 @@ public class SrgProvider extends DependencyProvider {
 
 	public boolean isTsrgV2() {
 		return isTsrgV2;
+	}
+
+	public boolean isLegacy() {
+		return isLegacy;
 	}
 
 	public static Path getMojmapTsrg(Project project, LoomGradleExtension extension) throws IOException {

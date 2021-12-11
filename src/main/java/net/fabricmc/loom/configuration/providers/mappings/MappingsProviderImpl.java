@@ -157,7 +157,7 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 		if (getExtension().shouldGenerateSrgTiny()) {
 			if (Files.notExists(tinyMappingsWithSrg) || isRefreshDeps()) {
 				// Merge tiny mappings with srg
-				SrgMerger.mergeSrg(getProject().getLogger(), getExtension().getMappingsProvider()::getMojmapSrgFileIfPossible, getRawSrgFile(), tinyMappings, tinyMappingsWithSrg, true);
+				SrgMerger.mergeSrg(getProject().getLogger(), getExtension().getMappingsProvider()::getMojmapSrgFileIfPossible, getRawSrgFile(), tinyMappings, tinyMappingsWithSrg, true, getExtension().getSrgProvider().isLegacy());
 			}
 
 			mappingTreeWithSrg = readMappings(tinyMappingsWithSrg);
