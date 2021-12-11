@@ -55,10 +55,10 @@ public class SpecialSourceExecutor {
 		return string;
 	}
 
-	public static Path produceSrgJar(RemapAction remapAction, Project project, String side, Set<File> mcLibs, Path officialJar, Path mappings, boolean isSrg, boolean actuallyRemapSrg)
+	public static Path produceSrgJar(RemapAction remapAction, Project project, String side, Set<File> mcLibs, Path officialJar, Path mappings, boolean isLegacy, boolean isFG2)
 			throws Exception {
 		Set<String> filter;
-		if (isSrg) {
+		if (isLegacy) {
 			filter = Files.readAllLines(mappings, StandardCharsets.UTF_8).stream()
 				.filter(s -> s.startsWith("CL:"))
 				.map(s -> s.split(" ")[1] + ".class")
@@ -122,7 +122,7 @@ public class SpecialSourceExecutor {
 
 		Path workingDir = tmpDir();
 
-		if (!isSrg || actuallyRemapSrg) {
+		if (!isFG2) {
 			project.javaexec(spec -> {
 				spec.setArgs(args);
 				spec.setClasspath(remapAction.getClasspath());

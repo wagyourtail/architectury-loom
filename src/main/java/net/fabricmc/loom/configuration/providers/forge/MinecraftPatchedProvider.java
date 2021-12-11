@@ -346,15 +346,15 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 		Path tmpSrg = getToSrgMappings();
 		Set<File> mcLibs = getProject().getConfigurations().getByName(Constants.Configurations.MINECRAFT_DEPENDENCIES).resolve();
 
-		boolean isSrg = getExtension().getMcpConfigProvider().isSRG();
+		boolean isSrg = getExtension().getSrgProvider().isLegacy();
 
 		Path[] clientJarOut = new Path[] { null };
 		Path[] serverJarOut = new Path[] { null };
 
 		ThreadingUtils.run(() -> {
-			clientJarOut[0] = SpecialSourceExecutor.produceSrgJar(getExtension().getMcpConfigProvider().getRemapAction(), getProject(), "client", mcLibs, clientJar, tmpSrg, isSrg, false);
+			clientJarOut[0] = SpecialSourceExecutor.produceSrgJar(getExtension().getMcpConfigProvider().getRemapAction(), getProject(), "client", mcLibs, clientJar, tmpSrg, isSrg, true);
 		}, () -> {
-			serverJarOut[0] = SpecialSourceExecutor.produceSrgJar(getExtension().getMcpConfigProvider().getRemapAction(), getProject(), "server", mcLibs, serverJar, tmpSrg, isSrg, false);
+			serverJarOut[0] = SpecialSourceExecutor.produceSrgJar(getExtension().getMcpConfigProvider().getRemapAction(), getProject(), "server", mcLibs, serverJar, tmpSrg, isSrg, true);
 		});
 
 //		if (isSrg) {
@@ -641,7 +641,7 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 			// Failed to replace logger filter, just ignore
 		}
 
-		if (getExtension().getMcpConfigProvider().isSRG()) {
+		if (getExtension().getMcpConfigProvider().isFG2()) {
 
 			new TaskApplyBinPatches().doTask(getProject(), clean.getAbsoluteFile(), patches.toFile().getAbsoluteFile(), output.getAbsoluteFile(), side);
 
@@ -665,11 +665,11 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 		//   This will change if upstream Loom adds the possibility for separate projects/source sets per environment.
 
 
-		if (getExtension().getMcpConfigProvider().isSRG()) {
+		if (getExtension().getMcpConfigProvider().isFG2()) {
 			logger.lifecycle(":merging jars");
 			Path tmpSrg = getToSrgMappings();
 			Set<File> mcLibs = getProject().getConfigurations().getByName(Constants.Configurations.MINECRAFT_DEPENDENCIES).resolve();
-			Files.copy(SpecialSourceExecutor.produceSrgJar(getExtension().getMcpConfigProvider().getRemapAction(), getProject(), "merged", mcLibs, minecraftClientPatchedSrgJar.toPath(), tmpSrg, true, true), minecraftMergedPatchedSrgJar.toPath());
+			Files.copy(SpecialSourceExecutor.produceSrgJar(getExtension().getMcpConfigProvider().getRemapAction(), getProject(), "merged", mcLibs, minecraftClientPatchedSrgJar.toPath(), tmpSrg, getExtension().getSrgProvider().isLegacy(), false), minecraftMergedPatchedSrgJar.toPath());
 		} else {
 			Files.copy(minecraftClientPatchedSrgJar.toPath(), minecraftMergedPatchedSrgJar.toPath());
 		}

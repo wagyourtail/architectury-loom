@@ -58,14 +58,14 @@ public class McpConfigProvider extends DependencyProvider {
 	private String mappingsPath;
 	private RemapAction remapAction;
 
-	private boolean isSRG = false;
+	private boolean isFG2 = false;
 
 	public McpConfigProvider(Project project) {
 		super(project);
 	}
 
-	public boolean isSRG() {
-		return isSRG;
+	public boolean isFG2() {
+		return isFG2;
 	}
 
 	@Override
@@ -78,7 +78,7 @@ public class McpConfigProvider extends DependencyProvider {
 		if (getExtension().getForgeProvider().isFG2()) {
 			official = false;
 			mappingsPath = ZipUtils.contains(mcpZip, "joined.srg") ? "joined.srg" : "config/joined.tsrg";
-			isSRG = mappingsPath.endsWith(".srg");
+			isFG2 = mappingsPath.endsWith(".srg");
 			remapAction = new FG2RemapAction(getProject());
 			if (!Files.exists(mcp) || isRefreshDeps()) {
 				Files.copy(mcpZip, mcp, StandardCopyOption.REPLACE_EXISTING);
