@@ -68,6 +68,7 @@ import dev.architectury.tinyremapper.InputTag;
 import dev.architectury.tinyremapper.OutputConsumerPath;
 import dev.architectury.tinyremapper.TinyRemapper;
 import net.minecraftforge.binarypatcher.ConsoleTool;
+import net.minecraftforge.gradle.tasks.MergeJars;
 import org.apache.commons.io.output.NullOutputStream;
 import org.gradle.api.Project;
 import org.gradle.api.file.ConfigurableFileCollection;
@@ -347,11 +348,21 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 
 		boolean isSrg = getExtension().getMcpConfigProvider().isSRG();
 
-//		ThreadingUtils.run(() -> {
-			Files.copy(SpecialSourceExecutor.produceSrgJar(getExtension().getMcpConfigProvider().getRemapAction(), getProject(), "client", mcLibs, clientJar, tmpSrg, isSrg), minecraftClientSrgJar.toPath());
-//		}, () -> {
-				Files.copy(SpecialSourceExecutor.produceSrgJar(getExtension().getMcpConfigProvider().getRemapAction(), getProject(), "server", mcLibs, serverJar, tmpSrg, isSrg), minecraftServerSrgJar.toPath());
-//			});
+		Path[] clientJarOut = new Path[] { null };
+		Path[] serverJarOut = new Path[] { null };
+
+		ThreadingUtils.run(() -> {
+			clientJarOut[0] = SpecialSourceExecutor.produceSrgJar(getExtension().getMcpConfigProvider().getRemapAction(), getProject(), "client", mcLibs, clientJar, tmpSrg, isSrg);
+		}, () -> {
+			serverJarOut[0] = SpecialSourceExecutor.produceSrgJar(getExtension().getMcpConfigProvider().getRemapAction(), getProject(), "server", mcLibs, serverJar, tmpSrg, isSrg);
+		});
+
+		if (isSrg) {
+			new MergeJars().processJar(clientJarOut[0].toFile(), serverJarOut[0].toFile(), minecraftClientSrgJar);
+		} else {
+			Files.copy(clientJarOut[0], minecraftClientSrgJar.toPath());
+			Files.copy(serverJarOut[0], minecraftServerSrgJar.toPath());
+		}
 	}
 
 	private Path getToSrgMappings() throws IOException {

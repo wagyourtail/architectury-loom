@@ -35,6 +35,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.google.common.base.Stopwatch;
+import net.minecraftforge.gradle.tasks.MergeJars;
 import org.apache.commons.io.output.NullOutputStream;
 import org.gradle.api.Project;
 import org.gradle.api.logging.LogLevel;
@@ -113,7 +114,7 @@ public class SpecialSourceExecutor {
 		}
 
 		Path output = extension.getFiles().getProjectBuildCache().toPath().resolve(officialJar.getFileName().toString().substring(0, officialJar.getFileName().toString().length() - 4) + "-srg-output.jar");
-		Files.deleteIfExists(output);
+//		Files.deleteIfExists(output);
 		stopwatch = Stopwatch.createStarted();
 
 		project.getLogger().info(stripped.toString());
@@ -123,32 +124,36 @@ public class SpecialSourceExecutor {
 
 		Path workingDir = tmpDir();
 
-		project.javaexec(spec -> {
-			spec.setArgs(args);
-			spec.setClasspath(remapAction.getClasspath());
-			spec.workingDir(workingDir.toFile());
-			spec.getMainClass().set(remapAction.getMainClass());
+		if (!isSrg) {
+			project.javaexec(spec -> {
+				spec.setArgs(args);
+				spec.setClasspath(remapAction.getClasspath());
+				spec.workingDir(workingDir.toFile());
+				spec.getMainClass().set(remapAction.getMainClass());
 
-			// if running with INFO or DEBUG logging
-			if (project.getGradle().getStartParameter().getShowStacktrace() != ShowStacktrace.INTERNAL_EXCEPTIONS
+				// if running with INFO or DEBUG logging
+				if (project.getGradle().getStartParameter().getShowStacktrace() != ShowStacktrace.INTERNAL_EXCEPTIONS
 					|| project.getGradle().getStartParameter().getLogLevel().compareTo(LogLevel.LIFECYCLE) < 0) {
-				spec.setStandardOutput(System.out);
-				spec.setErrorOutput(System.err);
-			} else {
-				spec.setStandardOutput(NullOutputStream.NULL_OUTPUT_STREAM);
-				spec.setErrorOutput(NullOutputStream.NULL_OUTPUT_STREAM);
-			}
-		}).rethrowFailure().assertNormalExitValue();
+					spec.setStandardOutput(System.out);
+					spec.setErrorOutput(System.err);
+				} else {
+					spec.setStandardOutput(NullOutputStream.NULL_OUTPUT_STREAM);
+					spec.setErrorOutput(NullOutputStream.NULL_OUTPUT_STREAM);
+				}
+			}).rethrowFailure().assertNormalExitValue();
+		} else {
+			Files.copy(stripped, output, StandardCopyOption.REPLACE_EXISTING);
+		}
 
 		project.getLogger().lifecycle(":remapped minecraft (" + remapAction + ", " + side + ", official -> mojang) in " + stopwatch.stop());
 
-		Files.deleteIfExists(stripped);
+//		Files.deleteIfExists(stripped);
 
 		Path tmp = tmpFile();
 		Files.deleteIfExists(tmp);
 		Files.copy(output, tmp);
 
-		Files.deleteIfExists(output);
+//		Files.deleteIfExists(output);
 		return tmp;
 	}
 
