@@ -357,12 +357,12 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 			serverJarOut[0] = SpecialSourceExecutor.produceSrgJar(getExtension().getMcpConfigProvider().getRemapAction(), getProject(), "server", mcLibs, serverJar, tmpSrg, isSrg);
 		});
 
-		if (isSrg) {
-			new MergeJars().processJar(clientJarOut[0].toFile(), serverJarOut[0].toFile(), minecraftClientSrgJar);
-		} else {
+//		if (isSrg) {
+//			new MergeJars().processJar(clientJarOut[0].toFile(), serverJarOut[0].toFile(), minecraftClientSrgJar);
+//		} else {
 			Files.copy(clientJarOut[0], minecraftClientSrgJar.toPath());
 			Files.copy(serverJarOut[0], minecraftServerSrgJar.toPath());
-		}
+//		}
 	}
 
 	private Path getToSrgMappings() throws IOException {

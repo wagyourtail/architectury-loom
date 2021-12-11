@@ -51,14 +51,14 @@ public class PatchProvider extends DependencyProvider {
 		init(dependency.getDependency().getVersion());
 
 		if (getExtension().getForgeProvider().isFG2()) {
-			File forge = getExtension().getForgeUserdevProvider().getUserdevJar();
+			File forge = getExtension().getForgeUniversalProvider().getForge();
 
 			if (Files.notExists(clientPatches) || isRefreshDeps()) {
 				getProject().getLogger().info(":extracting forge patches");
 
 				try (FileSystem fs = FileSystems.newFileSystem(new URI("jar:" + forge.toURI()), ImmutableMap.of("create", false))) {
-					Files.copy(fs.getPath("devbinpatches.pack.lzma"), clientPatches, StandardCopyOption.REPLACE_EXISTING);
-					Files.copy(fs.getPath("devbinpatches.pack.lzma"), serverPatches, StandardCopyOption.REPLACE_EXISTING);
+					Files.copy(fs.getPath("binpatches.pack.lzma"), clientPatches, StandardCopyOption.REPLACE_EXISTING);
+					Files.copy(fs.getPath("binpatches.pack.lzma"), serverPatches, StandardCopyOption.REPLACE_EXISTING);
 				}
 
 			}
