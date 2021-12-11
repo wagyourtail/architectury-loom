@@ -24,6 +24,16 @@
 
 package net.fabricmc.loom.util.srg;
 
+import com.google.common.base.Stopwatch;
+import net.fabricmc.loom.LoomGradleExtension;
+import net.fabricmc.loom.configuration.providers.forge.McpConfigProvider.RemapAction;
+import net.fabricmc.loom.util.FileSystemUtil;
+import net.fabricmc.loom.util.ThreadingUtils;
+import org.apache.commons.io.output.NullOutputStream;
+import org.gradle.api.Project;
+import org.gradle.api.logging.LogLevel;
+import org.gradle.api.logging.configuration.ShowStacktrace;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -33,18 +43,6 @@ import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import com.google.common.base.Stopwatch;
-import net.minecraftforge.gradle.tasks.MergeJars;
-import org.apache.commons.io.output.NullOutputStream;
-import org.gradle.api.Project;
-import org.gradle.api.logging.LogLevel;
-import org.gradle.api.logging.configuration.ShowStacktrace;
-
-import net.fabricmc.loom.LoomGradleExtension;
-import net.fabricmc.loom.configuration.providers.forge.McpConfigProvider.RemapAction;
-import net.fabricmc.loom.util.FileSystemUtil;
-import net.fabricmc.loom.util.ThreadingUtils;
 
 public class SpecialSourceExecutor {
 	private static String trimLeadingSlash(String string) {
@@ -57,7 +55,7 @@ public class SpecialSourceExecutor {
 		return string;
 	}
 
-	public static Path produceSrgJar(RemapAction remapAction, Project project, String side, Set<File> mcLibs, Path officialJar, Path mappings, boolean isSrg)
+	public static Path produceSrgJar(RemapAction remapAction, Project project, String side, Set<File> mcLibs, Path officialJar, Path mappings, boolean isSrg, boolean actuallyRemapSrg)
 			throws Exception {
 		Set<String> filter;
 		if (isSrg) {
@@ -124,7 +122,7 @@ public class SpecialSourceExecutor {
 
 		Path workingDir = tmpDir();
 
-		if (!isSrg) {
+		if (!isSrg || actuallyRemapSrg) {
 			project.javaexec(spec -> {
 				spec.setArgs(args);
 				spec.setClasspath(remapAction.getClasspath());

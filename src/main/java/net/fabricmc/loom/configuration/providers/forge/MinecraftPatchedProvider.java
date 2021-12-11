@@ -68,7 +68,6 @@ import dev.architectury.tinyremapper.InputTag;
 import dev.architectury.tinyremapper.OutputConsumerPath;
 import dev.architectury.tinyremapper.TinyRemapper;
 import net.minecraftforge.binarypatcher.ConsoleTool;
-import net.minecraftforge.gradle.tasks.MergeJars;
 import net.minecraftforge.gradle.tasks.TaskApplyBinPatches;
 import org.apache.commons.io.output.NullOutputStream;
 import org.gradle.api.Project;
@@ -353,9 +352,9 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 		Path[] serverJarOut = new Path[] { null };
 
 		ThreadingUtils.run(() -> {
-			clientJarOut[0] = SpecialSourceExecutor.produceSrgJar(getExtension().getMcpConfigProvider().getRemapAction(), getProject(), "client", mcLibs, clientJar, tmpSrg, isSrg);
+			clientJarOut[0] = SpecialSourceExecutor.produceSrgJar(getExtension().getMcpConfigProvider().getRemapAction(), getProject(), "client", mcLibs, clientJar, tmpSrg, isSrg, false);
 		}, () -> {
-			serverJarOut[0] = SpecialSourceExecutor.produceSrgJar(getExtension().getMcpConfigProvider().getRemapAction(), getProject(), "server", mcLibs, serverJar, tmpSrg, isSrg);
+			serverJarOut[0] = SpecialSourceExecutor.produceSrgJar(getExtension().getMcpConfigProvider().getRemapAction(), getProject(), "server", mcLibs, serverJar, tmpSrg, isSrg, false);
 		});
 
 //		if (isSrg) {
@@ -661,11 +660,19 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 		}
 	}
 
-	private void mergeJars(Logger logger) throws IOException {
+	private void mergeJars(Logger logger) throws Exception {
 		// FIXME: Hack here: There are no server-only classes so we can just copy the client JAR.
 		//   This will change if upstream Loom adds the possibility for separate projects/source sets per environment.
-		Files.copy(minecraftClientPatchedSrgJar.toPath(), minecraftMergedPatchedSrgJar.toPath());
 
+
+		if (getExtension().getMcpConfigProvider().isSRG()) {
+			logger.lifecycle(":merging jars");
+			Path tmpSrg = getToSrgMappings();
+			Set<File> mcLibs = getProject().getConfigurations().getByName(Constants.Configurations.MINECRAFT_DEPENDENCIES).resolve();
+			Files.copy(SpecialSourceExecutor.produceSrgJar(getExtension().getMcpConfigProvider().getRemapAction(), getProject(), "merged", mcLibs, minecraftClientPatchedSrgJar.toPath(), tmpSrg, true, true), minecraftMergedPatchedSrgJar.toPath());
+		} else {
+			Files.copy(minecraftClientPatchedSrgJar.toPath(), minecraftMergedPatchedSrgJar.toPath());
+		}
 		logger.lifecycle(":copying resources");
 
 		// Copy resources
