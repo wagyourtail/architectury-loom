@@ -34,16 +34,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -143,7 +141,27 @@ public class ForgeUserdevProvider extends DependencyProvider {
 				}
 			}
 
-			//TODO: hard-code fg2 run configs
+			for (String name : new String[] {"client", "server"}) {
+				LaunchProviderSettings launchSettings = getExtension().getLaunchConfigs().findByName(name);
+				RunConfigSettings settings = getExtension().getRunConfigs().findByName(name);
+
+				if (launchSettings != null) {
+					launchSettings.evaluateLater(() -> {
+							launchSettings.arg(Arrays.stream(json.get("minecraftArguments").getAsString().split(" "))
+								.map(this::processTemplates)
+								.collect(Collectors.toList()));
+
+					});
+				}
+
+				if (settings != null) {
+					settings.evaluateLater(() -> {
+						settings.defaultMainClass("net.minecraft.launchwrapper.Launch");
+					});
+				}
+
+			}
+
 		} else {
 			getProject().getLogger().info("FG3+ Userdev");
 

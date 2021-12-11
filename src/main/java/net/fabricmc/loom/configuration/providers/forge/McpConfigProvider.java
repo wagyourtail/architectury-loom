@@ -175,7 +175,7 @@ public class McpConfigProvider extends DependencyProvider {
 
 		public FG2RemapAction(Project project) {
 			this.project = project;
-			this.name = "net.md-5:SpecialSource:1.7.4:shaded";
+			this.name = "net.md-5:SpecialSource:1.8.3:shaded";
 			this.mainClasspath = DependencyDownloader.download(project, this.name, false, true)
 				.getSingleFile();
 			this.classpath = DependencyDownloader.download(project, this.name, true, true);
