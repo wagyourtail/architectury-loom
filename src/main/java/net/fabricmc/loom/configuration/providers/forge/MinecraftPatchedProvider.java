@@ -69,6 +69,7 @@ import dev.architectury.tinyremapper.OutputConsumerPath;
 import dev.architectury.tinyremapper.TinyRemapper;
 import net.minecraftforge.binarypatcher.ConsoleTool;
 import net.minecraftforge.gradle.tasks.MergeJars;
+import net.minecraftforge.gradle.tasks.TaskApplyBinPatches;
 import org.apache.commons.io.output.NullOutputStream;
 import org.gradle.api.Project;
 import org.gradle.api.file.ConfigurableFileCollection;
@@ -617,10 +618,8 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 		logger.lifecycle(":patching jars");
 
 		PatchProvider patchProvider = getExtension().getPatchProvider();
-		patchJars(minecraftClientSrgJar, minecraftClientPatchedSrgJar, patchProvider.clientPatches);
-		if (!getExtension().getMcpConfigProvider().isSRG()) {
-			patchJars(minecraftServerSrgJar, minecraftServerPatchedSrgJar, patchProvider.serverPatches);
-		}
+		patchJars(minecraftClientSrgJar, minecraftClientPatchedSrgJar, patchProvider.clientPatches, "client");
+		patchJars(minecraftServerSrgJar, minecraftServerPatchedSrgJar, patchProvider.serverPatches, "server");
 
 		ThreadingUtils.run(Environment.values(), environment -> {
 			copyMissingClasses(environment.srgJar.apply(this), environment.patchedSrgJar.apply(this));
@@ -634,7 +633,7 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 		logger.lifecycle(":patched jars in " + stopwatch.stop());
 	}
 
-	private void patchJars(File clean, File output, Path patches) throws IOException {
+	private void patchJars(File clean, File output, Path patches, String side) throws IOException {
 		PrintStream previous = System.out;
 
 		try {
@@ -645,12 +644,7 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 
 		if (getExtension().getMcpConfigProvider().isSRG()) {
 
-			ConsoleTool.main(new String[] {
-				"--clean", clean.getAbsolutePath(),
-				"--output", output.getAbsolutePath(),
-				"--apply", patches.toAbsolutePath().toString(),
-				"--legacy"
-			});
+			new TaskApplyBinPatches().doTask(getProject(), clean.getAbsoluteFile(), patches.toFile().getAbsoluteFile(), output.getAbsoluteFile(), side);
 
 		} else {
 			ConsoleTool.main(new String[] {
