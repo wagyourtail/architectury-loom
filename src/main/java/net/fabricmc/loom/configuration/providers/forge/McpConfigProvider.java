@@ -74,15 +74,16 @@ public class McpConfigProvider extends DependencyProvider {
 
 		Path mcpZip = dependency.resolveFile().orElseThrow(() -> new RuntimeException("Could not resolve MCPConfig")).toPath();
 
-
 		if (getExtension().getForgeProvider().isFG2()) {
 			official = false;
 			mappingsPath = ZipUtils.contains(mcpZip, "joined.srg") ? "joined.srg" : "config/joined.tsrg";
 			isFG2 = mappingsPath.endsWith(".srg");
 			remapAction = null;
+
 			if (!Files.exists(mcp) || isRefreshDeps()) {
 				Files.copy(mcpZip, mcp, StandardCopyOption.REPLACE_EXISTING);
 			}
+
 			return;
 		}
 
@@ -177,11 +178,11 @@ public class McpConfigProvider extends DependencyProvider {
 			this.project = project;
 			this.name = json.get("version").getAsString();
 			this.mainClasspath = DependencyDownloader.download(project, this.name, false, true)
-					.getSingleFile();
+							.getSingleFile();
 			this.classpath = DependencyDownloader.download(project, this.name, true, true);
 			this.args = StreamSupport.stream(json.getAsJsonArray("args").spliterator(), false)
-					.map(JsonElement::getAsString)
-					.collect(Collectors.toList());
+							.map(JsonElement::getAsString)
+							.collect(Collectors.toList());
 			for (int i = 1; i < this.args.size(); i++) {
 				if (this.args.get(i).equals("{libraries}")) {
 					this.args.remove(i);

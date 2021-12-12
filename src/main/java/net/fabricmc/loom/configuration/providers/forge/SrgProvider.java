@@ -24,10 +24,22 @@
 
 package net.fabricmc.loom.configuration.providers.forge;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.io.StringReader;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.*;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -105,17 +117,7 @@ public class SrgProvider extends DependencyProvider {
 
 				Files.deleteIfExists(mergedMojangRaw);
 				Files.deleteIfExists(mergedMojang);
-				net.minecraftforge.installertools.ConsoleTool.main(new String[] {
-						"--task",
-						"MERGE_MAPPING",
-						"--left",
-						getSrg().toAbsolutePath().toString(),
-						"--right",
-						getMojmapTsrg2(getProject(), getExtension()).toAbsolutePath().toString(),
-						"--classes",
-						"--output",
-						mergedMojangRaw.toAbsolutePath().toString()
-				});
+				net.minecraftforge.installertools.ConsoleTool.main(new String[] {"--task", "MERGE_MAPPING", "--left", getSrg().toAbsolutePath().toString(), "--right", getMojmapTsrg2(getProject(), getExtension()).toAbsolutePath().toString(), "--classes", "--output", mergedMojangRaw.toAbsolutePath().toString()});
 
 				MemoryMappingTree tree = new MemoryMappingTree();
 				MappingReader.read(new StringReader(FileUtils.readFileToString(mergedMojangRaw.toFile(), StandardCharsets.UTF_8)), new FieldDescWrappingVisitor(tree));
@@ -175,8 +177,7 @@ public class SrgProvider extends DependencyProvider {
 			return super.visitField(srcName, srcDesc);
 		}
 
-		private record FieldKey(String owner, String name) {
-		}
+		private record FieldKey(String owner, String name) {}
 	}
 
 	private void init(String version) {
@@ -224,8 +225,7 @@ public class SrgProvider extends DependencyProvider {
 
 		if (Files.notExists(mojmapTsrg) || LoomGradlePlugin.refreshDeps) {
 			try (BufferedWriter writer = Files.newBufferedWriter(mojmapTsrg, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
-				Tsrg2Utils.writeTsrg(visitor -> visitMojmap(visitor, project),
-						MappingsNamespace.NAMED.toString(), false, writer);
+				Tsrg2Utils.writeTsrg(visitor -> visitMojmap(visitor, project), MappingsNamespace.NAMED.toString(), false, writer);
 			}
 		}
 

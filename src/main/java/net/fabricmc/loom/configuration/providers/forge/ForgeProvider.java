@@ -77,7 +77,6 @@ public class ForgeProvider extends DependencyProvider {
 		return Constants.Configurations.FORGE;
 	}
 
-
 	public boolean isFG2() {
 		return fg2;
 	}

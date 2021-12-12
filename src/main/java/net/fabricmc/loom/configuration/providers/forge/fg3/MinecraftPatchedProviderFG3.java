@@ -24,18 +24,6 @@
 
 package net.fabricmc.loom.configuration.providers.forge.fg3;
 
-import com.google.common.base.Stopwatch;
-import net.fabricmc.loom.configuration.providers.MinecraftProviderImpl;
-import net.fabricmc.loom.configuration.providers.forge.MinecraftPatchedProvider;
-import net.fabricmc.loom.configuration.providers.forge.PatchProvider;
-import net.fabricmc.loom.util.Constants;
-import net.fabricmc.loom.util.ThreadingUtils;
-import net.fabricmc.loom.util.srg.SpecialSourceExecutor;
-import net.minecraftforge.binarypatcher.ConsoleTool;
-import org.apache.commons.io.output.NullOutputStream;
-import org.gradle.api.Project;
-import org.gradle.api.logging.Logger;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -45,6 +33,19 @@ import java.util.Arrays;
 import java.util.Locale;
 import java.util.Set;
 import java.util.function.Function;
+
+import com.google.common.base.Stopwatch;
+import net.minecraftforge.binarypatcher.ConsoleTool;
+import org.apache.commons.io.output.NullOutputStream;
+import org.gradle.api.Project;
+import org.gradle.api.logging.Logger;
+
+import net.fabricmc.loom.configuration.providers.MinecraftProviderImpl;
+import net.fabricmc.loom.configuration.providers.forge.MinecraftPatchedProvider;
+import net.fabricmc.loom.configuration.providers.forge.PatchProvider;
+import net.fabricmc.loom.util.Constants;
+import net.fabricmc.loom.util.ThreadingUtils;
+import net.fabricmc.loom.util.srg.SpecialSourceExecutor;
 
 public class MinecraftPatchedProviderFG3 extends MinecraftPatchedProvider {
 	// Step 1: Remap Minecraft to SRG (global)
@@ -178,17 +179,17 @@ public class MinecraftPatchedProviderFG3 extends MinecraftPatchedProvider {
 
 	public enum Environment {
 		CLIENT(provider -> provider.minecraftClientSrgJar,
-				provider -> provider.minecraftClientPatchedSrgJar
+						provider -> provider.minecraftClientPatchedSrgJar
 		),
 		SERVER(provider -> provider.minecraftServerSrgJar,
-				provider -> provider.minecraftServerPatchedSrgJar
+						provider -> provider.minecraftServerPatchedSrgJar
 		);
 
 		final Function<MinecraftPatchedProviderFG3, File> srgJar;
 		public final Function<MinecraftPatchedProviderFG3, File> patchedSrgJar;
 
 		Environment(Function<MinecraftPatchedProviderFG3, File> srgJar,
-				Function<MinecraftPatchedProviderFG3, File> patchedSrgJar) {
+						Function<MinecraftPatchedProviderFG3, File> patchedSrgJar) {
 			this.srgJar = srgJar;
 			this.patchedSrgJar = patchedSrgJar;
 		}
@@ -229,9 +230,9 @@ public class MinecraftPatchedProviderFG3 extends MinecraftPatchedProvider {
 		}
 
 		ConsoleTool.main(new String[] {
-			"--clean", clean.getAbsolutePath(),
-			"--output", output.getAbsolutePath(),
-			"--apply", patches.toAbsolutePath().toString()
+				"--clean", clean.getAbsolutePath(),
+				"--output", output.getAbsolutePath(),
+				"--apply", patches.toAbsolutePath().toString()
 		});
 
 		try {
@@ -245,7 +246,6 @@ public class MinecraftPatchedProviderFG3 extends MinecraftPatchedProvider {
 	protected void mergeJars(Logger logger) throws Exception {
 		// FIXME: Hack here: There are no server-only classes so we can just copy the client JAR.
 		//   This will change if upstream Loom adds the possibility for separate projects/source sets per environment.
-
 
 		Files.copy(minecraftClientPatchedSrgJar.toPath(), minecraftMergedPatchedSrgJar.toPath());
 

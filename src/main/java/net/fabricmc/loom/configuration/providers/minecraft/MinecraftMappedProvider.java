@@ -342,11 +342,21 @@ public class MinecraftMappedProvider extends DependencyProvider {
 			if (forge != null) {
 				OutputRemappingHandler.remap(remapper, forge.assets, outputForge, null, forgeTag);
 
-				//FG2 - remove binpatches for the dev environment
-				try (FileSystem fs = FileSystems.newFileSystem(outputForge, Map.of("create", "false"))) {
-					Path binpatches = fs.getPath("binpatches.pack.lzma");
-					if (Files.exists(binpatches)) {
-						Files.delete(binpatches);
+				if (getExtension().getForgeProvider().isFG2()) {
+					//FG2 - remove binpatches for the dev environment
+					try (FileSystem fs = FileSystems.newFileSystem(outputForge, Map.of("create", "false"))) {
+						Path binpatches = fs.getPath("binpatches.pack.lzma");
+
+						if (Files.exists(binpatches)) {
+							Files.delete(binpatches);
+						}
+
+						//TODO: FIXME, hack to remove forge trying to transform class names for fg2 dev launch
+						Path deobfTransf = fs.getPath("net/minecraftforge/fml/common/asm/transformers/DeobfuscationTransformer.class");
+
+						if (Files.exists(deobfTransf)) {
+							Files.delete(deobfTransf);
+						}
 					}
 				}
 			}

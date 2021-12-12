@@ -44,7 +44,6 @@ import java.util.stream.Stream;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Stopwatch;
-import net.fabricmc.mappingio.format.SrgReader;
 import org.apache.commons.io.IOUtils;
 import org.gradle.api.logging.Logger;
 import org.jetbrains.annotations.Nullable;
@@ -53,6 +52,7 @@ import net.fabricmc.loom.util.function.CollectionUtil;
 import net.fabricmc.mappingio.FlatMappingVisitor;
 import net.fabricmc.mappingio.MappingReader;
 import net.fabricmc.mappingio.adapter.RegularAsFlatMappingVisitor;
+import net.fabricmc.mappingio.format.SrgReader;
 import net.fabricmc.mappingio.format.Tiny2Writer;
 import net.fabricmc.mappingio.format.TsrgReader;
 import net.fabricmc.mappingio.tree.MappingTree;
@@ -75,11 +75,11 @@ public final class SrgMerger {
 	private final boolean lenient;
 	private final Set<String> methodSrgNames = new HashSet<>();
 
-	private final boolean isSrg;
+	private final boolean isLegacySrg;
 
-	public SrgMerger(Logger logger, Path srg, @Nullable Supplier<Path> mojmap, Path tiny, boolean lenient, boolean isSrg) throws IOException {
+	public SrgMerger(Logger logger, Path srg, @Nullable Supplier<Path> mojmap, Path tiny, boolean lenient, boolean isLegacySrg) throws IOException {
 		this.logger = logger;
-		this.isSrg = isSrg;
+		this.isLegacySrg = isLegacySrg;
 		this.srg = readSrg(srg, mojmap);
 		this.src = new MemoryMappingTree();
 		this.output = new MemoryMappingTree();
@@ -123,10 +123,10 @@ public final class SrgMerger {
 	 * @throws MappingException if the input tiny tree's default namespace is not 'official'
 	 *                          or if an element mentioned in the SRG file does not have tiny mappings
 	 */
-	public static void mergeSrg(Logger logger, @Nullable Supplier<Path> mojmap, Path srg, Path tiny, Path out, boolean lenient, boolean isSrg)
-			throws IOException, MappingException {
+	public static void mergeSrg(Logger logger, @Nullable Supplier<Path> mojmap, Path srg, Path tiny, Path out, boolean lenient, boolean isLegacySrg)
+					throws IOException, MappingException {
 		Stopwatch stopwatch = Stopwatch.createStarted();
-		MemoryMappingTree tree = mergeSrg(logger, mojmap, srg, tiny, lenient, isSrg);
+		MemoryMappingTree tree = mergeSrg(logger, mojmap, srg, tiny, lenient, isLegacySrg);
 
 		try (Tiny2Writer writer = new Tiny2Writer(Files.newBufferedWriter(out), false)) {
 			tree.accept(writer);
@@ -149,9 +149,9 @@ public final class SrgMerger {
 	 * @throws MappingException if the input tiny tree's default namespace is not 'official'
 	 *                          or if an element mentioned in the SRG file does not have tiny mappings
 	 */
-	public static MemoryMappingTree mergeSrg(Logger logger, @Nullable Supplier<Path> mojmap, Path srg, Path tiny, boolean lenient, boolean isSrg)
-			throws IOException, MappingException {
-		return new SrgMerger(logger, srg, mojmap, tiny, lenient, isSrg).merge();
+	public static MemoryMappingTree mergeSrg(Logger logger, @Nullable Supplier<Path> mojmap, Path srg, Path tiny, boolean lenient, boolean isLegacySrg)
+					throws IOException, MappingException {
+		return new SrgMerger(logger, srg, mojmap, tiny, lenient, isLegacySrg).merge();
 	}
 
 	private MemoryMappingTree readSrg(Path srg, @Nullable Supplier<Path> mojmap) throws IOException {
@@ -163,11 +163,13 @@ public final class SrgMerger {
 			}
 
 			MemoryMappingTree tsrg = new MemoryMappingTree();
-			if (isSrg) {
+
+			if (isLegacySrg) {
 				SrgReader.read(new StringReader(content), tsrg);
 			} else {
 				TsrgReader.read(new StringReader(content), tsrg);
 			}
+
 			return tsrg;
 		}
 	}
@@ -216,8 +218,8 @@ public final class SrgMerger {
 		}
 
 		List<String> classNames = CollectionUtil.map(
-				output.getDstNamespaces(),
-				namespace -> "srg".equals(namespace) ? srg : classDef.getName(namespace)
+						output.getDstNamespaces(),
+						namespace -> "srg".equals(namespace) ? srg : classDef.getName(namespace)
 		);
 
 		flatOutput.visitClass(obf, classNames.toArray(new String[0]));
@@ -228,8 +230,8 @@ public final class SrgMerger {
 
 		for (MappingTree.MethodMapping method : klass.getMethods()) {
 			MappingTree.MethodMapping def = CollectionUtil.find(
-					classDef.getMethods(),
-					m -> m.getName("official").equals(method.getSrcName()) && m.getDesc("official").equals(method.getSrcDesc())
+							classDef.getMethods(),
+							m -> m.getName("official").equals(method.getSrcName()) && m.getDesc("official").equals(method.getSrcDesc())
 			).orElse(null);
 
 			String methodSrgName = method.getDstName(0);
@@ -244,8 +246,8 @@ public final class SrgMerger {
 					postProcesses.add(() -> {
 						if (!methodSrgNames.contains(methodSrgName)) {
 							List<String> methodNames = CollectionUtil.map(
-									output.getDstNamespaces(),
-									namespace -> "srg".equals(namespace) ? methodSrgName : method.getSrcName()
+											output.getDstNamespaces(),
+											namespace -> "srg".equals(namespace) ? methodSrgName : method.getSrcName()
 							);
 
 							try {
@@ -280,8 +282,8 @@ public final class SrgMerger {
 				}
 
 				MappingTree.MethodMapping method = CollectionUtil.find(
-						klass.getMethods(),
-						m -> m.getSrcName().equals(def.getName("official")) && m.getSrcDesc().equals(def.getDesc("official"))
+								klass.getMethods(),
+								m -> m.getSrcName().equals(def.getName("official")) && m.getSrcDesc().equals(def.getDesc("official"))
 				).orElse(null);
 
 				if (method == null) {
@@ -296,15 +298,15 @@ public final class SrgMerger {
 
 		for (MappingTree.FieldMapping field : klass.getFields()) {
 			MappingTree.FieldMapping def = CollectionUtil.find(
-					classDef.getFields(),
-					f -> f.getName("official").equals(field.getSrcName())
+							classDef.getFields(),
+							f -> f.getName("official").equals(field.getSrcName())
 			).orElse(nullOrThrow(() -> new MappingException("Missing field: " + field.getSrcName() + " (srg: " + field.getDstName(0) + ")")));
 
 			if (def == null) {
 				if (tryMatchRegardlessSrgsField(obf, field)) {
 					List<String> fieldNames = CollectionUtil.map(
-							output.getDstNamespaces(),
-							namespace -> "srg".equals(namespace) ? field.getDstName(0) : field.getSrcName()
+									output.getDstNamespaces(),
+									namespace -> "srg".equals(namespace) ? field.getDstName(0) : field.getSrcName()
 					);
 
 					flatOutput.visitField(obf, field.getSrcName(), field.getSrcDesc(), fieldNames.toArray(new String[0]));
@@ -314,8 +316,8 @@ public final class SrgMerger {
 			}
 
 			List<String> fieldNames = CollectionUtil.map(
-					output.getDstNamespaces(),
-					namespace -> "srg".equals(namespace) ? field.getDstName(0) : def.getName(namespace)
+							output.getDstNamespaces(),
+							namespace -> "srg".equals(namespace) ? field.getDstName(0) : def.getName(namespace)
 			);
 
 			flatOutput.visitField(obf, def.getName("official"), def.getDesc("official"), fieldNames.toArray(new String[0]));
@@ -327,15 +329,15 @@ public final class SrgMerger {
 	}
 
 	private void methodToTiny(String obfClassName, @Nullable MappingTree.MethodMapping srgMethod, @Nullable String srgMethodName, MappingTree.MethodMapping actualMethod)
-			throws IOException {
+					throws IOException {
 		if (srgMethod != null && srgMethodName != null) {
 			srgMethodName = srgMethod.getDstName(0);
 		}
 
 		String finalSrgMethodName = srgMethodName;
 		List<String> methodNames = CollectionUtil.map(
-				output.getDstNamespaces(),
-				namespace -> "srg".equals(namespace) ? finalSrgMethodName : actualMethod.getName(namespace)
+						output.getDstNamespaces(),
+						namespace -> "srg".equals(namespace) ? finalSrgMethodName : actualMethod.getName(namespace)
 		);
 
 		flatOutput.visitMethod(obfClassName, actualMethod.getName("official"), actualMethod.getDesc("official"), methodNames.toArray(new String[0]));
@@ -348,8 +350,8 @@ public final class SrgMerger {
 			MappingTree.MethodArgMapping srgArg = srgMethod != null ? srgMethod.getArg(arg.getArgPosition(), arg.getLvIndex(), arg.getName("official")) : null;
 			String srgName = srgArg != null ? srgArg.getDstName(0) : null;
 			List<String> argNames = CollectionUtil.map(
-					output.getDstNamespaces(),
-					namespace -> "srg".equals(namespace) ? srgName : arg.getName(namespace)
+							output.getDstNamespaces(),
+							namespace -> "srg".equals(namespace) ? srgName : arg.getName(namespace)
 			);
 
 			flatOutput.visitMethodArg(obfClassName, actualMethod.getName("official"), actualMethod.getDesc("official"), arg.getArgPosition(), arg.getLvIndex(), arg.getName("official"), argNames.toArray(new String[0]));
@@ -363,8 +365,8 @@ public final class SrgMerger {
 			MappingTree.MethodVarMapping srgVar = srgMethod != null ? srgMethod.getVar(var.getLvtRowIndex(), var.getLvIndex(), var.getStartOpIdx(), var.getName("official")) : null;
 			String srgName = srgVar != null ? srgVar.getDstName(0) : null;
 			List<String> varNames = CollectionUtil.map(
-					output.getDstNamespaces(),
-					namespace -> "srg".equals(namespace) ? srgName : var.getName(namespace)
+							output.getDstNamespaces(),
+							namespace -> "srg".equals(namespace) ? srgName : var.getName(namespace)
 			);
 
 			flatOutput.visitMethodVar(obfClassName, actualMethod.getName("official"), actualMethod.getDesc("official"), var.getLvtRowIndex(), var.getLvIndex(), var.getStartOpIdx(), var.getName("official"), varNames.toArray(new String[0]));

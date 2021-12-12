@@ -47,9 +47,7 @@ import com.google.common.collect.Table;
 import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import dev.architectury.refmapremapper.utils.DescriptorRemapper;
-import net.fabricmc.loom.configuration.providers.forge.fg3.MinecraftPatchedProviderFG3;
 import org.gradle.api.Project;
-import org.gradle.internal.normalization.java.impl.FieldMember;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.FieldVisitor;
@@ -58,6 +56,7 @@ import org.objectweb.asm.Opcodes;
 import net.fabricmc.loom.LoomGradleExtension;
 import net.fabricmc.loom.LoomGradlePlugin;
 import net.fabricmc.loom.api.mappings.layered.MappingsNamespace;
+import net.fabricmc.loom.configuration.providers.forge.fg3.MinecraftPatchedProviderFG3;
 import net.fabricmc.loom.configuration.providers.mappings.MappingsProviderImpl;
 import net.fabricmc.loom.util.FileSystemUtil;
 import net.fabricmc.loom.util.ThreadingUtils;
@@ -216,8 +215,8 @@ public class FieldMigratedMappingsProvider extends MappingsProviderImpl {
 						completer.add(() -> {
 							byte[] bytes = Files.readAllBytes(fsPath);
 							new ClassReader(bytes).accept(
-								visitor,
-								ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES
+											visitor,
+											ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES
 							);
 						});
 					}
@@ -252,7 +251,7 @@ public class FieldMigratedMappingsProvider extends MappingsProviderImpl {
 						String fieldIntermediary = fieldDef.getName("intermediary");
 						String descriptorIntermediary = fieldDef.getDesc("intermediary");
 						String newDescriptorRemapped = DescriptorRemapper.remapDescriptor(newDescriptor,
-								clazz -> srgToIntermediary.getOrDefault(clazz, clazz));
+										clazz -> srgToIntermediary.getOrDefault(clazz, clazz));
 						migratedFields.put(new FieldMember(ownerIntermediary, fieldIntermediary), newDescriptorRemapped);
 						getProject().getLogger().info(ownerIntermediary + "#" + fieldIntermediary + ": " + descriptorIntermediary + " -> " + newDescriptorRemapped);
 					}

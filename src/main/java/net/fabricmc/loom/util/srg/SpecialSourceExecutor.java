@@ -24,16 +24,6 @@
 
 package net.fabricmc.loom.util.srg;
 
-import com.google.common.base.Stopwatch;
-import net.fabricmc.loom.LoomGradleExtension;
-import net.fabricmc.loom.configuration.providers.forge.McpConfigProvider.RemapAction;
-import net.fabricmc.loom.util.FileSystemUtil;
-import net.fabricmc.loom.util.ThreadingUtils;
-import org.apache.commons.io.output.NullOutputStream;
-import org.gradle.api.Project;
-import org.gradle.api.logging.LogLevel;
-import org.gradle.api.logging.configuration.ShowStacktrace;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -43,6 +33,17 @@ import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import com.google.common.base.Stopwatch;
+import org.apache.commons.io.output.NullOutputStream;
+import org.gradle.api.Project;
+import org.gradle.api.logging.LogLevel;
+import org.gradle.api.logging.configuration.ShowStacktrace;
+
+import net.fabricmc.loom.LoomGradleExtension;
+import net.fabricmc.loom.configuration.providers.forge.McpConfigProvider.RemapAction;
+import net.fabricmc.loom.util.FileSystemUtil;
+import net.fabricmc.loom.util.ThreadingUtils;
 
 public class SpecialSourceExecutor {
 	private static String trimLeadingSlash(String string) {
@@ -56,7 +57,6 @@ public class SpecialSourceExecutor {
 	}
 
 	public static void stripJar(Project project, Path inJar, Path outJar, Set<String> filter) throws IOException {
-
 		Stopwatch stopwatch = Stopwatch.createStarted();
 
 		int count = 0;
@@ -95,18 +95,17 @@ public class SpecialSourceExecutor {
 	}
 
 	public static Path produceSrgJar(RemapAction remapAction, Project project, String side, Set<File> mcLibs, Path officialJar, Path mappings)
-			throws Exception {
+					throws Exception {
 		Set<String> filter = Files.readAllLines(mappings, StandardCharsets.UTF_8).stream()
-			.filter(s -> !s.startsWith("\t"))
-			.map(s -> s.split(" ")[0] + ".class")
-			.collect(Collectors.toSet());
+						.filter(s -> !s.startsWith("\t"))
+						.map(s -> s.split(" ")[0] + ".class")
+						.collect(Collectors.toSet());
 
 		LoomGradleExtension extension = LoomGradleExtension.get(project.getProject());
 		Path stripped = extension.getFiles().getProjectBuildCache().toPath().resolve(officialJar.getFileName().toString().substring(0, officialJar.getFileName().toString().length() - 4) + "-filtered.jar");
 		Files.deleteIfExists(stripped);
 
 		stripJar(project, officialJar, stripped, filter);
-
 
 		Path output = extension.getFiles().getProjectBuildCache().toPath().resolve(officialJar.getFileName().toString().substring(0, officialJar.getFileName().toString().length() - 4) + "-srg-output.jar");
 		Files.deleteIfExists(output);
@@ -127,7 +126,7 @@ public class SpecialSourceExecutor {
 
 			// if running with INFO or DEBUG logging
 			if (project.getGradle().getStartParameter().getShowStacktrace() != ShowStacktrace.INTERNAL_EXCEPTIONS
-				|| project.getGradle().getStartParameter().getLogLevel().compareTo(LogLevel.LIFECYCLE) < 0) {
+			    || project.getGradle().getStartParameter().getLogLevel().compareTo(LogLevel.LIFECYCLE) < 0) {
 				spec.setStandardOutput(System.out);
 				spec.setErrorOutput(System.err);
 			} else {

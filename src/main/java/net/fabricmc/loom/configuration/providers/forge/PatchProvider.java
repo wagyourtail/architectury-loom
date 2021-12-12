@@ -28,7 +28,11 @@ import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
-import java.nio.file.*;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.function.Consumer;
 
 import com.google.common.collect.ImmutableMap;
@@ -60,15 +64,13 @@ public class PatchProvider extends DependencyProvider {
 					Files.copy(fs.getPath("binpatches.pack.lzma"), clientPatches, StandardCopyOption.REPLACE_EXISTING);
 					Files.copy(fs.getPath("binpatches.pack.lzma"), serverPatches, StandardCopyOption.REPLACE_EXISTING);
 				}
-
 			}
 		} else {
-
 			if (Files.notExists(clientPatches) || Files.notExists(serverPatches) || isRefreshDeps()) {
 				getProject().getLogger().info(":extracting forge patches");
 
 				Path installerJar = dependency.resolveFile().orElseThrow(() -> new RuntimeException(
-					"Could not resolve Forge installer")).toPath();
+								"Could not resolve Forge installer")).toPath();
 
 				try (FileSystem fs = FileSystems.newFileSystem(new URI("jar:" + installerJar.toUri()), ImmutableMap.of("create", false))) {
 					Files.copy(fs.getPath("data", "client.lzma"), clientPatches, StandardCopyOption.REPLACE_EXISTING);

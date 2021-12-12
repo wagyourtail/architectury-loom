@@ -34,14 +34,17 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -57,10 +60,10 @@ import org.gradle.api.attributes.Attribute;
 import org.gradle.api.file.FileSystemLocation;
 import org.gradle.api.provider.Provider;
 
+import net.fabricmc.loom.api.ForgeLocalMod;
 import net.fabricmc.loom.configuration.DependencyProvider;
 import net.fabricmc.loom.configuration.ide.RunConfigSettings;
 import net.fabricmc.loom.configuration.launch.LaunchProviderSettings;
-import net.fabricmc.loom.api.ForgeLocalMod;
 import net.fabricmc.loom.util.Constants;
 import net.fabricmc.loom.util.DependencyDownloader;
 import net.fabricmc.loom.util.FileSystemUtil;
@@ -115,7 +118,6 @@ public class ForgeUserdevProvider extends DependencyProvider {
 		boolean fg2 = !json.has("mcp");
 		getExtension().getForgeProvider().setFg2(fg2);
 
-
 		if (fg2) {
 			getProject().getLogger().info("FG2 Userdev, using default mcp_config/universal...");
 
@@ -147,10 +149,10 @@ public class ForgeUserdevProvider extends DependencyProvider {
 
 				if (launchSettings != null) {
 					launchSettings.evaluateLater(() -> {
-							launchSettings.arg(Arrays.stream(json.get("minecraftArguments").getAsString().split(" "))
-								.map(this::processTemplates)
-								.collect(Collectors.toList()));
+						launchSettings.arg(Arrays.stream(json.get("minecraftArguments").getAsString().split(" ")).map(this::processTemplates).collect(Collectors.toList()));
 
+						// add missing args
+						launchSettings.arg("--accessToken", "FML");
 					});
 				}
 
@@ -159,9 +161,7 @@ public class ForgeUserdevProvider extends DependencyProvider {
 						settings.defaultMainClass("net.minecraft.launchwrapper.Launch");
 					});
 				}
-
 			}
-
 		} else {
 			getProject().getLogger().info("FG3+ Userdev");
 
@@ -169,23 +169,15 @@ public class ForgeUserdevProvider extends DependencyProvider {
 			addDependency(json.get("mcp").getAsString(), Constants.Configurations.SRG);
 			addDependency(json.get("universal").getAsString(), Constants.Configurations.FORGE_UNIVERSAL);
 
-
 			for (JsonElement lib : json.get("libraries").getAsJsonArray()) {
 				Dependency dep = null;
 
 				if (lib.getAsString().startsWith("org.spongepowered:mixin:")) {
 					if (PropertyUtil.getAndFinalize(getExtension().getForge().getUseCustomMixin())) {
 						if (lib.getAsString().contains("0.8.2")) {
-							dep = addDependency(
-								"net.fabricmc:sponge-mixin:0.8.2+build.24",
-								Constants.Configurations.FORGE_DEPENDENCIES
-							);
+							dep = addDependency("net.fabricmc:sponge-mixin:0.8.2+build.24", Constants.Configurations.FORGE_DEPENDENCIES);
 						} else {
-							dep = addDependency(
-								"dev.architectury:mixin-patched" +
-									lib.getAsString().substring(lib.getAsString().lastIndexOf(":")) + ".+",
-								Constants.Configurations.FORGE_DEPENDENCIES
-							);
+							dep = addDependency("dev.architectury:mixin-patched" + lib.getAsString().substring(lib.getAsString().lastIndexOf(":")) + ".+", Constants.Configurations.FORGE_DEPENDENCIES);
 						}
 					}
 				}
@@ -211,10 +203,7 @@ public class ForgeUserdevProvider extends DependencyProvider {
 				if (launchSettings != null) {
 					launchSettings.evaluateLater(() -> {
 						if (value.has("args")) {
-							launchSettings.arg(StreamSupport.stream(value.getAsJsonArray("args").spliterator(), false)
-								.map(JsonElement::getAsString)
-								.map(this::processTemplates)
-								.collect(Collectors.toList()));
+							launchSettings.arg(StreamSupport.stream(value.getAsJsonArray("args").spliterator(), false).map(JsonElement::getAsString).map(this::processTemplates).collect(Collectors.toList()));
 						}
 
 						if (value.has("props")) {
@@ -232,10 +221,7 @@ public class ForgeUserdevProvider extends DependencyProvider {
 						settings.defaultMainClass(value.getAsJsonPrimitive("main").getAsString());
 
 						if (value.has("jvmArgs")) {
-							settings.vmArgs(StreamSupport.stream(value.getAsJsonArray("jvmArgs").spliterator(), false)
-								.map(JsonElement::getAsString)
-								.map(this::processTemplates)
-								.collect(Collectors.toList()));
+							settings.vmArgs(StreamSupport.stream(value.getAsJsonArray("jvmArgs").spliterator(), false).map(JsonElement::getAsString).map(this::processTemplates).collect(Collectors.toList()));
 						}
 
 						if (value.has("env")) {
@@ -279,22 +265,15 @@ public class ForgeUserdevProvider extends DependencyProvider {
 
 			// TODO: Look into ways to not hardcode
 			if (key.equals("runtime_classpath")) {
-				string = runtimeClasspath().stream()
-						.map(File::getAbsolutePath)
-						.collect(Collectors.joining(File.pathSeparator));
+				string = runtimeClasspath().stream().map(File::getAbsolutePath).collect(Collectors.joining(File.pathSeparator));
 			} else if (key.equals("minecraft_classpath")) {
-				string = minecraftClasspath().stream()
-						.map(File::getAbsolutePath)
-						.collect(Collectors.joining(File.pathSeparator));
+				string = minecraftClasspath().stream().map(File::getAbsolutePath).collect(Collectors.joining(File.pathSeparator));
 			} else if (key.equals("runtime_classpath_file")) {
 				Path path = getDirectories().getProjectPersistentCache().toPath().resolve("forge_runtime_classpath.txt");
 
 				postPopulationScheduler.accept(() -> {
 					try {
-						Files.writeString(path, runtimeClasspath().stream()
-										.map(File::getAbsolutePath)
-										.collect(Collectors.joining("\n")),
-								StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+						Files.writeString(path, runtimeClasspath().stream().map(File::getAbsolutePath).collect(Collectors.joining("\n")), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 					} catch (IOException e) {
 						throw new RuntimeException(e);
 					}
@@ -306,10 +285,7 @@ public class ForgeUserdevProvider extends DependencyProvider {
 
 				postPopulationScheduler.accept(() -> {
 					try {
-						Files.writeString(path, minecraftClasspath().stream()
-										.map(File::getAbsolutePath)
-										.collect(Collectors.joining("\n")),
-								StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+						Files.writeString(path, minecraftClasspath().stream().map(File::getAbsolutePath).collect(Collectors.joining("\n")), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 					} catch (IOException e) {
 						throw new RuntimeException(e);
 					}
@@ -328,10 +304,7 @@ public class ForgeUserdevProvider extends DependencyProvider {
 				for (ForgeLocalMod localMod : getExtension().getForge().getLocalMods()) {
 					String sourceSetName = localMod.getName();
 
-					localMod.getSourceSets().flatMap(sourceSet -> Stream.concat(
-							Stream.of(sourceSet.getOutput().getResourcesDir()),
-							sourceSet.getOutput().getClassesDirs().getFiles().stream())
-					).map(File::getAbsolutePath).distinct().map(s -> sourceSetName + "%%" + s).collect(Collectors.toCollection(() -> modClasses));
+					localMod.getSourceSets().flatMap(sourceSet -> Stream.concat(Stream.of(sourceSet.getOutput().getResourcesDir()), sourceSet.getOutput().getClassesDirs().getFiles().stream())).map(File::getAbsolutePath).distinct().map(s -> sourceSetName + "%%" + s).collect(Collectors.toCollection(() -> modClasses));
 				}
 
 				string = String.join(File.pathSeparator, modClasses);
@@ -341,18 +314,13 @@ public class ForgeUserdevProvider extends DependencyProvider {
 				JsonElement element = json.get(key);
 
 				if (element.isJsonArray()) {
-					string = StreamSupport.stream(element.getAsJsonArray().spliterator(), false)
-							.map(JsonElement::getAsString)
-							.flatMap(str -> {
-								if (str.contains(":")) {
-									return DependencyDownloader.download(getProject(), str, false, false).getFiles().stream()
-											.map(File::getAbsolutePath)
-											.filter(dep -> !dep.contains("bootstraplauncher")); // TODO: Hack
-								}
+					string = StreamSupport.stream(element.getAsJsonArray().spliterator(), false).map(JsonElement::getAsString).flatMap(str -> {
+						if (str.contains(":")) {
+							return DependencyDownloader.download(getProject(), str, false, false).getFiles().stream().map(File::getAbsolutePath).filter(dep -> !dep.contains("bootstraplauncher")); // TODO: Hack
+						}
 
-								return Stream.of(str);
-							})
-							.collect(Collectors.joining(File.pathSeparator));
+						return Stream.of(str);
+					}).collect(Collectors.joining(File.pathSeparator));
 				} else {
 					string = element.toString();
 				}
