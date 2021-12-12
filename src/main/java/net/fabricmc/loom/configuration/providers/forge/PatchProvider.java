@@ -65,17 +65,19 @@ public class PatchProvider extends DependencyProvider {
 					Files.copy(fs.getPath("binpatches.pack.lzma"), serverPatches, StandardCopyOption.REPLACE_EXISTING);
 				}
 			}
-		} else {
-			if (Files.notExists(clientPatches) || Files.notExists(serverPatches) || isRefreshDeps()) {
-				getProject().getLogger().info(":extracting forge patches");
 
-				Path installerJar = dependency.resolveFile().orElseThrow(() -> new RuntimeException(
-								"Could not resolve Forge installer")).toPath();
+			return;
+		}
 
-				try (FileSystem fs = FileSystems.newFileSystem(new URI("jar:" + installerJar.toUri()), ImmutableMap.of("create", false))) {
-					Files.copy(fs.getPath("data", "client.lzma"), clientPatches, StandardCopyOption.REPLACE_EXISTING);
-					Files.copy(fs.getPath("data", "server.lzma"), serverPatches, StandardCopyOption.REPLACE_EXISTING);
-				}
+		if (Files.notExists(clientPatches) || Files.notExists(serverPatches) || isRefreshDeps()) {
+			getProject().getLogger().info(":extracting forge patches");
+
+			Path installerJar = dependency.resolveFile().orElseThrow(() -> new RuntimeException(
+							"Could not resolve Forge installer")).toPath();
+
+			try (FileSystem fs = FileSystems.newFileSystem(new URI("jar:" + installerJar.toUri()), ImmutableMap.of("create", false))) {
+				Files.copy(fs.getPath("data", "client.lzma"), clientPatches, StandardCopyOption.REPLACE_EXISTING);
+				Files.copy(fs.getPath("data", "server.lzma"), serverPatches, StandardCopyOption.REPLACE_EXISTING);
 			}
 		}
 	}

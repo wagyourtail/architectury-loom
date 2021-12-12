@@ -205,7 +205,10 @@ public class ForgeUserdevProvider extends DependencyProvider {
 			if (launchSettings != null) {
 				launchSettings.evaluateLater(() -> {
 					if (value.has("args")) {
-						launchSettings.arg(StreamSupport.stream(value.getAsJsonArray("args").spliterator(), false).map(JsonElement::getAsString).map(this::processTemplates).collect(Collectors.toList()));
+						launchSettings.arg(StreamSupport.stream(value.getAsJsonArray("args").spliterator(), false)
+								.map(JsonElement::getAsString)
+								.map(this::processTemplates)
+								.collect(Collectors.toList()));
 					}
 
 					if (value.has("props")) {
@@ -223,7 +226,10 @@ public class ForgeUserdevProvider extends DependencyProvider {
 					settings.defaultMainClass(value.getAsJsonPrimitive("main").getAsString());
 
 					if (value.has("jvmArgs")) {
-						settings.vmArgs(StreamSupport.stream(value.getAsJsonArray("jvmArgs").spliterator(), false).map(JsonElement::getAsString).map(this::processTemplates).collect(Collectors.toList()));
+						settings.vmArgs(StreamSupport.stream(value.getAsJsonArray("jvmArgs").spliterator(), false)
+								.map(JsonElement::getAsString)
+								.map(this::processTemplates)
+								.collect(Collectors.toList()));
 					}
 
 					if (value.has("env")) {
