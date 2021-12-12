@@ -26,6 +26,8 @@ package net.fabricmc.loom.configuration.providers.minecraft;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -339,6 +341,14 @@ public class MinecraftMappedProvider extends DependencyProvider {
 
 			if (forge != null) {
 				OutputRemappingHandler.remap(remapper, forge.assets, outputForge, null, forgeTag);
+
+				//FG2 - remove binpatches for the dev environment
+				try (FileSystem fs = FileSystems.newFileSystem(outputForge, Map.of("create", "false"))) {
+					Path binpatches = fs.getPath("binpatches.pack.lzma");
+					if (Files.exists(binpatches)) {
+						Files.delete(binpatches);
+					}
+				}
 			}
 
 			getProject().getLogger().lifecycle(":remapped minecraft (TinyRemapper, " + fromM + " -> " + toM + ") in " + stopwatch);
