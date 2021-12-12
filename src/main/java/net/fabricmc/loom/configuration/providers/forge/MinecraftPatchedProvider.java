@@ -198,10 +198,12 @@ public abstract class MinecraftPatchedProvider extends DependencyProvider {
 	}
 
 	protected File[] getGlobalCaches() {
-		File[] files = {minecraftClientExtra};
+		File[] files = {
+				minecraftClientExtra
+		};
 
 		if (forgeMergedJar != null) {
-			Arrays.copyOf(files, files.length + 1);
+			files = Arrays.copyOf(files, files.length + 1);
 			files[files.length - 1] = forgeMergedJar;
 		}
 
@@ -215,7 +217,10 @@ public abstract class MinecraftPatchedProvider extends DependencyProvider {
 	}
 
 	protected File[] getProjectCache() {
-		return new File[] {minecraftMergedPatchedSrgAtJar, minecraftMergedPatchedAtJar};
+		return new File[] {
+				minecraftMergedPatchedSrgAtJar,
+				minecraftMergedPatchedAtJar
+		};
 	}
 
 	@Override
@@ -254,7 +259,15 @@ public abstract class MinecraftPatchedProvider extends DependencyProvider {
 		Path[] libraries = TinyRemapperHelper.getMinecraftDependencies(getProject());
 		MemoryMappingTree mappingsWithSrg = getExtension().getMappingsProvider().getMappingsWithSrg();
 
-		TinyRemapper remapper = TinyRemapper.newRemapper().logger(getProject().getLogger()::lifecycle).logUnknownInvokeDynamic(false).withMappings(TinyRemapperHelper.create(mappingsWithSrg, from, to, true)).withMappings(InnerClassRemapper.of(InnerClassRemapper.readClassNames(input), mappingsWithSrg, from, to)).renameInvalidLocals(true).rebuildSourceFilenames(true).fixPackageAccess(true).build();
+		TinyRemapper remapper = TinyRemapper.newRemapper()
+				.logger(getProject().getLogger()::lifecycle)
+				.logUnknownInvokeDynamic(false)
+				.withMappings(TinyRemapperHelper.create(mappingsWithSrg, from, to, true))
+				.withMappings(InnerClassRemapper.of(InnerClassRemapper.readClassNames(input), mappingsWithSrg, from, to))
+				.renameInvalidLocals(true)
+				.rebuildSourceFilenames(true)
+				.fixPackageAccess(true)
+				.build();
 
 		if (getProject().getGradle().getStartParameter().getLogLevel().compareTo(LogLevel.LIFECYCLE) < 0) {
 			MappingsProviderVerbose.saveFile(remapper);

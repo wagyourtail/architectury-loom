@@ -93,7 +93,7 @@ public class MinecraftPatchedProviderFG3 extends MinecraftPatchedProvider {
 		};
 
 		if (forgeMergedJar != null) {
-			Arrays.copyOf(files, files.length + 1);
+			files = Arrays.copyOf(files, files.length + 1);
 			files[files.length - 1] = forgeMergedJar;
 		}
 
