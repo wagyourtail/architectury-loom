@@ -68,7 +68,7 @@ public class MinecraftPatchedProviderFG3 extends MinecraftPatchedProvider {
 	private Path[] mergedMojangTsrg2Files;
 
 	public MinecraftPatchedProviderFG3(Project project) {
-		super(project);
+		super(project, Constants.Forge.ACCESS_TRANSFORMER_PATH);
 	}
 
 	@Override

@@ -73,7 +73,8 @@ public class MinecraftPatchedProviderFG2 extends MinecraftPatchedProvider {
 	// fields in super
 
 	public MinecraftPatchedProviderFG2(Project project) {
-		super(project);
+		// use AT from forge universal (btw userdev at's are named `forge_at.cfg` if this should be changed)
+		super(project, "forge_at.cfg");
 	}
 
 	@Override
