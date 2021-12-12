@@ -123,22 +123,6 @@ public abstract class MinecraftPatchedProvider extends DependencyProvider {
 		this.accessTransformerPath = accessTransformerPath;
 	}
 
-	@Override
-	public void provide(DependencyInfo dependency, Consumer<Runnable> postPopulationScheduler) throws Exception {
-		initFiles();
-		testCleanAllCaches();
-		beginTransform();
-	}
-
-	protected abstract void beginTransform() throws Exception;
-
-	public abstract void endTransform() throws Exception;
-
-	@Override
-	public String getTargetConfig() {
-		return Constants.Configurations.MINECRAFT;
-	}
-
 	public void initFiles() throws IOException {
 		filesDirty = false;
 		projectAtHash = new File(getDirectories().getProjectPersistentCache(), "at.sha256");
@@ -194,69 +178,15 @@ public abstract class MinecraftPatchedProvider extends DependencyProvider {
 		minecraftMergedPatchedSrgAtJar = new File(projectDir, "merged-srg-at-patched.jar");
 	}
 
-	public void testCleanAllCaches() throws IOException {
-		if (isRefreshDeps() || Stream.of(getGlobalCaches()).anyMatch(((Predicate<File>) File::exists).negate()) || !isPatchedJarUpToDate(minecraftMergedPatchedAtJar)) {
-			cleanAllCache();
-		} else if (atDirty || Stream.of(getProjectCache()).anyMatch(((Predicate<File>) File::exists).negate())) {
-			cleanProjectCache();
-		}
-	}
+	private byte[] getProjectAtsHash() throws IOException {
+		if (projectAts.isEmpty()) return ByteSource.empty().hash(Hashing.sha256()).asBytes();
+		List<ByteSource> currentBytes = new ArrayList<>();
 
-	public void applyLoomPatchVersion(Path target) throws IOException {
-		try (FileSystemUtil.Delegate delegate = FileSystemUtil.getJarFileSystem(target, false)) {
-			Path manifestPath = delegate.get().getPath("META-INF/MANIFEST.MF");
-
-			Preconditions.checkArgument(Files.exists(manifestPath), "META-INF/MANIFEST.MF does not exist in patched srg jar!");
-			Manifest manifest = new Manifest();
-
-			if (Files.exists(manifestPath)) {
-				try (InputStream stream = Files.newInputStream(manifestPath)) {
-					manifest.read(stream);
-					manifest.getMainAttributes().putValue(LOOM_PATCH_VERSION_KEY, CURRENT_LOOM_PATCH_VERSION);
-				}
-			}
-
-			try (OutputStream stream = Files.newOutputStream(manifestPath, StandardOpenOption.CREATE)) {
-				manifest.write(stream);
-			}
-		}
-	}
-
-	protected boolean isPatchedJarUpToDate(File jar) throws IOException {
-		if (!jar.exists()) return false;
-
-		byte[] manifestBytes = ZipUtils.unpackNullable(jar.toPath(), "META-INF/MANIFEST.MF");
-
-		if (manifestBytes == null) {
-			return false;
+		for (File projectAt : projectAts) {
+			currentBytes.add(com.google.common.io.Files.asByteSource(projectAt));
 		}
 
-		Manifest manifest = new Manifest(new ByteArrayInputStream(manifestBytes));
-		Attributes attributes = manifest.getMainAttributes();
-		String value = attributes.getValue(LOOM_PATCH_VERSION_KEY);
-
-		if (Objects.equals(value, CURRENT_LOOM_PATCH_VERSION)) {
-			return true;
-		} else {
-			getProject().getLogger().lifecycle(":forge patched jars not up to date. current version: " + value);
-			return false;
-		}
-	}
-
-	public boolean usesProjectCache() {
-		return !projectAts.isEmpty();
-	}
-
-	public File getMergedJar() {
-		return minecraftMergedPatchedAtJar;
-	}
-
-	public File getForgeMergedJar() {
-		return forgeMergedJar;
-	}
-
-	public boolean isAtDirty() {
-		return atDirty || filesDirty;
+		return ByteSource.concat(currentBytes).hash(Hashing.sha256()).asBytes();
 	}
 
 	public void cleanAllCache() {
@@ -288,107 +218,85 @@ public abstract class MinecraftPatchedProvider extends DependencyProvider {
 		return new File[] {minecraftMergedPatchedSrgAtJar, minecraftMergedPatchedAtJar};
 	}
 
+	@Override
+	public void provide(DependencyInfo dependency, Consumer<Runnable> postPopulationScheduler) throws Exception {
+		initFiles();
+		testCleanAllCaches();
+		beginTransform();
+	}
+
+	protected abstract void beginTransform() throws Exception;
+
+	public void testCleanAllCaches() throws IOException {
+		if (isRefreshDeps() || Stream.of(getGlobalCaches()).anyMatch(((Predicate<File>) File::exists).negate()) || !isPatchedJarUpToDate(minecraftMergedPatchedAtJar)) {
+			cleanAllCache();
+		} else if (atDirty || Stream.of(getProjectCache()).anyMatch(((Predicate<File>) File::exists).negate())) {
+			cleanProjectCache();
+		}
+	}
+
+	public abstract void endTransform() throws Exception;
+
+	protected void fillClientExtraJar() throws IOException {
+		Files.deleteIfExists(minecraftClientExtra.toPath());
+		FileSystemUtil.getJarFileSystem(minecraftClientExtra, true).close();
+
+		copyNonClassFiles(getExtension().getMinecraftProvider().minecraftClientJar, minecraftClientExtra);
+	}
+
 	private void writeAtHash() throws IOException {
 		try (FileOutputStream out = new FileOutputStream(projectAtHash)) {
 			out.write(getProjectAtsHash());
 		}
 	}
 
-	private byte[] getProjectAtsHash() throws IOException {
-		if (projectAts.isEmpty()) return ByteSource.empty().hash(Hashing.sha256()).asBytes();
-		List<ByteSource> currentBytes = new ArrayList<>();
+	protected TinyRemapper buildRemapper(Path input, String from, String to) throws IOException {
+		Path[] libraries = TinyRemapperHelper.getMinecraftDependencies(getProject());
+		MemoryMappingTree mappingsWithSrg = getExtension().getMappingsProvider().getMappingsWithSrg();
 
-		for (File projectAt : projectAts) {
-			currentBytes.add(com.google.common.io.Files.asByteSource(projectAt));
+		TinyRemapper remapper = TinyRemapper.newRemapper().logger(getProject().getLogger()::lifecycle).logUnknownInvokeDynamic(false).withMappings(TinyRemapperHelper.create(mappingsWithSrg, from, to, true)).withMappings(InnerClassRemapper.of(InnerClassRemapper.readClassNames(input), mappingsWithSrg, from, to)).renameInvalidLocals(true).rebuildSourceFilenames(true).fixPackageAccess(true).build();
+
+		if (getProject().getGradle().getStartParameter().getLogLevel().compareTo(LogLevel.LIFECYCLE) < 0) {
+			MappingsProviderVerbose.saveFile(remapper);
 		}
 
-		return ByteSource.concat(currentBytes).hash(Hashing.sha256()).asBytes();
+		remapper.readClassPath(libraries);
+		remapper.prepareClasses();
+		return remapper;
 	}
 
-	private void walkFileSystems(File source, File target, Predicate<Path> filter, Function<FileSystem, Iterable<Path>> toWalk, FsPathConsumer action)
-					throws IOException {
-		try (FileSystemUtil.Delegate sourceFs = FileSystemUtil.getJarFileSystem(source, false); FileSystemUtil.Delegate targetFs = FileSystemUtil.getJarFileSystem(target, false)) {
-			for (Path sourceDir : toWalk.apply(sourceFs.get())) {
-				Path dir = sourceDir.toAbsolutePath();
-				if (!Files.exists(dir)) continue;
-				Files.walk(dir).filter(Files::isRegularFile).filter(filter).forEach(it -> {
-					boolean root = dir.getParent() == null;
+	protected void fixParameterAnnotation(File jarFile) throws Exception {
+		getProject().getLogger().info(":fixing parameter annotations for " + jarFile.getAbsolutePath());
+		Stopwatch stopwatch = Stopwatch.createStarted();
 
-					try {
-						Path relativeSource = root ? it : dir.relativize(it);
-						Path targetPath = targetFs.get().getPath(relativeSource.toString());
-						action.accept(sourceFs.get(), targetFs.get(), it, targetPath);
-					} catch (IOException e) {
-						throw new UncheckedIOException(e);
+		try (FileSystem fs = FileSystems.newFileSystem(new URI("jar:" + jarFile.toURI()), ImmutableMap.of("create", false))) {
+			ThreadingUtils.TaskCompleter completer = ThreadingUtils.taskCompleter();
+
+			for (Path file : (Iterable<? extends Path>) Files.walk(fs.getPath("/"))::iterator) {
+				if (!file.toString().endsWith(".class")) continue;
+
+				completer.add(() -> {
+					byte[] bytes = Files.readAllBytes(file);
+					ClassReader reader = new ClassReader(bytes);
+					ClassNode node = new ClassNode();
+					ClassVisitor visitor = new ParameterAnnotationFixer(node, null);
+					reader.accept(visitor, 0);
+
+					ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+					node.accept(writer);
+					byte[] out = writer.toByteArray();
+
+					if (!Arrays.equals(bytes, out)) {
+						Files.delete(file);
+						Files.write(file, out);
 					}
 				});
 			}
-		}
-	}
 
-	protected abstract void patchJars(File clean, File output, Path patches, String side) throws IOException;
-
-	protected abstract void mergeJars(Logger logger) throws Exception;
-
-	protected void copyMissingClasses(File source, File target) throws IOException {
-		walkFileSystems(source, target, it -> it.toString().endsWith(".class"), (sourceFs, targetFs, sourcePath, targetPath) -> {
-			if (Files.exists(targetPath)) return;
-			Path parent = targetPath.getParent();
-
-			if (parent != null) {
-				Files.createDirectories(parent);
-			}
-
-			Files.copy(sourcePath, targetPath);
-		});
-	}
-
-	protected void copyNonClassFiles(File source, File target) throws IOException {
-		Predicate<Path> filter = getExtension().isForgeAndOfficial() ? file -> {
-			String s = file.toString();
-			return !s.endsWith(".class");
-		} : file -> {
-			String s = file.toString();
-			return !s.endsWith(".class") || (s.startsWith("META-INF") && !s.startsWith("META-INF/services"));
-		};
-
-		walkFileSystems(source, target, filter, this::copyReplacing);
-	}
-
-	private void walkFileSystems(File source, File target, Predicate<Path> filter, FsPathConsumer action) throws IOException {
-		walkFileSystems(source, target, filter, FileSystem::getRootDirectories, action);
-	}
-
-	private void copyAll(File source, File target) throws IOException {
-		walkFileSystems(source, target, it -> true, this::copyReplacing);
-	}
-
-	private void copyReplacing(FileSystem sourceFs, FileSystem targetFs, Path sourcePath, Path targetPath) throws IOException {
-		Path parent = targetPath.getParent();
-
-		if (parent != null) {
-			Files.createDirectories(parent);
+			completer.complete();
 		}
 
-		Files.copy(sourcePath, targetPath, StandardCopyOption.REPLACE_EXISTING);
-	}
-
-	protected void copyUserdevFiles(File source, File target) throws IOException {
-		// Removes the Forge name mapping service definition so that our own is used.
-		// If there are multiple name mapping services with the same "understanding" pair
-		// (source -> target namespace pair), modlauncher throws a fit and will crash.
-		// To use our YarnNamingService instead of MCPNamingService, we have to remove this file.
-		Predicate<Path> filter = file -> !file.toString().endsWith(".class") && !file.toString().equals(NAME_MAPPING_SERVICE_PATH);
-
-		walkFileSystems(source, target, filter, fs -> Collections.singleton(fs.getPath("inject")), (sourceFs, targetFs, sourcePath, targetPath) -> {
-			Path parent = targetPath.getParent();
-
-			if (parent != null) {
-				Files.createDirectories(parent);
-			}
-
-			Files.copy(sourcePath, targetPath);
-		});
+		getProject().getLogger().info(":fixing parameter annotations for " + jarFile.getAbsolutePath() + " in " + stopwatch);
 	}
 
 	protected void deleteParameterNames(File jarFile) throws Exception {
@@ -445,38 +353,33 @@ public abstract class MinecraftPatchedProvider extends DependencyProvider {
 		getProject().getLogger().info(":deleting parameter names for " + jarFile.getAbsolutePath() + " in " + stopwatch);
 	}
 
-	protected void fixParameterAnnotation(File jarFile) throws Exception {
-		getProject().getLogger().info(":fixing parameter annotations for " + jarFile.getAbsolutePath());
-		Stopwatch stopwatch = Stopwatch.createStarted();
+	protected File getForgeJar() {
+		return getExtension().getForgeUniversalProvider().getForge();
+	}
 
-		try (FileSystem fs = FileSystems.newFileSystem(new URI("jar:" + jarFile.toURI()), ImmutableMap.of("create", false))) {
-			ThreadingUtils.TaskCompleter completer = ThreadingUtils.taskCompleter();
+	protected File getForgeUserdevJar() {
+		return getExtension().getForgeUserdevProvider().getUserdevJar();
+	}
 
-			for (Path file : (Iterable<? extends Path>) Files.walk(fs.getPath("/"))::iterator) {
-				if (!file.toString().endsWith(".class")) continue;
+	protected boolean isPatchedJarUpToDate(File jar) throws IOException {
+		if (!jar.exists()) return false;
 
-				completer.add(() -> {
-					byte[] bytes = Files.readAllBytes(file);
-					ClassReader reader = new ClassReader(bytes);
-					ClassNode node = new ClassNode();
-					ClassVisitor visitor = new ParameterAnnotationFixer(node, null);
-					reader.accept(visitor, 0);
+		byte[] manifestBytes = ZipUtils.unpackNullable(jar.toPath(), "META-INF/MANIFEST.MF");
 
-					ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
-					node.accept(writer);
-					byte[] out = writer.toByteArray();
-
-					if (!Arrays.equals(bytes, out)) {
-						Files.delete(file);
-						Files.write(file, out);
-					}
-				});
-			}
-
-			completer.complete();
+		if (manifestBytes == null) {
+			return false;
 		}
 
-		getProject().getLogger().info(":fixing parameter annotations for " + jarFile.getAbsolutePath() + " in " + stopwatch);
+		Manifest manifest = new Manifest(new ByteArrayInputStream(manifestBytes));
+		Attributes attributes = manifest.getMainAttributes();
+		String value = attributes.getValue(LOOM_PATCH_VERSION_KEY);
+
+		if (Objects.equals(value, CURRENT_LOOM_PATCH_VERSION)) {
+			return true;
+		} else {
+			getProject().getLogger().lifecycle(":forge patched jars not up to date. current version: " + value);
+			return false;
+		}
 	}
 
 	protected void accessTransformForge(Logger logger) throws Exception {
@@ -539,29 +442,6 @@ public abstract class MinecraftPatchedProvider extends DependencyProvider {
 		logger.lifecycle(":access transformed minecraft in " + stopwatch.stop());
 	}
 
-	protected File getForgeJar() {
-		return getExtension().getForgeUniversalProvider().getForge();
-	}
-
-	protected File getForgeUserdevJar() {
-		return getExtension().getForgeUserdevProvider().getUserdevJar();
-	}
-
-	protected TinyRemapper buildRemapper(Path input, String from, String to) throws IOException {
-		Path[] libraries = TinyRemapperHelper.getMinecraftDependencies(getProject());
-		MemoryMappingTree mappingsWithSrg = getExtension().getMappingsProvider().getMappingsWithSrg();
-
-		TinyRemapper remapper = TinyRemapper.newRemapper().logger(getProject().getLogger()::lifecycle).logUnknownInvokeDynamic(false).withMappings(TinyRemapperHelper.create(mappingsWithSrg, from, to, true)).withMappings(InnerClassRemapper.of(InnerClassRemapper.readClassNames(input), mappingsWithSrg, from, to)).renameInvalidLocals(true).rebuildSourceFilenames(true).fixPackageAccess(true).build();
-
-		if (getProject().getGradle().getStartParameter().getLogLevel().compareTo(LogLevel.LIFECYCLE) < 0) {
-			MappingsProviderVerbose.saveFile(remapper);
-		}
-
-		remapper.readClassPath(libraries);
-		remapper.prepareClasses();
-		return remapper;
-	}
-
 	protected void remapPatchedJar(Logger logger) throws Exception {
 		getProject().getLogger().lifecycle(":remapping minecraft (TinyRemapper, srg -> official)");
 		Path mcInput = minecraftMergedPatchedSrgAtJar.toPath();
@@ -600,10 +480,130 @@ public abstract class MinecraftPatchedProvider extends DependencyProvider {
 		applyLoomPatchVersion(mcOutput);
 	}
 
-	protected void fillClientExtraJar() throws IOException {
-		Files.deleteIfExists(minecraftClientExtra.toPath());
-		FileSystemUtil.getJarFileSystem(minecraftClientExtra, true).close();
+	protected abstract void patchJars(File clean, File output, Path patches, String side) throws IOException;
 
-		copyNonClassFiles(getExtension().getMinecraftProvider().minecraftClientJar, minecraftClientExtra);
+	protected abstract void mergeJars(Logger logger) throws Exception;
+
+	private void walkFileSystems(File source, File target, Predicate<Path> filter, Function<FileSystem, Iterable<Path>> toWalk, FsPathConsumer action)
+					throws IOException {
+		try (FileSystemUtil.Delegate sourceFs = FileSystemUtil.getJarFileSystem(source, false); FileSystemUtil.Delegate targetFs = FileSystemUtil.getJarFileSystem(target, false)) {
+			for (Path sourceDir : toWalk.apply(sourceFs.get())) {
+				Path dir = sourceDir.toAbsolutePath();
+				if (!Files.exists(dir)) continue;
+				Files.walk(dir).filter(Files::isRegularFile).filter(filter).forEach(it -> {
+					boolean root = dir.getParent() == null;
+
+					try {
+						Path relativeSource = root ? it : dir.relativize(it);
+						Path targetPath = targetFs.get().getPath(relativeSource.toString());
+						action.accept(sourceFs.get(), targetFs.get(), it, targetPath);
+					} catch (IOException e) {
+						throw new UncheckedIOException(e);
+					}
+				});
+			}
+		}
+	}
+
+	private void walkFileSystems(File source, File target, Predicate<Path> filter, FsPathConsumer action) throws IOException {
+		walkFileSystems(source, target, filter, FileSystem::getRootDirectories, action);
+	}
+
+	private void copyAll(File source, File target) throws IOException {
+		walkFileSystems(source, target, it -> true, this::copyReplacing);
+	}
+
+	protected void copyMissingClasses(File source, File target) throws IOException {
+		walkFileSystems(source, target, it -> it.toString().endsWith(".class"), (sourceFs, targetFs, sourcePath, targetPath) -> {
+			if (Files.exists(targetPath)) return;
+			Path parent = targetPath.getParent();
+
+			if (parent != null) {
+				Files.createDirectories(parent);
+			}
+
+			Files.copy(sourcePath, targetPath);
+		});
+	}
+
+	protected void copyNonClassFiles(File source, File target) throws IOException {
+		Predicate<Path> filter = getExtension().isForgeAndOfficial() ? file -> {
+			String s = file.toString();
+			return !s.endsWith(".class");
+		} : file -> {
+			String s = file.toString();
+			return !s.endsWith(".class") || (s.startsWith("META-INF") && !s.startsWith("META-INF/services"));
+		};
+
+		walkFileSystems(source, target, filter, this::copyReplacing);
+	}
+
+	private void copyReplacing(FileSystem sourceFs, FileSystem targetFs, Path sourcePath, Path targetPath) throws IOException {
+		Path parent = targetPath.getParent();
+
+		if (parent != null) {
+			Files.createDirectories(parent);
+		}
+
+		Files.copy(sourcePath, targetPath, StandardCopyOption.REPLACE_EXISTING);
+	}
+
+	protected void copyUserdevFiles(File source, File target) throws IOException {
+		// Removes the Forge name mapping service definition so that our own is used.
+		// If there are multiple name mapping services with the same "understanding" pair
+		// (source -> target namespace pair), modlauncher throws a fit and will crash.
+		// To use our YarnNamingService instead of MCPNamingService, we have to remove this file.
+		Predicate<Path> filter = file -> !file.toString().endsWith(".class") && !file.toString().equals(NAME_MAPPING_SERVICE_PATH);
+
+		walkFileSystems(source, target, filter, fs -> Collections.singleton(fs.getPath("inject")), (sourceFs, targetFs, sourcePath, targetPath) -> {
+			Path parent = targetPath.getParent();
+
+			if (parent != null) {
+				Files.createDirectories(parent);
+			}
+
+			Files.copy(sourcePath, targetPath);
+		});
+	}
+
+	public void applyLoomPatchVersion(Path target) throws IOException {
+		try (FileSystemUtil.Delegate delegate = FileSystemUtil.getJarFileSystem(target, false)) {
+			Path manifestPath = delegate.get().getPath("META-INF/MANIFEST.MF");
+
+			Preconditions.checkArgument(Files.exists(manifestPath), "META-INF/MANIFEST.MF does not exist in patched srg jar!");
+			Manifest manifest = new Manifest();
+
+			if (Files.exists(manifestPath)) {
+				try (InputStream stream = Files.newInputStream(manifestPath)) {
+					manifest.read(stream);
+					manifest.getMainAttributes().putValue(LOOM_PATCH_VERSION_KEY, CURRENT_LOOM_PATCH_VERSION);
+				}
+			}
+
+			try (OutputStream stream = Files.newOutputStream(manifestPath, StandardOpenOption.CREATE)) {
+				manifest.write(stream);
+			}
+		}
+	}
+
+	public File getMergedJar() {
+		return minecraftMergedPatchedAtJar;
+	}
+
+	public File getForgeMergedJar() {
+		return forgeMergedJar;
+	}
+
+	public boolean usesProjectCache() {
+		return !projectAts.isEmpty();
+	}
+
+	public boolean isAtDirty() {
+		return atDirty || filesDirty;
+	}
+
+	@Override
+	public String getTargetConfig() {
+		return Constants.Configurations.MINECRAFT;
 	}
 }
