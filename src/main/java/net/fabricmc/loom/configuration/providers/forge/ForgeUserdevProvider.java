@@ -265,15 +265,22 @@ public class ForgeUserdevProvider extends DependencyProvider {
 
 			// TODO: Look into ways to not hardcode
 			if (key.equals("runtime_classpath")) {
-				string = runtimeClasspath().stream().map(File::getAbsolutePath).collect(Collectors.joining(File.pathSeparator));
+				string = runtimeClasspath().stream()
+						.map(File::getAbsolutePath)
+						.collect(Collectors.joining(File.pathSeparator));
 			} else if (key.equals("minecraft_classpath")) {
-				string = minecraftClasspath().stream().map(File::getAbsolutePath).collect(Collectors.joining(File.pathSeparator));
+				string = minecraftClasspath().stream()
+						.map(File::getAbsolutePath)
+						.collect(Collectors.joining(File.pathSeparator));
 			} else if (key.equals("runtime_classpath_file")) {
 				Path path = getDirectories().getProjectPersistentCache().toPath().resolve("forge_runtime_classpath.txt");
 
 				postPopulationScheduler.accept(() -> {
 					try {
-						Files.writeString(path, runtimeClasspath().stream().map(File::getAbsolutePath).collect(Collectors.joining("\n")), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+						Files.writeString(path, runtimeClasspath().stream()
+										.map(File::getAbsolutePath)
+										.collect(Collectors.joining("\n")),
+								StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 					} catch (IOException e) {
 						throw new RuntimeException(e);
 					}
@@ -285,7 +292,10 @@ public class ForgeUserdevProvider extends DependencyProvider {
 
 				postPopulationScheduler.accept(() -> {
 					try {
-						Files.writeString(path, minecraftClasspath().stream().map(File::getAbsolutePath).collect(Collectors.joining("\n")), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+						Files.writeString(path, minecraftClasspath().stream()
+										.map(File::getAbsolutePath)
+										.collect(Collectors.joining("\n")),
+								StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 					} catch (IOException e) {
 						throw new RuntimeException(e);
 					}
@@ -304,7 +314,10 @@ public class ForgeUserdevProvider extends DependencyProvider {
 				for (ForgeLocalMod localMod : getExtension().getForge().getLocalMods()) {
 					String sourceSetName = localMod.getName();
 
-					localMod.getSourceSets().flatMap(sourceSet -> Stream.concat(Stream.of(sourceSet.getOutput().getResourcesDir()), sourceSet.getOutput().getClassesDirs().getFiles().stream())).map(File::getAbsolutePath).distinct().map(s -> sourceSetName + "%%" + s).collect(Collectors.toCollection(() -> modClasses));
+					localMod.getSourceSets().flatMap(sourceSet -> Stream.concat(
+							Stream.of(sourceSet.getOutput().getResourcesDir()),
+							sourceSet.getOutput().getClassesDirs().getFiles().stream())
+					).map(File::getAbsolutePath).distinct().map(s -> sourceSetName + "%%" + s).collect(Collectors.toCollection(() -> modClasses));
 				}
 
 				string = String.join(File.pathSeparator, modClasses);
@@ -314,13 +327,18 @@ public class ForgeUserdevProvider extends DependencyProvider {
 				JsonElement element = json.get(key);
 
 				if (element.isJsonArray()) {
-					string = StreamSupport.stream(element.getAsJsonArray().spliterator(), false).map(JsonElement::getAsString).flatMap(str -> {
-						if (str.contains(":")) {
-							return DependencyDownloader.download(getProject(), str, false, false).getFiles().stream().map(File::getAbsolutePath).filter(dep -> !dep.contains("bootstraplauncher")); // TODO: Hack
-						}
+					string = StreamSupport.stream(element.getAsJsonArray().spliterator(), false)
+							.map(JsonElement::getAsString)
+							.flatMap(str -> {
+								if (str.contains(":")) {
+									return DependencyDownloader.download(getProject(), str, false, false).getFiles().stream()
+											.map(File::getAbsolutePath)
+											.filter(dep -> !dep.contains("bootstraplauncher")); // TODO: Hack
+								}
 
-						return Stream.of(str);
-					}).collect(Collectors.joining(File.pathSeparator));
+								return Stream.of(str);
+							})
+							.collect(Collectors.joining(File.pathSeparator));
 				} else {
 					string = element.toString();
 				}

@@ -181,8 +181,8 @@ public class McpConfigProvider extends DependencyProvider {
 							.getSingleFile();
 			this.classpath = DependencyDownloader.download(project, this.name, true, true);
 			this.args = StreamSupport.stream(json.getAsJsonArray("args").spliterator(), false)
-							.map(JsonElement::getAsString)
-							.collect(Collectors.toList());
+					.map(JsonElement::getAsString)
+					.collect(Collectors.toList());
 			for (int i = 1; i < this.args.size(); i++) {
 				if (this.args.get(i).equals("{libraries}")) {
 					this.args.remove(i);

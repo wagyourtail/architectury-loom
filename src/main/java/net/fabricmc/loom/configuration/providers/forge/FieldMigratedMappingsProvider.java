@@ -251,7 +251,7 @@ public class FieldMigratedMappingsProvider extends MappingsProviderImpl {
 						String fieldIntermediary = fieldDef.getName("intermediary");
 						String descriptorIntermediary = fieldDef.getDesc("intermediary");
 						String newDescriptorRemapped = DescriptorRemapper.remapDescriptor(newDescriptor,
-										clazz -> srgToIntermediary.getOrDefault(clazz, clazz));
+								clazz -> srgToIntermediary.getOrDefault(clazz, clazz));
 						migratedFields.put(new FieldMember(ownerIntermediary, fieldIntermediary), newDescriptorRemapped);
 						getProject().getLogger().info(ownerIntermediary + "#" + fieldIntermediary + ": " + descriptorIntermediary + " -> " + newDescriptorRemapped);
 					}

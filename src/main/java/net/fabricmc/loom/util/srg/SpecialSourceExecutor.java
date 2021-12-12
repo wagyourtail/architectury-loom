@@ -97,9 +97,9 @@ public class SpecialSourceExecutor {
 	public static Path produceSrgJar(RemapAction remapAction, Project project, String side, Set<File> mcLibs, Path officialJar, Path mappings)
 					throws Exception {
 		Set<String> filter = Files.readAllLines(mappings, StandardCharsets.UTF_8).stream()
-						.filter(s -> !s.startsWith("\t"))
-						.map(s -> s.split(" ")[0] + ".class")
-						.collect(Collectors.toSet());
+				.filter(s -> !s.startsWith("\t"))
+				.map(s -> s.split(" ")[0] + ".class")
+				.collect(Collectors.toSet());
 
 		LoomGradleExtension extension = LoomGradleExtension.get(project.getProject());
 		Path stripped = extension.getFiles().getProjectBuildCache().toPath().resolve(officialJar.getFileName().toString().substring(0, officialJar.getFileName().toString().length() - 4) + "-filtered.jar");
@@ -111,7 +111,6 @@ public class SpecialSourceExecutor {
 		Files.deleteIfExists(output);
 		Stopwatch stopwatch = Stopwatch.createStarted();
 
-		project.getLogger().info(stripped.toString());
 		List<String> args = remapAction.getArgs(stripped, output, mappings, project.files(mcLibs));
 
 		project.getLogger().lifecycle(":remapping minecraft (" + remapAction + ", " + side + ", official -> mojang)");
@@ -126,7 +125,7 @@ public class SpecialSourceExecutor {
 
 			// if running with INFO or DEBUG logging
 			if (project.getGradle().getStartParameter().getShowStacktrace() != ShowStacktrace.INTERNAL_EXCEPTIONS
-			    || project.getGradle().getStartParameter().getLogLevel().compareTo(LogLevel.LIFECYCLE) < 0) {
+					|| project.getGradle().getStartParameter().getLogLevel().compareTo(LogLevel.LIFECYCLE) < 0) {
 				spec.setStandardOutput(System.out);
 				spec.setErrorOutput(System.err);
 			} else {

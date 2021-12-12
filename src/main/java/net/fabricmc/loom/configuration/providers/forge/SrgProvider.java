@@ -225,7 +225,8 @@ public class SrgProvider extends DependencyProvider {
 
 		if (Files.notExists(mojmapTsrg) || LoomGradlePlugin.refreshDeps) {
 			try (BufferedWriter writer = Files.newBufferedWriter(mojmapTsrg, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
-				Tsrg2Utils.writeTsrg(visitor -> visitMojmap(visitor, project), MappingsNamespace.NAMED.toString(), false, writer);
+				Tsrg2Utils.writeTsrg(visitor -> visitMojmap(visitor, project),
+						MappingsNamespace.NAMED.toString(), false, writer);
 			}
 		}
 

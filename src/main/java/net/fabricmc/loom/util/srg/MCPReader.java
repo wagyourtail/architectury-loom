@@ -228,13 +228,13 @@ public class MCPReader {
 
 			for (MappingTree.MethodMapping methodDef : classDef.getMethods()) {
 				tokens.put(MemberToken.ofMethod(ofClass, methodDef.getName(obfIndex), methodDef.getDesc(obfIndex)),
-								methodDef.getName(srgIndex));
+						methodDef.getName(srgIndex));
 			}
 		}
 	}
 
 	private void injectMcp(Path mcpJar, Map<String, String> intermediaryToSrgMap, Map<String, String[]> intermediaryToDocsMap, Map<String, Map<Integer, String>> intermediaryToParamsMap)
-					throws IOException, CsvValidationException {
+			throws IOException, CsvValidationException {
 		Map<String, List<String>> srgToIntermediary = inverseMap(intermediaryToSrgMap);
 		Map<String, List<String>> simpleSrgToIntermediary = new HashMap<>();
 		Pattern methodPattern = Pattern.compile("(func_\\d*)_.*");
@@ -347,10 +347,10 @@ public class MCPReader {
 	}
 
 	private record MemberToken(
-					TokenType type,
-					@Nullable MCPReader.MemberToken owner,
-					String name,
-					@Nullable String descriptor
+			TokenType type,
+			@Nullable MCPReader.MemberToken owner,
+			String name,
+			@Nullable String descriptor
 	) {
 		static MemberToken ofClass(String name) {
 			return new MemberToken(TokenType.CLASS, null, name, null);
