@@ -161,77 +161,79 @@ public class ForgeUserdevProvider extends DependencyProvider {
 					});
 				}
 			}
-		} else {
-			getProject().getLogger().info("FG3+ Userdev");
 
-			addDependency(json.get("mcp").getAsString(), Constants.Configurations.MCP_CONFIG);
-			addDependency(json.get("mcp").getAsString(), Constants.Configurations.SRG);
-			addDependency(json.get("universal").getAsString(), Constants.Configurations.FORGE_UNIVERSAL);
+			return;
+		}
 
-			for (JsonElement lib : json.get("libraries").getAsJsonArray()) {
-				Dependency dep = null;
+		getProject().getLogger().info("FG3+ Userdev");
 
-				if (lib.getAsString().startsWith("org.spongepowered:mixin:")) {
-					if (PropertyUtil.getAndFinalize(getExtension().getForge().getUseCustomMixin())) {
-						if (lib.getAsString().contains("0.8.2")) {
-							dep = addDependency("net.fabricmc:sponge-mixin:0.8.2+build.24", Constants.Configurations.FORGE_DEPENDENCIES);
-						} else {
-							dep = addDependency("dev.architectury:mixin-patched" + lib.getAsString().substring(lib.getAsString().lastIndexOf(":")) + ".+", Constants.Configurations.FORGE_DEPENDENCIES);
-						}
+		addDependency(json.get("mcp").getAsString(), Constants.Configurations.MCP_CONFIG);
+		addDependency(json.get("mcp").getAsString(), Constants.Configurations.SRG);
+		addDependency(json.get("universal").getAsString(), Constants.Configurations.FORGE_UNIVERSAL);
+
+		for (JsonElement lib : json.get("libraries").getAsJsonArray()) {
+			Dependency dep = null;
+
+			if (lib.getAsString().startsWith("org.spongepowered:mixin:")) {
+				if (PropertyUtil.getAndFinalize(getExtension().getForge().getUseCustomMixin())) {
+					if (lib.getAsString().contains("0.8.2")) {
+						dep = addDependency("net.fabricmc:sponge-mixin:0.8.2+build.24", Constants.Configurations.FORGE_DEPENDENCIES);
+					} else {
+						dep = addDependency("dev.architectury:mixin-patched" + lib.getAsString().substring(lib.getAsString().lastIndexOf(":")) + ".+", Constants.Configurations.FORGE_DEPENDENCIES);
 					}
-				}
-
-				if (dep == null) {
-					dep = addDependency(lib.getAsString(), Constants.Configurations.FORGE_DEPENDENCIES);
-				}
-
-				if (lib.getAsString().split(":").length < 4) {
-					((ModuleDependency) dep).attributes(attributes -> {
-						attributes.attribute(transformed, true);
-					});
 				}
 			}
 
-			// TODO: Should I copy the patches from here as well?
-			//       That'd require me to run the "MCP environment" fully up to merging.
-			for (Map.Entry<String, JsonElement> entry : json.getAsJsonObject("runs").entrySet()) {
-				LaunchProviderSettings launchSettings = getExtension().getLaunchConfigs().findByName(entry.getKey());
-				RunConfigSettings settings = getExtension().getRunConfigs().findByName(entry.getKey());
-				JsonObject value = entry.getValue().getAsJsonObject();
+			if (dep == null) {
+				dep = addDependency(lib.getAsString(), Constants.Configurations.FORGE_DEPENDENCIES);
+			}
 
-				if (launchSettings != null) {
-					launchSettings.evaluateLater(() -> {
-						if (value.has("args")) {
-							launchSettings.arg(StreamSupport.stream(value.getAsJsonArray("args").spliterator(), false).map(JsonElement::getAsString).map(this::processTemplates).collect(Collectors.toList()));
+			if (lib.getAsString().split(":").length < 4) {
+				((ModuleDependency) dep).attributes(attributes -> {
+					attributes.attribute(transformed, true);
+				});
+			}
+		}
+
+		// TODO: Should I copy the patches from here as well?
+		//       That'd require me to run the "MCP environment" fully up to merging.
+		for (Map.Entry<String, JsonElement> entry : json.getAsJsonObject("runs").entrySet()) {
+			LaunchProviderSettings launchSettings = getExtension().getLaunchConfigs().findByName(entry.getKey());
+			RunConfigSettings settings = getExtension().getRunConfigs().findByName(entry.getKey());
+			JsonObject value = entry.getValue().getAsJsonObject();
+
+			if (launchSettings != null) {
+				launchSettings.evaluateLater(() -> {
+					if (value.has("args")) {
+						launchSettings.arg(StreamSupport.stream(value.getAsJsonArray("args").spliterator(), false).map(JsonElement::getAsString).map(this::processTemplates).collect(Collectors.toList()));
+					}
+
+					if (value.has("props")) {
+						for (Map.Entry<String, JsonElement> props : value.getAsJsonObject("props").entrySet()) {
+							String string = processTemplates(props.getValue().getAsString());
+
+							launchSettings.property(props.getKey(), string);
 						}
+					}
+				});
+			}
 
-						if (value.has("props")) {
-							for (Map.Entry<String, JsonElement> props : value.getAsJsonObject("props").entrySet()) {
-								String string = processTemplates(props.getValue().getAsString());
+			if (settings != null) {
+				settings.evaluateLater(() -> {
+					settings.defaultMainClass(value.getAsJsonPrimitive("main").getAsString());
 
-								launchSettings.property(props.getKey(), string);
-							}
+					if (value.has("jvmArgs")) {
+						settings.vmArgs(StreamSupport.stream(value.getAsJsonArray("jvmArgs").spliterator(), false).map(JsonElement::getAsString).map(this::processTemplates).collect(Collectors.toList()));
+					}
+
+					if (value.has("env")) {
+						for (Map.Entry<String, JsonElement> env : value.getAsJsonObject("env").entrySet()) {
+							String string = processTemplates(env.getValue().getAsString());
+
+							settings.envVariables.put(env.getKey(), string);
 						}
-					});
-				}
-
-				if (settings != null) {
-					settings.evaluateLater(() -> {
-						settings.defaultMainClass(value.getAsJsonPrimitive("main").getAsString());
-
-						if (value.has("jvmArgs")) {
-							settings.vmArgs(StreamSupport.stream(value.getAsJsonArray("jvmArgs").spliterator(), false).map(JsonElement::getAsString).map(this::processTemplates).collect(Collectors.toList()));
-						}
-
-						if (value.has("env")) {
-							for (Map.Entry<String, JsonElement> env : value.getAsJsonObject("env").entrySet()) {
-								String string = processTemplates(env.getValue().getAsString());
-
-								settings.envVariables.put(env.getKey(), string);
-							}
-						}
-					});
-				}
+					}
+				});
 			}
 		}
 	}
