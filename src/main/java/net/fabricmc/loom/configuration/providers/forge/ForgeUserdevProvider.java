@@ -60,10 +60,10 @@ import org.gradle.api.attributes.Attribute;
 import org.gradle.api.file.FileSystemLocation;
 import org.gradle.api.provider.Provider;
 
-import net.fabricmc.loom.api.ForgeLocalMod;
 import net.fabricmc.loom.configuration.DependencyProvider;
 import net.fabricmc.loom.configuration.ide.RunConfigSettings;
 import net.fabricmc.loom.configuration.launch.LaunchProviderSettings;
+import net.fabricmc.loom.api.ForgeLocalMod;
 import net.fabricmc.loom.util.Constants;
 import net.fabricmc.loom.util.DependencyDownloader;
 import net.fabricmc.loom.util.FileSystemUtil;
@@ -72,7 +72,6 @@ import net.fabricmc.loom.util.PropertyUtil;
 public class ForgeUserdevProvider extends DependencyProvider {
 	private File userdevJar;
 	private JsonObject json;
-
 	private Consumer<Runnable> postPopulationScheduler;
 
 	public ForgeUserdevProvider(Project project) {

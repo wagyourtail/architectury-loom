@@ -178,7 +178,7 @@ public class McpConfigProvider extends DependencyProvider {
 			this.project = project;
 			this.name = json.get("version").getAsString();
 			this.mainClasspath = DependencyDownloader.download(project, this.name, false, true)
-							.getSingleFile();
+					.getSingleFile();
 			this.classpath = DependencyDownloader.download(project, this.name, true, true);
 			this.args = StreamSupport.stream(json.getAsJsonArray("args").spliterator(), false)
 					.map(JsonElement::getAsString)

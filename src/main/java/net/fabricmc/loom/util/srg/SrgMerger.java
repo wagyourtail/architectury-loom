@@ -350,8 +350,8 @@ public final class SrgMerger {
 			MappingTree.MethodArgMapping srgArg = srgMethod != null ? srgMethod.getArg(arg.getArgPosition(), arg.getLvIndex(), arg.getName("official")) : null;
 			String srgName = srgArg != null ? srgArg.getDstName(0) : null;
 			List<String> argNames = CollectionUtil.map(
-							output.getDstNamespaces(),
-							namespace -> "srg".equals(namespace) ? srgName : arg.getName(namespace)
+					output.getDstNamespaces(),
+					namespace -> "srg".equals(namespace) ? srgName : arg.getName(namespace)
 			);
 
 			flatOutput.visitMethodArg(obfClassName, actualMethod.getName("official"), actualMethod.getDesc("official"), arg.getArgPosition(), arg.getLvIndex(), arg.getName("official"), argNames.toArray(new String[0]));
@@ -365,8 +365,8 @@ public final class SrgMerger {
 			MappingTree.MethodVarMapping srgVar = srgMethod != null ? srgMethod.getVar(var.getLvtRowIndex(), var.getLvIndex(), var.getStartOpIdx(), var.getName("official")) : null;
 			String srgName = srgVar != null ? srgVar.getDstName(0) : null;
 			List<String> varNames = CollectionUtil.map(
-							output.getDstNamespaces(),
-							namespace -> "srg".equals(namespace) ? srgName : var.getName(namespace)
+					output.getDstNamespaces(),
+					namespace -> "srg".equals(namespace) ? srgName : var.getName(namespace)
 			);
 
 			flatOutput.visitMethodVar(obfClassName, actualMethod.getName("official"), actualMethod.getDesc("official"), var.getLvtRowIndex(), var.getLvIndex(), var.getStartOpIdx(), var.getName("official"), varNames.toArray(new String[0]));

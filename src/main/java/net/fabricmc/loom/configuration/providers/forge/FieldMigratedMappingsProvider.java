@@ -215,8 +215,8 @@ public class FieldMigratedMappingsProvider extends MappingsProviderImpl {
 						completer.add(() -> {
 							byte[] bytes = Files.readAllBytes(fsPath);
 							new ClassReader(bytes).accept(
-											visitor,
-											ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES
+									visitor,
+									ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES
 							);
 						});
 					}

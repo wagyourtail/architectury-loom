@@ -117,7 +117,17 @@ public class SrgProvider extends DependencyProvider {
 
 				Files.deleteIfExists(mergedMojangRaw);
 				Files.deleteIfExists(mergedMojang);
-				net.minecraftforge.installertools.ConsoleTool.main(new String[] {"--task", "MERGE_MAPPING", "--left", getSrg().toAbsolutePath().toString(), "--right", getMojmapTsrg2(getProject(), getExtension()).toAbsolutePath().toString(), "--classes", "--output", mergedMojangRaw.toAbsolutePath().toString()});
+				net.minecraftforge.installertools.ConsoleTool.main(new String[] {
+						"--task",
+						"MERGE_MAPPING",
+						"--left",
+						getSrg().toAbsolutePath().toString(),
+						"--right",
+						getMojmapTsrg2(getProject(), getExtension()).toAbsolutePath().toString(),
+						"--classes",
+						"--output",
+						mergedMojangRaw.toAbsolutePath().toString()
+				});
 
 				MemoryMappingTree tree = new MemoryMappingTree();
 				MappingReader.read(new StringReader(FileUtils.readFileToString(mergedMojangRaw.toFile(), StandardCharsets.UTF_8)), new FieldDescWrappingVisitor(tree));
@@ -177,7 +187,8 @@ public class SrgProvider extends DependencyProvider {
 			return super.visitField(srcName, srcDesc);
 		}
 
-		private record FieldKey(String owner, String name) {}
+		private record FieldKey(String owner, String name) {
+		}
 	}
 
 	private void init(String version) {
