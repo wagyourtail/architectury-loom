@@ -47,7 +47,9 @@ import com.google.common.collect.Table;
 import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import dev.architectury.refmapremapper.utils.DescriptorRemapper;
+import net.fabricmc.loom.configuration.providers.forge.fg3.MinecraftPatchedProviderFG3;
 import org.gradle.api.Project;
+import org.gradle.internal.normalization.java.impl.FieldMember;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.FieldVisitor;
@@ -203,20 +205,25 @@ public class FieldMigratedMappingsProvider extends MappingsProviderImpl {
 
 		Visitor visitor = new Visitor(Opcodes.ASM9);
 
-		for (MinecraftPatchedProvider.Environment environment : MinecraftPatchedProvider.Environment.values()) {
-			File patchedSrgJar = environment.patchedSrgJar.apply(extension.getMappingsProvider().patchedProvider);
-			FileSystemUtil.Delegate system = FileSystemUtil.getJarFileSystem(patchedSrgJar, false);
-			completer.onComplete(value -> system.close());
+		if (extension.getMappingsProvider().patchedProvider instanceof MinecraftPatchedProviderFG3 pp3) {
+			for (MinecraftPatchedProviderFG3.Environment environment : MinecraftPatchedProviderFG3.Environment.values()) {
+				File patchedSrgJar = environment.patchedSrgJar.apply(pp3);
+				FileSystemUtil.Delegate system = FileSystemUtil.getJarFileSystem(patchedSrgJar, false);
+				completer.onComplete(value -> system.close());
 
-			for (Path fsPath : (Iterable<? extends Path>) Files.walk(system.get().getPath("/"))::iterator) {
-				if (Files.isRegularFile(fsPath) && fsPath.toString().endsWith(".class")) {
-					completer.add(() -> {
-						byte[] bytes = Files.readAllBytes(fsPath);
-						new ClassReader(bytes).accept(visitor, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
-					});
+				for (Path fsPath : (Iterable<? extends Path>) Files.walk(system.get().getPath("/"))::iterator) {
+					if (Files.isRegularFile(fsPath) && fsPath.toString().endsWith(".class")) {
+						completer.add(() -> {
+							byte[] bytes = Files.readAllBytes(fsPath);
+							new ClassReader(bytes).accept(
+								visitor,
+								ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES
+							);
+						});
+					}
 				}
 			}
-		}
+		} //TODO: DOES FG2 NEED THIS????
 
 		completer.complete();
 		Map<FieldMember, String> migratedFields = new HashMap<>();

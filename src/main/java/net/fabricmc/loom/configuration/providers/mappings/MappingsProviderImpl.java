@@ -49,6 +49,8 @@ import java.util.regex.Pattern;
 import com.google.common.base.Stopwatch;
 import com.google.common.net.UrlEscapers;
 import com.google.gson.JsonObject;
+import net.fabricmc.loom.configuration.providers.forge.MinecraftPatchedProvider;
+import net.fabricmc.loom.configuration.providers.forge.fg2.MinecraftPatchedProviderFG2;
 import org.apache.tools.ant.util.StringUtils;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
@@ -64,7 +66,7 @@ import net.fabricmc.loom.configuration.accesswidener.TransitiveAccessWidenerJarP
 import net.fabricmc.loom.configuration.processors.JarProcessorManager;
 import net.fabricmc.loom.configuration.processors.MinecraftProcessedProvider;
 import net.fabricmc.loom.configuration.providers.MinecraftProviderImpl;
-import net.fabricmc.loom.configuration.providers.forge.MinecraftPatchedProvider;
+import net.fabricmc.loom.configuration.providers.forge.fg3.MinecraftPatchedProviderFG3;
 import net.fabricmc.loom.configuration.providers.forge.SrgProvider;
 import net.fabricmc.loom.configuration.providers.minecraft.MinecraftMappedProvider;
 import net.fabricmc.loom.util.Constants;
@@ -147,8 +149,13 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 		}
 
 		if (getExtension().isForge()) {
-			patchedProvider = new MinecraftPatchedProvider(getProject());
-			patchedProvider.provide(dependency, postPopulationScheduler);
+			if (getExtension().getMcpConfigProvider().isFG2()) {
+				patchedProvider = new MinecraftPatchedProviderFG2(getProject());
+				patchedProvider.provide(dependency, postPopulationScheduler);
+			} else {
+				patchedProvider = new MinecraftPatchedProviderFG3(getProject());
+				patchedProvider.provide(dependency, postPopulationScheduler);
+			}
 		}
 
 		mappingTree = readMappings(tinyMappings);
@@ -219,7 +226,7 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 		processorManager.setupProcessors();
 
 		if (extension.isForge()) {
-			patchedProvider.finishProvide();
+			patchedProvider.endTransform();
 		}
 
 		if (processorManager.active() || (extension.isForge() && patchedProvider.usesProjectCache())) {

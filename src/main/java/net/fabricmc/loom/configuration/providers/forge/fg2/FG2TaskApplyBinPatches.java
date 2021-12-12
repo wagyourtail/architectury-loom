@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
  * USA
  */
-package net.minecraftforge.gradle.tasks;
+package net.fabricmc.loom.configuration.providers.forge.fg2;
 
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
@@ -39,10 +39,8 @@ import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
-import net.minecraftforge.java.util.jar.Pack200;
+import net.fabricmc.shade.java.util.jar.Pack200;
 import org.gradle.api.Project;
-import org.gradle.api.file.FileVisitDetails;
-import org.gradle.api.file.FileVisitor;
 import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
@@ -53,16 +51,16 @@ import com.nothome.delta.GDiffPatcher;
 import lzma.sdk.lzma.Decoder;
 import lzma.streams.LzmaInputStream;
 
-public class TaskApplyBinPatches {
+public class FG2TaskApplyBinPatches {
 
-    private HashMap<String, ClassPatch> patchlist = Maps.newHashMap();
-    private GDiffPatcher                patcher   = new GDiffPatcher();
+    private static final HashMap<String, ClassPatch> patchlist = Maps.newHashMap();
+    private static final GDiffPatcher                patcher   = new GDiffPatcher();
 
-    private Project project;
+    private static Project project;
 
-    public void doTask(Project project, File inJar, File patches, File outjar, String side) throws IOException
+    public static void doTask(Project project, File inJar, File patches, File outjar, String side) throws IOException
     {
-        this.project = project;
+        FG2TaskApplyBinPatches.project = project;
         setup(patches, side);
 
         if (outjar.exists())
@@ -138,14 +136,14 @@ public class TaskApplyBinPatches {
         }
     }
 
-    private int adlerHash(byte[] input)
+    private static int adlerHash(byte[] input)
     {
         Adler32 hasher = new Adler32();
         hasher.update(input);
         return (int) hasher.getValue();
     }
 
-    public void setup(File patches, String side)
+    public static void setup(File patches, String side)
     {
         Pattern matcher = Pattern.compile(String.format("binpatch/%s/.*.binpatch", side));
 
@@ -192,7 +190,7 @@ public class TaskApplyBinPatches {
         log("Patch list :\n\t%s", Joiner.on("\n\t").join(patchlist.entrySet()));
     }
 
-    private ClassPatch readPatch(JarEntry patchEntry, JarInputStream jis) throws IOException
+    private static ClassPatch readPatch(JarEntry patchEntry, JarInputStream jis) throws IOException
     {
         log("\t%s", patchEntry.getName());
         ByteArrayDataInput input = ByteStreams.newDataInput(ByteStreams.toByteArray(jis));
@@ -213,9 +211,9 @@ public class TaskApplyBinPatches {
         return new ClassPatch(name, sourceClassName, targetClassName, exists, inputChecksum, patchBytes);
     }
 
-    private void log(String format, Object... args)
+    private static void log(String format, Object... args)
     {
-        this.project.getLogger().info(String.format(format, args));
+        project.getLogger().info(String.format(format, args));
     }
 
     public static class ClassPatch

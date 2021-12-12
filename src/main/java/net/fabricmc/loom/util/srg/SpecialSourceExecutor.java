@@ -55,32 +55,14 @@ public class SpecialSourceExecutor {
 		return string;
 	}
 
-	public static Path produceSrgJar(RemapAction remapAction, Project project, String side, Set<File> mcLibs, Path officialJar, Path mappings, boolean isLegacy, boolean isFG2)
-			throws Exception {
-		Set<String> filter;
-		if (isLegacy) {
-			filter = Files.readAllLines(mappings, StandardCharsets.UTF_8).stream()
-				.filter(s -> s.startsWith("CL:"))
-				.map(s -> s.split(" ")[1] + ".class")
-				.collect(Collectors.toSet());
-		} else {
-			filter = Files.readAllLines(mappings, StandardCharsets.UTF_8).stream()
-				.filter(s -> !s.startsWith("\t"))
-				.map(s -> s.split(" ")[0] + ".class")
-				.collect(Collectors.toSet());
-		}
-		LoomGradleExtension extension = LoomGradleExtension.get(project.getProject());
-		Path stripped = extension.getFiles().getProjectBuildCache().toPath().resolve(officialJar.getFileName().toString().substring(0, officialJar.getFileName().toString().length() - 4) + "-filtered.jar");
-		Files.deleteIfExists(stripped);
-
-		project.getLogger().info(officialJar.toString());
+	public static void stripJar(Project project, Path inJar, Path outJar, Set<String> filter) throws IOException {
 
 		Stopwatch stopwatch = Stopwatch.createStarted();
 
 		int count = 0;
 
-		try (FileSystemUtil.Delegate output = FileSystemUtil.getJarFileSystem(stripped, true)) {
-			try (FileSystemUtil.Delegate fs = FileSystemUtil.getJarFileSystem(officialJar, false)) {
+		try (FileSystemUtil.Delegate output = FileSystemUtil.getJarFileSystem(outJar, true)) {
+			try (FileSystemUtil.Delegate fs = FileSystemUtil.getJarFileSystem(inJar, false)) {
 				ThreadingUtils.TaskCompleter completer = ThreadingUtils.taskCompleter();
 
 				for (Path path : (Iterable<? extends Path>) Files.walk(fs.get().getPath("/"))::iterator) {
@@ -110,10 +92,25 @@ public class SpecialSourceExecutor {
 		} finally {
 			project.getLogger().info("Copied " + count + " class files in " + stopwatch.stop());
 		}
+	}
+
+	public static Path produceSrgJar(RemapAction remapAction, Project project, String side, Set<File> mcLibs, Path officialJar, Path mappings)
+			throws Exception {
+		Set<String> filter = Files.readAllLines(mappings, StandardCharsets.UTF_8).stream()
+			.filter(s -> !s.startsWith("\t"))
+			.map(s -> s.split(" ")[0] + ".class")
+			.collect(Collectors.toSet());
+
+		LoomGradleExtension extension = LoomGradleExtension.get(project.getProject());
+		Path stripped = extension.getFiles().getProjectBuildCache().toPath().resolve(officialJar.getFileName().toString().substring(0, officialJar.getFileName().toString().length() - 4) + "-filtered.jar");
+		Files.deleteIfExists(stripped);
+
+		stripJar(project, officialJar, stripped, filter);
+
 
 		Path output = extension.getFiles().getProjectBuildCache().toPath().resolve(officialJar.getFileName().toString().substring(0, officialJar.getFileName().toString().length() - 4) + "-srg-output.jar");
-//		Files.deleteIfExists(output);
-		stopwatch = Stopwatch.createStarted();
+		Files.deleteIfExists(output);
+		Stopwatch stopwatch = Stopwatch.createStarted();
 
 		project.getLogger().info(stripped.toString());
 		List<String> args = remapAction.getArgs(stripped, output, mappings, project.files(mcLibs));
@@ -122,36 +119,32 @@ public class SpecialSourceExecutor {
 
 		Path workingDir = tmpDir();
 
-		if (!isFG2) {
-			project.javaexec(spec -> {
-				spec.setArgs(args);
-				spec.setClasspath(remapAction.getClasspath());
-				spec.workingDir(workingDir.toFile());
-				spec.getMainClass().set(remapAction.getMainClass());
+		project.javaexec(spec -> {
+			spec.setArgs(args);
+			spec.setClasspath(remapAction.getClasspath());
+			spec.workingDir(workingDir.toFile());
+			spec.getMainClass().set(remapAction.getMainClass());
 
-				// if running with INFO or DEBUG logging
-				if (project.getGradle().getStartParameter().getShowStacktrace() != ShowStacktrace.INTERNAL_EXCEPTIONS
-					|| project.getGradle().getStartParameter().getLogLevel().compareTo(LogLevel.LIFECYCLE) < 0) {
-					spec.setStandardOutput(System.out);
-					spec.setErrorOutput(System.err);
-				} else {
-					spec.setStandardOutput(NullOutputStream.NULL_OUTPUT_STREAM);
-					spec.setErrorOutput(NullOutputStream.NULL_OUTPUT_STREAM);
-				}
-			}).rethrowFailure().assertNormalExitValue();
-		} else {
-			Files.copy(stripped, output, StandardCopyOption.REPLACE_EXISTING);
-		}
+			// if running with INFO or DEBUG logging
+			if (project.getGradle().getStartParameter().getShowStacktrace() != ShowStacktrace.INTERNAL_EXCEPTIONS
+				|| project.getGradle().getStartParameter().getLogLevel().compareTo(LogLevel.LIFECYCLE) < 0) {
+				spec.setStandardOutput(System.out);
+				spec.setErrorOutput(System.err);
+			} else {
+				spec.setStandardOutput(NullOutputStream.NULL_OUTPUT_STREAM);
+				spec.setErrorOutput(NullOutputStream.NULL_OUTPUT_STREAM);
+			}
+		}).rethrowFailure().assertNormalExitValue();
 
 		project.getLogger().lifecycle(":remapped minecraft (" + remapAction + ", " + side + ", official -> mojang) in " + stopwatch.stop());
 
-//		Files.deleteIfExists(stripped);
+		Files.deleteIfExists(stripped);
 
 		Path tmp = tmpFile();
 		Files.deleteIfExists(tmp);
 		Files.copy(output, tmp);
 
-//		Files.deleteIfExists(output);
+		Files.deleteIfExists(output);
 		return tmp;
 	}
 
