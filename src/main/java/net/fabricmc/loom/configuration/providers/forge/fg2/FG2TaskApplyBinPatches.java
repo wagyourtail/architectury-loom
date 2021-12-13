@@ -30,6 +30,8 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.ServiceLoader;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 import java.util.jar.JarOutputStream;
@@ -41,7 +43,6 @@ import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 import com.google.common.base.Joiner;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteStreams;
@@ -50,28 +51,25 @@ import lzma.sdk.lzma.Decoder;
 import lzma.streams.LzmaInputStream;
 import org.gradle.api.Project;
 
-import net.fabricmc.shade.java.util.jar.Pack200;
-
 public class FG2TaskApplyBinPatches {
-	private static final HashMap<String, ClassPatch> patchlist = Maps.newHashMap();
-	private static final GDiffPatcher patcher = new GDiffPatcher();
+	private final HashMap<String, ClassPatch> patches = Maps.newHashMap();
+	private final GDiffPatcher patcher = new GDiffPatcher();
 
-	private static Project project;
+	private Project project;
 
-	public static void doTask(Project project, File inJar, File patches, File outjar, String side) throws IOException {
-		FG2TaskApplyBinPatches.project = project;
+	public FG2TaskApplyBinPatches(Project project) {
+		this.project = project;
+	}
+
+	public void doTask(File input, File patches, File output, String side) throws IOException {
 		setup(patches, side);
+		output.delete();
 
-		if (outjar.exists()) {
-			outjar.delete();
-		}
+		final HashSet<String> entries = new HashSet<>();
 
-		ZipFile in = new ZipFile(inJar);
-		ZipInputStream classesIn = new ZipInputStream(new FileInputStream(inJar));
-		final ZipOutputStream out = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(outjar)));
-		final HashSet<String> entries = new HashSet<String>();
-
-		try {
+		try (ZipFile in = new ZipFile(input);
+		     ZipInputStream classesIn = new ZipInputStream(new FileInputStream(input));
+		     ZipOutputStream out = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(output)))) {
 			// DO PATCHES
 			log("Patching Class:");
 
@@ -88,14 +86,14 @@ public class FG2TaskApplyBinPatches {
 					out.putNextEntry(n);
 
 					byte[] data = ByteStreams.toByteArray(in.getInputStream(e));
-					ClassPatch patch = patchlist.get(e.getName().replace('\\', '/'));
+					ClassPatch patch = this.patches.get(e.getName().replace('\\', '/'));
 
 					if (patch != null) {
 						log("\t%s (%s) (input size %d)", patch.targetClassName, patch.sourceClassName, data.length);
 						int inputChecksum = adlerHash(data);
 
 						if (patch.inputChecksum != inputChecksum) {
-							throw new RuntimeException(String.format("There is a binary discrepency between the expected input class %s (%s) and the actual class. Checksum on disk is %x, in patch %x. Things are probably about to go very wrong. Did you put something into the jar file?", patch.targetClassName, patch.sourceClassName, inputChecksum, patch.inputChecksum));
+							throw new RuntimeException(String.format("There is a binary discrepancy between the expected input class %s (%s) and the actual class. Checksum on disk is %x, in patch %x. Things are probably about to go very wrong. Did you put something into the jar file?", patch.targetClassName, patch.sourceClassName, inputChecksum, patch.inputChecksum));
 						}
 
 						synchronized (patcher) {
@@ -111,7 +109,7 @@ public class FG2TaskApplyBinPatches {
 			}
 
 			// COPY DATA
-			ZipEntry entry = null;
+			ZipEntry entry;
 
 			while ((entry = classesIn.getNextEntry()) != null) {
 				if (entries.contains(entry.getName())) {
@@ -122,10 +120,6 @@ public class FG2TaskApplyBinPatches {
 				out.write(ByteStreams.toByteArray(classesIn));
 				entries.add(entry.getName());
 			}
-		} finally {
-			classesIn.close();
-			in.close();
-			out.close();
 		}
 	}
 
@@ -135,7 +129,7 @@ public class FG2TaskApplyBinPatches {
 		return (int) hasher.getValue();
 	}
 
-	public static void setup(File patches, String side) {
+	public void setup(File patches, String side) {
 		Pattern matcher = Pattern.compile(String.format("binpatch/%s/.*.binpatch", side));
 
 		JarInputStream jis;
@@ -144,10 +138,19 @@ public class FG2TaskApplyBinPatches {
 			LzmaInputStream binpatchesDecompressed = new LzmaInputStream(new FileInputStream(patches), new Decoder());
 			ByteArrayOutputStream jarBytes = new ByteArrayOutputStream();
 			JarOutputStream jos = new JarOutputStream(jarBytes);
-			Pack200.newUnpacker().unpack(binpatchesDecompressed, jos);
+			List<ServiceLoader.Provider<Pack200Provider>> loader = ServiceLoader.load(Pack200Provider.class)
+					.stream().toList();
+
+			if (loader.isEmpty()) {
+				throw new IllegalStateException("No provider for Pack200 has been found. Did you declare a provider?");
+			} else if (loader.size() > 1) {
+				throw new IllegalStateException("Multiple providers for Pack200 have been found, this is not supported. Did you properly declare a provider?");
+			}
+
+			loader.get(0).get().unpack(binpatchesDecompressed, jos);
 			jis = new JarInputStream(new ByteArrayInputStream(jarBytes.toByteArray()));
 		} catch (Exception e) {
-			throw Throwables.propagate(e);
+			throw new RuntimeException(e);
 		}
 
 		log("Reading Patches:");
@@ -162,19 +165,20 @@ public class FG2TaskApplyBinPatches {
 
 				if (matcher.matcher(entry.getName()).matches()) {
 					ClassPatch cp = readPatch(entry, jis);
-					patchlist.put(cp.sourceClassName.replace('.', '/') + ".class", cp);
+					this.patches.put(cp.sourceClassName.replace('.', '/') + ".class", cp);
 				} else {
 					log("skipping entry: %s", entry.getName());
 					jis.closeEntry();
 				}
 			} catch (IOException e) {
+				throw new RuntimeException(e);
 			}
 		} while (true);
-		log("Read %d binary patches", patchlist.size());
-		log("Patch list :\n\t%s", Joiner.on("\n\t").join(patchlist.entrySet()));
+		log("Read %d binary patches", this.patches.size());
+		log("Patch list :\n\t%s", Joiner.on("\n\t").join(this.patches.entrySet()));
 	}
 
-	private static ClassPatch readPatch(JarEntry patchEntry, JarInputStream jis) throws IOException {
+	private ClassPatch readPatch(JarEntry patchEntry, JarInputStream jis) throws IOException {
 		log("\t%s", patchEntry.getName());
 		ByteArrayDataInput input = ByteStreams.newDataInput(ByteStreams.toByteArray(jis));
 
@@ -195,26 +199,12 @@ public class FG2TaskApplyBinPatches {
 		return new ClassPatch(name, sourceClassName, targetClassName, exists, inputChecksum, patchBytes);
 	}
 
-	private static void log(String format, Object... args) {
+	private void log(String format, Object... args) {
 		project.getLogger().info(String.format(format, args));
 	}
 
-	public static class ClassPatch {
-		public final String name;
-		public final String sourceClassName;
-		public final String targetClassName;
-		public final boolean existsAtTarget;
-		public final byte[] patch;
-		public final int inputChecksum;
-
-		public ClassPatch(String name, String sourceClassName, String targetClassName, boolean existsAtTarget, int inputChecksum, byte[] patch) {
-			this.name = name;
-			this.sourceClassName = sourceClassName;
-			this.targetClassName = targetClassName;
-			this.existsAtTarget = existsAtTarget;
-			this.inputChecksum = inputChecksum;
-			this.patch = patch;
-		}
+	public record ClassPatch(String name, String sourceClassName, String targetClassName, boolean existsAtTarget, int inputChecksum,
+	                         byte[] patch) {
 
 		@Override
 		public String toString() {

@@ -232,7 +232,7 @@ public class MinecraftPatchedProviderFG2 extends MinecraftPatchedProvider {
 			// Failed to replace logger filter, just ignore
 		}
 
-		FG2TaskApplyBinPatches.doTask(getProject(), clean.getAbsoluteFile(), patches.toFile().getAbsoluteFile(), output.getAbsoluteFile(), side);
+		new FG2TaskApplyBinPatches(getProject()).doTask(clean.getAbsoluteFile(), patches.toFile().getAbsoluteFile(), output.getAbsoluteFile(), side);
 
 		try {
 			System.setOut(previous);
