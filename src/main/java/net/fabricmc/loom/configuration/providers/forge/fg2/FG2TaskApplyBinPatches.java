@@ -30,8 +30,6 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
-import java.util.ServiceLoader;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 import java.util.jar.JarOutputStream;
@@ -50,6 +48,8 @@ import com.nothome.delta.GDiffPatcher;
 import lzma.sdk.lzma.Decoder;
 import lzma.streams.LzmaInputStream;
 import org.gradle.api.Project;
+
+import net.fabricmc.loom.LoomGradleExtension;
 
 public class FG2TaskApplyBinPatches {
 	private final HashMap<String, ClassPatch> patches = Maps.newHashMap();
@@ -138,16 +138,13 @@ public class FG2TaskApplyBinPatches {
 			LzmaInputStream binpatchesDecompressed = new LzmaInputStream(new FileInputStream(patches), new Decoder());
 			ByteArrayOutputStream jarBytes = new ByteArrayOutputStream();
 			JarOutputStream jos = new JarOutputStream(jarBytes);
-			List<ServiceLoader.Provider<Pack200Provider>> loader = ServiceLoader.load(Pack200Provider.class)
-					.stream().toList();
+			Pack200Provider provider = LoomGradleExtension.get(project).getForge().getPack200Provider().get();
 
-			if (loader.isEmpty()) {
+			if (provider == null) {
 				throw new IllegalStateException("No provider for Pack200 has been found. Did you declare a provider?");
-			} else if (loader.size() > 1) {
-				throw new IllegalStateException("Multiple providers for Pack200 have been found, this is not supported. Did you properly declare a provider?");
 			}
 
-			loader.get(0).get().unpack(binpatchesDecompressed, jos);
+			provider.unpack(binpatchesDecompressed, jos);
 			jis = new JarInputStream(new ByteArrayInputStream(jarBytes.toByteArray()));
 		} catch (Exception e) {
 			throw new RuntimeException(e);
