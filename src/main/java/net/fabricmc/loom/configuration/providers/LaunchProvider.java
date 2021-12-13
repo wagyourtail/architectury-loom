@@ -47,6 +47,7 @@ import org.gradle.api.plugins.JavaPlugin;
 import net.fabricmc.loom.configuration.DependencyProvider;
 import net.fabricmc.loom.configuration.RemappedConfigurationEntry;
 import net.fabricmc.loom.configuration.launch.LaunchProviderSettings;
+import net.fabricmc.loom.configuration.providers.forge.ForgeProvider;
 import net.fabricmc.loom.util.Constants;
 import net.fabricmc.loom.util.PropertyUtil;
 
@@ -105,7 +106,7 @@ public class LaunchProvider extends DependencyProvider {
 
 		addDependency(Constants.Dependencies.DEV_LAUNCH_INJECTOR + Constants.Dependencies.Versions.DEV_LAUNCH_INJECTOR, Constants.Configurations.LOOM_DEVELOPMENT_DEPENDENCIES);
 
-		if (!getExtension().isForge() || !getExtension().getForgeProvider().isFG2()) {
+		if (!getExtension().isForge() || getExtension().getForgeProvider().getFG() == ForgeProvider.FG_VERSION.FG3) {
 			addDependency(Constants.Dependencies.TERMINAL_CONSOLE_APPENDER + Constants.Dependencies.Versions.TERMINAL_CONSOLE_APPENDER, Constants.Configurations.LOOM_DEVELOPMENT_DEPENDENCIES);
 		}
 

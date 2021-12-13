@@ -54,7 +54,7 @@ public class PatchProvider extends DependencyProvider {
 	public void provide(DependencyInfo dependency, Consumer<Runnable> postPopulationScheduler) throws Exception {
 		init(dependency.getDependency().getVersion());
 
-		if (getExtension().getForgeProvider().isFG2()) {
+		if (getExtension().getForgeProvider().getFG() != ForgeProvider.FG_VERSION.FG3) {
 			File forge = getExtension().getForgeUniversalProvider().getForge();
 
 			if (Files.notExists(clientPatches) || isRefreshDeps()) {

@@ -92,7 +92,11 @@ public class SrgProvider extends DependencyProvider {
 				try {
 					Files.copy(fs.getPath("config", "joined.tsrg"), srg, StandardCopyOption.REPLACE_EXISTING);
 				} catch (NoSuchFileException e) {
-					Files.copy(fs.getPath("joined.srg"), srg, StandardCopyOption.REPLACE_EXISTING);
+					if (getExtension().getForgeProvider().getFG() == ForgeProvider.FG_VERSION.ONE_SEVEN) {
+						Files.copy(fs.getPath("conf", "packaged.srg"), srg, StandardCopyOption.REPLACE_EXISTING);
+					} else {
+						Files.copy(fs.getPath("joined.srg"), srg, StandardCopyOption.REPLACE_EXISTING);
+					}
 				}
 			}
 		}

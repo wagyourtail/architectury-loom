@@ -155,18 +155,10 @@ public class MinecraftPatchedProviderFG2 extends MinecraftPatchedProvider {
 		// Step 5: Remap Patched AT & Forge to Official (global or project)
 		if (dirty) {
 			remapPatchedJar(getProject().getLogger());
-
-			if (getExtension().isForgeAndOfficial()) {
-				fillClientExtraJar();
-			}
 		}
 
 		this.filesDirty = dirty;
 		this.dirty = false;
-
-		if (getExtension().isForgeAndOfficial()) {
-			addDependency(minecraftClientExtra, Constants.Configurations.FORGE_EXTRA);
-		}
 	}
 
 	public enum Environment {
@@ -193,7 +185,7 @@ public class MinecraftPatchedProviderFG2 extends MinecraftPatchedProvider {
 
 	private void stripJars(Logger logger) throws IOException {
 		logger.lifecycle(":stripping jars");
-		Set<String> filter = Files.readAllLines(getExtension().getMcpConfigProvider().getMappings(), StandardCharsets.UTF_8).stream()
+		Set<String> filter = Files.readAllLines(getExtension().getSrgProvider().getSrg(), StandardCharsets.UTF_8).stream()
 						.filter(s -> s.startsWith("CL:"))
 						.map(s -> s.split(" ")[1] + ".class")
 						.collect(Collectors.toSet());

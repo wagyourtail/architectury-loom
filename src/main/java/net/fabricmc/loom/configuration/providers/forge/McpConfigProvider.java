@@ -58,14 +58,8 @@ public class McpConfigProvider extends DependencyProvider {
 	private String mappingsPath;
 	private RemapAction remapAction;
 
-	private boolean isFG2 = false;
-
 	public McpConfigProvider(Project project) {
 		super(project);
-	}
-
-	public boolean isFG2() {
-		return isFG2;
 	}
 
 	@Override
@@ -74,10 +68,15 @@ public class McpConfigProvider extends DependencyProvider {
 
 		Path mcpZip = dependency.resolveFile().orElseThrow(() -> new RuntimeException("Could not resolve MCPConfig")).toPath();
 
-		if (getExtension().getForgeProvider().isFG2()) {
+		if (getExtension().getForgeProvider().getFG() != ForgeProvider.FG_VERSION.FG3) {
 			official = false;
-			mappingsPath = ZipUtils.contains(mcpZip, "joined.srg") ? "joined.srg" : "config/joined.tsrg";
-			isFG2 = mappingsPath.endsWith(".srg");
+
+			if (getExtension().getForgeProvider().getFG() == ForgeProvider.FG_VERSION.ONE_SEVEN) {
+				mappingsPath = "conf/packaged.srg";
+			} else {
+				mappingsPath = ZipUtils.contains(mcpZip, "joined.srg") ? "joined.srg" : "config/joined.tsrg";
+			}
+
 			remapAction = null;
 
 			if (!Files.exists(mcp) || isRefreshDeps()) {

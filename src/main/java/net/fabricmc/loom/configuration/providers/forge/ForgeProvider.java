@@ -37,7 +37,7 @@ public class ForgeProvider extends DependencyProvider {
 	private File globalCache;
 	private File projectCache;
 
-	private boolean fg2 = false;
+	private FG_VERSION fgVersion = FG_VERSION.FG3;
 
 	public ForgeProvider(Project project) {
 		super(project);
@@ -45,9 +45,21 @@ public class ForgeProvider extends DependencyProvider {
 
 	@Override
 	public void provide(DependencyInfo dependency, Consumer<Runnable> postPopulationScheduler) throws Exception {
-		version = new ForgeVersion(dependency.getResolvedVersion());
-		addDependency(dependency.getDepString() + ":userdev", Constants.Configurations.FORGE_USERDEV);
-		addDependency(dependency.getDepString() + ":installer", Constants.Configurations.FORGE_INSTALLER);
+		version = new ForgeVersion(dependency.getDepString().split(":")[2]);
+
+		if (semVersCompare(version.minecraftVersion, "1.7.2") != -1) {
+			getProject().getLogger().info("semV: " + semVersCompare(version.minecraftVersion, "1.7.10"));
+
+			if (semVersCompare(version.minecraftVersion, "1.7.10") != 1) {
+				setFg(FG_VERSION.ONE_SEVEN);
+			}
+
+			addDependency(dependency.getDepString() + ":userdev", Constants.Configurations.FORGE_USERDEV);
+			addDependency(dependency.getDepString() + ":installer", Constants.Configurations.FORGE_INSTALLER);
+		} else {
+			addDependency(dependency.getDependency() + ":src@zip", Constants.Configurations.FORGE_USERDEV);
+			setFg(FG_VERSION.FG1);
+		}
 	}
 
 	public ForgeVersion getVersion() {
@@ -77,12 +89,12 @@ public class ForgeProvider extends DependencyProvider {
 		return Constants.Configurations.FORGE;
 	}
 
-	public boolean isFG2() {
-		return fg2;
+	public FG_VERSION getFG() {
+		return fgVersion;
 	}
 
-	public void setFg2(boolean fg2) {
-		this.fg2 = fg2;
+	public void setFg(FG_VERSION fgVersion) {
+		this.fgVersion = fgVersion;
 	}
 
 	public static final class ForgeVersion {
@@ -121,5 +133,36 @@ public class ForgeProvider extends DependencyProvider {
 		public String getForgeVersion() {
 			return forgeVersion;
 		}
+	}
+
+	/**
+	 * @param v1
+	 * @param v2
+	 * @return -1 if v2 > v1 else 1 if v1 > v2 else 0
+	 */
+	public static int semVersCompare(String v1, String v2) {
+		String[] v1s = v1.split("\\.");
+		String[] v2s = v2.split("\\.");
+
+		for (int i = 0; i < v1s.length; ++i) {
+			// off the end of v2 but v1 still has more
+			if (i >= v2s.length) {
+				return 1;
+			}
+
+			if (!v1s[i].equals(v2s[i])) {
+				if (Integer.parseInt(v1s[i]) > Integer.parseInt(v2s[i])) {
+					return 1;
+				}
+
+				return -1;
+			}
+		}
+
+		return 0;
+	}
+
+	public enum FG_VERSION {
+		FG3, FG2, ONE_SEVEN, FG1, PRE_ONE_THREE
 	}
 }

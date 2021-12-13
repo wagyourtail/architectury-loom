@@ -28,6 +28,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -100,12 +101,17 @@ public class ForgeUserdevProvider extends DependencyProvider {
 			Files.copy(resolved.toPath(), userdevJar.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
 			try (FileSystem fs = FileSystems.newFileSystem(new URI("jar:" + resolved.toURI()), ImmutableMap.of("create", false))) {
-				if (Files.exists(fs.getPath("config.json"))) {
-					//fg3+
-					Files.copy(fs.getPath("config.json"), configJson, StandardCopyOption.REPLACE_EXISTING);
+				if (getExtension().getForgeProvider().getFG() == ForgeProvider.FG_VERSION.FG1) {
+					provideFG1(dependency, fs);
+					return;
 				} else {
-					//fg2
-					Files.copy(fs.getPath("dev.json"), configJson, StandardCopyOption.REPLACE_EXISTING);
+					if (Files.exists(fs.getPath("config.json"))) {
+						//fg3+
+						Files.copy(fs.getPath("config.json"), configJson, StandardCopyOption.REPLACE_EXISTING);
+					} else {
+						//fg2
+						Files.copy(fs.getPath("dev.json"), configJson, StandardCopyOption.REPLACE_EXISTING);
+					}
 				}
 			}
 		}
@@ -115,56 +121,91 @@ public class ForgeUserdevProvider extends DependencyProvider {
 		}
 
 		boolean fg2 = !json.has("mcp");
-		getExtension().getForgeProvider().setFg2(fg2);
+		if (fg2 && getExtension().getForgeProvider().getFG() != ForgeProvider.FG_VERSION.ONE_SEVEN) getExtension().getForgeProvider().setFg(ForgeProvider.FG_VERSION.FG2);
 
 		if (fg2) {
-			getProject().getLogger().info("FG2 Userdev, using default mcp_config/universal...");
-
-			String defaultMCPPath = "de.oceanlabs.mcp:mcp:" + getExtension().getMinecraftProvider().minecraftVersion() + ":srg@zip";
-			String defaultUniversalPath = "net.minecraftforge:forge:" + dependency.getResolvedVersion() + ":universal";
-
-			getProject().getLogger().info("Using default MCP path: " + defaultMCPPath);
-			getProject().getLogger().info("Using default Universal path: " + defaultUniversalPath);
-
-			addDependency(defaultMCPPath, Constants.Configurations.MCP_CONFIG);
-			addDependency(defaultMCPPath, Constants.Configurations.SRG);
-			addDependency(defaultUniversalPath, Constants.Configurations.FORGE_UNIVERSAL);
-
-			for (JsonElement lib : json.getAsJsonArray("libraries")) {
-				JsonObject libObj = lib.getAsJsonObject();
-
-				Dependency dep = addDependency(libObj.get("name").getAsString(), Constants.Configurations.FORGE_DEPENDENCIES);
-
-				if (libObj.get("name").getAsString().split(":").length < 4) {
-					((ModuleDependency) dep).attributes(attributes -> {
-						attributes.attribute(transformed, true);
-					});
-				}
-			}
-
-			for (String name : new String[] {"client", "server"}) {
-				LaunchProviderSettings launchSettings = getExtension().getLaunchConfigs().findByName(name);
-				RunConfigSettings settings = getExtension().getRunConfigs().findByName(name);
-
-				if (launchSettings != null) {
-					launchSettings.evaluateLater(() -> {
-						launchSettings.arg(Arrays.stream(json.get("minecraftArguments").getAsString().split(" ")).map(this::processTemplates).collect(Collectors.toList()));
-
-						// add missing args
-						launchSettings.arg("--accessToken", "FML");
-					});
-				}
-
-				if (settings != null) {
-					settings.evaluateLater(() -> {
-						settings.defaultMainClass("net.minecraft.launchwrapper.Launch");
-					});
-				}
-			}
-
+			provideFG2(dependency, transformed);
 			return;
 		}
 
+		provideFG3(transformed);
+	}
+
+	public void provideFG1(DependencyInfo dependency, FileSystem fs) {
+		Path mcpZip = getExtension().getForgeProvider().getGlobalCache().toPath().resolve("mcp.zip");
+
+		getProject().getLogger().info("FG1 \"Userdev\" (src), using defaults");
+	}
+
+	public void provideFG2(DependencyInfo dependency, Attribute<Boolean> transformed) throws URISyntaxException, IOException {
+		getProject().getLogger().info("FG2 Userdev, using default mcp_config/universal...");
+
+		String defaultMCPPath = "de.oceanlabs.mcp:mcp:" + getExtension().getMinecraftProvider().minecraftVersion() + ":srg@zip";
+
+		if (getExtension().getForgeProvider().getFG() == ForgeProvider.FG_VERSION.ONE_SEVEN) {
+			defaultMCPPath = dependency.getDepString() + ":userdev";
+
+			if (getProject().getConfigurations().getByName(getExtension().getMappingsProvider().getTargetConfig()).getDependencies().isEmpty()) {
+				getProject().getLogger().info("no mappings dep, constructing default mappings from bundled mcp");
+
+				Path mcpZip = getExtension().getForgeProvider().getGlobalCache().toPath().resolve("mcp.zip");
+				File resolved = dependency.resolveFile().orElseThrow(() -> new RuntimeException("Could not resolve Forge userdev"));
+
+				try (FileSystem fs = FileSystems.newFileSystem(new URI("jar:" + resolved.toURI()), ImmutableMap.of("create", false))) {
+					try (FileSystem output = FileSystems.newFileSystem(new URI("jar:" + mcpZip.toUri()), ImmutableMap.of("create", true))) {
+						Files.copy(fs.getPath("conf/fields.csv"), output.getPath("fields.csv"), StandardCopyOption.REPLACE_EXISTING);
+						Files.copy(fs.getPath("conf/methods.csv"), output.getPath("methods.csv"), StandardCopyOption.REPLACE_EXISTING);
+						Files.copy(fs.getPath("conf/params.csv"), output.getPath("params.csv"), StandardCopyOption.REPLACE_EXISTING);
+					}
+				}
+
+				addDependency(mcpZip.toFile(), Constants.Configurations.MAPPINGS);
+			}
+		}
+
+		String defaultUniversalPath = "net.minecraftforge:forge:" + dependency.getResolvedVersion() + ":universal";
+
+		getProject().getLogger().info("Using default MCP path: " + defaultMCPPath);
+		getProject().getLogger().info("Using default Universal path: " + defaultUniversalPath);
+
+		addDependency(defaultMCPPath, Constants.Configurations.MCP_CONFIG);
+		addDependency(defaultMCPPath, Constants.Configurations.SRG);
+		addDependency(defaultUniversalPath, Constants.Configurations.FORGE_UNIVERSAL);
+
+		for (JsonElement lib : json.getAsJsonArray("libraries")) {
+			JsonObject libObj = lib.getAsJsonObject();
+
+			Dependency dep = addDependency(libObj.get("name").getAsString(), Constants.Configurations.FORGE_DEPENDENCIES);
+
+			if (libObj.get("name").getAsString().split(":").length < 4) {
+				((ModuleDependency) dep).attributes(attributes -> {
+					attributes.attribute(transformed, true);
+				});
+			}
+		}
+
+		for (String name : new String[] {"client", "server"}) {
+			LaunchProviderSettings launchSettings = getExtension().getLaunchConfigs().findByName(name);
+			RunConfigSettings settings = getExtension().getRunConfigs().findByName(name);
+
+			if (launchSettings != null) {
+				launchSettings.evaluateLater(() -> {
+					launchSettings.arg(Arrays.stream(json.get("minecraftArguments").getAsString().split(" ")).map(this::processTemplates).collect(Collectors.toList()));
+
+					// add missing args
+					launchSettings.arg("--accessToken", "FML");
+				});
+			}
+
+			if (settings != null) {
+				settings.evaluateLater(() -> {
+					settings.defaultMainClass("net.minecraft.launchwrapper.Launch");
+				});
+			}
+		}
+	}
+
+	public void provideFG3(Attribute<Boolean> transformed) {
 		getProject().getLogger().info("FG3+ Userdev");
 
 		addDependency(json.get("mcp").getAsString(), Constants.Configurations.MCP_CONFIG);
@@ -206,9 +247,9 @@ public class ForgeUserdevProvider extends DependencyProvider {
 				launchSettings.evaluateLater(() -> {
 					if (value.has("args")) {
 						launchSettings.arg(StreamSupport.stream(value.getAsJsonArray("args").spliterator(), false)
-								.map(JsonElement::getAsString)
-								.map(this::processTemplates)
-								.collect(Collectors.toList()));
+										.map(JsonElement::getAsString)
+										.map(this::processTemplates)
+										.collect(Collectors.toList()));
 					}
 
 					if (value.has("props")) {
@@ -227,9 +268,9 @@ public class ForgeUserdevProvider extends DependencyProvider {
 
 					if (value.has("jvmArgs")) {
 						settings.vmArgs(StreamSupport.stream(value.getAsJsonArray("jvmArgs").spliterator(), false)
-								.map(JsonElement::getAsString)
-								.map(this::processTemplates)
-								.collect(Collectors.toList()));
+										.map(JsonElement::getAsString)
+										.map(this::processTemplates)
+										.collect(Collectors.toList()));
 					}
 
 					if (value.has("env")) {

@@ -58,6 +58,7 @@ import org.objectweb.asm.commons.Remapper;
 import net.fabricmc.loom.api.mappings.layered.MappingsNamespace;
 import net.fabricmc.loom.configuration.DependencyProvider;
 import net.fabricmc.loom.configuration.providers.MinecraftProviderImpl;
+import net.fabricmc.loom.configuration.providers.forge.ForgeProvider;
 import net.fabricmc.loom.configuration.providers.mappings.MappingsProviderImpl;
 import net.fabricmc.loom.configuration.providers.minecraft.tr.OutputRemappingHandler;
 import net.fabricmc.loom.configuration.sources.ForgeSourcesRemapper;
@@ -342,7 +343,7 @@ public class MinecraftMappedProvider extends DependencyProvider {
 			if (forge != null) {
 				OutputRemappingHandler.remap(remapper, forge.assets, outputForge, null, forgeTag);
 
-				if (getExtension().getForgeProvider().isFG2()) {
+				if (getExtension().getForgeProvider().getFG() == ForgeProvider.FG_VERSION.FG2) {
 					//FG2 - remove binpatches for the dev environment to work
 					try (FileSystem fs = FileSystems.newFileSystem(outputForge, Map.of("create", "false"))) {
 						Files.deleteIfExists(fs.getPath("binpatches.pack.lzma"));

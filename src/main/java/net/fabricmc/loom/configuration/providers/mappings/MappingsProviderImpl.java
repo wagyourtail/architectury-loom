@@ -66,6 +66,7 @@ import net.fabricmc.loom.configuration.processors.JarProcessorManager;
 import net.fabricmc.loom.configuration.processors.MinecraftProcessedProvider;
 import net.fabricmc.loom.configuration.providers.MinecraftProvider;
 import net.fabricmc.loom.configuration.providers.MinecraftProviderImpl;
+import net.fabricmc.loom.configuration.providers.forge.ForgeProvider;
 import net.fabricmc.loom.configuration.providers.forge.MinecraftPatchedProvider;
 import net.fabricmc.loom.configuration.providers.forge.fg2.MinecraftPatchedProviderFG2;
 import net.fabricmc.loom.configuration.providers.forge.fg3.MinecraftPatchedProviderFG3;
@@ -157,7 +158,7 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 		}
 
 		if (getExtension().isForge()) {
-			if (getExtension().getMcpConfigProvider().isFG2()) {
+			if (getExtension().getForgeProvider().getFG() != ForgeProvider.FG_VERSION.FG3) {
 				patchedProvider = new MinecraftPatchedProviderFG2(getProject());
 				patchedProvider.provide(dependency, postPopulationScheduler);
 			} else {
