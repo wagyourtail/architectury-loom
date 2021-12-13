@@ -352,6 +352,17 @@ public class MinecraftMappedProvider extends DependencyProvider {
 						Files.deleteIfExists(fs.getPath("net/minecraftforge/fml/common/asm/transformers/DeobfuscationTransformer.class"));
 					}
 				}
+
+				if (getExtension().getForgeProvider().getFG() == ForgeProvider.FG_VERSION.ONE_SEVEN) {
+					//FG2 - remove binpatches for the dev environment to work
+					try (FileSystem fs = FileSystems.newFileSystem(outputForge, Map.of("create", "false"))) {
+						Files.deleteIfExists(fs.getPath("binpatches.pack.lzma"));
+
+						//TODO: FIXME, hack. remove forge trying to transform class names for fg2 dev launch
+						Files.deleteIfExists(fs.getPath("cpw/mods/fml/common/asm/transformers/deobf/DeobfuscationRemapper.class"));
+					}
+
+				}
 			}
 
 			getProject().getLogger().lifecycle(":remapped minecraft (TinyRemapper, " + fromM + " -> " + toM + ") in " + stopwatch);

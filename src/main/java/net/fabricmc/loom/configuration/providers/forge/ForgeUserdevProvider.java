@@ -175,6 +175,11 @@ public class ForgeUserdevProvider extends DependencyProvider {
 		for (JsonElement lib : json.getAsJsonArray("libraries")) {
 			JsonObject libObj = lib.getAsJsonObject();
 
+			// skip twitch libs
+			if (libObj.get("name").getAsString().contains("twitch")) {
+				continue;
+			}
+
 			Dependency dep = addDependency(libObj.get("name").getAsString(), Constants.Configurations.FORGE_DEPENDENCIES);
 
 			if (libObj.get("name").getAsString().split(":").length < 4) {
@@ -194,6 +199,10 @@ public class ForgeUserdevProvider extends DependencyProvider {
 
 					// add missing args
 					launchSettings.arg("--accessToken", "FML");
+
+					if (getExtension().getForgeProvider().getFG() == ForgeProvider.FG_VERSION.ONE_SEVEN) {
+						launchSettings.arg("--userProperties", "{}");
+					}
 				});
 			}
 

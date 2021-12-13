@@ -33,6 +33,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -52,6 +53,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
@@ -99,7 +101,7 @@ public abstract class MinecraftPatchedProvider extends DependencyProvider {
 	private static final String LOOM_PATCH_VERSION_KEY = "Loom-Patch-Version";
 	private static final String CURRENT_LOOM_PATCH_VERSION = "5";
 	private static final String NAME_MAPPING_SERVICE_PATH = "/inject/META-INF/services/cpw.mods.modlauncher.api.INameMappingService";
-	protected final String accessTransformerPath;
+	protected final String[] accessTransformerPath;
 
 	// step 3 - fg2: srg transform, fg3: merge
 	protected File minecraftMergedPatchedSrgJar;
@@ -118,7 +120,7 @@ public abstract class MinecraftPatchedProvider extends DependencyProvider {
 	protected boolean filesDirty = false;
 	protected Path mcpConfigMappings;
 
-	protected MinecraftPatchedProvider(Project project, String accessTransformerPath) {
+	protected MinecraftPatchedProvider(Project project, String... accessTransformerPath) {
 		super(project);
 		this.accessTransformerPath = accessTransformerPath;
 	}
@@ -415,14 +417,29 @@ public abstract class MinecraftPatchedProvider extends DependencyProvider {
 		args.add(target.getAbsolutePath());
 
 		for (File jar : ImmutableList.of(getForgeJar(), getForgeUserdevJar(), minecraftMergedPatchedSrgJar)) {
-			byte[] atBytes = ZipUtils.unpackNullable(jar.toPath(), accessTransformerPath);
+			for (String atPath : accessTransformerPath) {
+				byte[] atBytes = ZipUtils.unpackNullable(jar.toPath(), atPath);
 
-			if (atBytes != null) {
-				File tmpFile = File.createTempFile("at-conf", ".cfg");
-				toDelete.add(tmpFile);
-				Files.write(tmpFile.toPath(), atBytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
-				args.add("--atFile");
-				args.add(tmpFile.getAbsolutePath());
+				if (atBytes != null) {
+					// fix badly formatted <init> on 1.7.10
+					if (getExtension().getForgeProvider().getFG() == ForgeProvider.FG_VERSION.ONE_SEVEN) {
+						String at = new String(atBytes, StandardCharsets.UTF_8);
+						at = replaceFunction(at, Pattern.compile("(.)(<init>\\([^\n]*\\))\n"), (g) -> {
+							if (!g[1].equals(" ")) {
+								return g[1] + " " + g[2] + "V\n";
+							}
+
+							return " " + g[2] + "V\n";
+						});
+						atBytes = at.getBytes(StandardCharsets.UTF_8);
+					}
+
+					File tmpFile = File.createTempFile("at-conf", ".cfg");
+					toDelete.add(tmpFile);
+					Files.write(tmpFile.toPath(), atBytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+					args.add("--atFile");
+					args.add(tmpFile.getAbsolutePath());
+				}
 			}
 		}
 
@@ -453,6 +470,26 @@ public abstract class MinecraftPatchedProvider extends DependencyProvider {
 		}
 
 		logger.lifecycle(":access transformed minecraft in " + stopwatch.stop());
+	}
+
+	public static String replaceFunction(String str, Pattern pattern, Function<String[], String> replaceFn) {
+		Matcher m = pattern.matcher(str);
+		int offset = 0;
+
+		while (m.find()) {
+			String[] args = new String[m.groupCount() + 1];
+
+			for (int i = 0; i < args.length; ++i) {
+				args[i] = m.group(i);
+			}
+
+			String replacement = replaceFn.apply(args);
+			int len = m.end() - m.start();
+			str = str.substring(0, m.start() + offset) + replacement + str.substring(m.end() + offset);
+			offset = replacement.length() - len;
+		}
+
+		return str;
 	}
 
 	protected void remapPatchedJar(Logger logger) throws Exception {

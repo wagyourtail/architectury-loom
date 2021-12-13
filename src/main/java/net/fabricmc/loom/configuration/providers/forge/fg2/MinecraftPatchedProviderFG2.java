@@ -73,8 +73,7 @@ public class MinecraftPatchedProviderFG2 extends MinecraftPatchedProvider {
 	// fields in super
 
 	public MinecraftPatchedProviderFG2(Project project) {
-		// use AT from forge universal (btw userdev at's are named `forge_at.cfg` if this should be changed)
-		super(project, "forge_at.cfg");
+		super(project, "forge_at.cfg", "fml_at.cfg");
 	}
 
 	@Override
@@ -239,7 +238,6 @@ public class MinecraftPatchedProviderFG2 extends MinecraftPatchedProvider {
 		//  This will change if upstream Loom adds the possibility for separate projects/source sets per environment.
 
 		logger.lifecycle(":merging jars");
-		Set<File> mcLibs = getProject().getConfigurations().getByName(Constants.Configurations.MINECRAFT_DEPENDENCIES).resolve();
 		Files.copy(minecraftClientPatchedJar.toPath(), minecraftMergedPatchedJar.toPath());
 
 		logger.lifecycle(":copying resources");
