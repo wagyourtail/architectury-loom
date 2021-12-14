@@ -92,11 +92,12 @@ public class MinecraftPatchedProviderFG2 extends MinecraftPatchedProvider {
 	@Override
 	protected File[] getGlobalCaches() {
 		File[] files = {
+				minecraftClientJar,
+				minecraftServerJar,
 				minecraftClientPatchedJar,
 				minecraftServerPatchedJar,
 				minecraftMergedPatchedJar,
-				minecraftMergedPatchedSrgJar,
-				minecraftClientExtra,
+				minecraftMergedPatchedSrgJar
 		};
 
 		if (forgeMergedJar != null) {
@@ -155,18 +156,10 @@ public class MinecraftPatchedProviderFG2 extends MinecraftPatchedProvider {
 		// Step 5: Remap Patched AT & Forge to Official (global or project)
 		if (dirty) {
 			remapPatchedJar(getProject().getLogger());
-
-			if (getExtension().isForgeAndOfficial()) {
-				fillClientExtraJar();
-			}
 		}
 
 		this.filesDirty = dirty;
 		this.dirty = false;
-
-		if (getExtension().isForgeAndOfficial()) {
-			addDependency(minecraftClientExtra, Constants.Configurations.FORGE_EXTRA);
-		}
 	}
 
 	public enum Environment {
@@ -214,9 +207,7 @@ public class MinecraftPatchedProviderFG2 extends MinecraftPatchedProvider {
 			copyMissingClasses(environment.srgJar.apply(this), environment.patchedSrgJar.apply(this));
 			deleteParameterNames(environment.patchedSrgJar.apply(this));
 
-			if (getExtension().isForgeAndNotOfficial()) {
-				fixParameterAnnotation(environment.patchedSrgJar.apply(this));
-			}
+			fixParameterAnnotation(environment.patchedSrgJar.apply(this));
 		});
 
 		logger.lifecycle(":patched jars in " + stopwatch.stop());
@@ -253,12 +244,9 @@ public class MinecraftPatchedProviderFG2 extends MinecraftPatchedProvider {
 		logger.lifecycle(":copying resources");
 
 		// Copy resources
-		if (getExtension().isForgeAndNotOfficial()) {
-			// Copy resources
-			MinecraftProviderImpl minecraftProvider = getExtension().getMinecraftProvider();
-			copyNonClassFiles(minecraftProvider.minecraftClientJar, minecraftMergedPatchedJar);
-			copyNonClassFiles(minecraftProvider.getMinecraftServerJar(), minecraftMergedPatchedJar);
-		}
+		MinecraftProviderImpl minecraftProvider = getExtension().getMinecraftProvider();
+		copyNonClassFiles(minecraftProvider.minecraftClientJar, minecraftMergedPatchedJar);
+		copyNonClassFiles(minecraftProvider.getMinecraftServerJar(), minecraftMergedPatchedJar);
 	}
 
 	protected void remapPatchedJarToSrg(Logger logger) throws Exception {

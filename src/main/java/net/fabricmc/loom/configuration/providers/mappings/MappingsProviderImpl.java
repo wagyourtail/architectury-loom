@@ -157,7 +157,7 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 		}
 
 		if (getExtension().isForge()) {
-			if (getExtension().getMcpConfigProvider().isFG2()) {
+			if (getExtension().getForgeProvider().isFG2()) {
 				patchedProvider = new MinecraftPatchedProviderFG2(getProject());
 				patchedProvider.provide(dependency, postPopulationScheduler);
 			} else {
