@@ -57,7 +57,9 @@ public class ForgeProvider extends DependencyProvider {
 			addDependency(dependency.getDepString() + ":userdev", Constants.Configurations.FORGE_USERDEV);
 			addDependency(dependency.getDepString() + ":installer", Constants.Configurations.FORGE_INSTALLER);
 		} else {
-			addDependency(dependency.getDependency() + ":src@zip", Constants.Configurations.FORGE_USERDEV);
+			addDependency(dependency.getDepString() + ":src@zip", Constants.Configurations.FORGE_USERDEV);
+			addDependency(dependency.getDepString() + ":installer", Constants.Configurations.FORGE_INSTALLER);
+
 			setFg(FG_VERSION.FG1);
 		}
 	}
@@ -163,6 +165,6 @@ public class ForgeProvider extends DependencyProvider {
 	}
 
 	public enum FG_VERSION {
-		FG3, FG2, ONE_SEVEN, FG1, PRE_ONE_THREE
+		FG3, ONE_TWELVE, FG2, ONE_SEVEN, FG1, PRE_ONE_THREE
 	}
 }

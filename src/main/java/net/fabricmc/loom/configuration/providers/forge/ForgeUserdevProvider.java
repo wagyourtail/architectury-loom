@@ -131,10 +131,36 @@ public class ForgeUserdevProvider extends DependencyProvider {
 		provideFG3(transformed);
 	}
 
-	public void provideFG1(DependencyInfo dependency, FileSystem fs) {
-		Path mcpZip = getExtension().getForgeProvider().getGlobalCache().toPath().resolve("mcp.zip");
-
+	public void provideFG1(DependencyInfo dependency, FileSystem fs) throws IOException, URISyntaxException {
 		getProject().getLogger().info("FG1 \"Userdev\" (src), using defaults");
+
+		String defaultMCPPath = dependency.getDepString() + ":src@zip";
+		String defaultUniversalPath = "net.minecraftforge:forge:" + dependency.getResolvedVersion() + ":universal";
+
+		if (getProject().getConfigurations().getByName(getExtension().getMappingsProvider().getTargetConfig()).getDependencies().isEmpty()) {
+			getProject().getLogger().info("no mappings dep, constructing default mappings from bundled mcp");
+
+			Path mcpZip = getExtension().getForgeProvider().getGlobalCache().toPath().resolve("mcp.zip");
+			File resolved = dependency.resolveFile().orElseThrow(() -> new RuntimeException("Could not resolve Forge userdev"));
+
+//			try (FileSystem fs = FileSystems.newFileSystem(new URI("jar:" + resolved.toURI()), ImmutableMap.of("create", false))) {
+			try (FileSystem output = FileSystems.newFileSystem(new URI("jar:" + mcpZip.toUri()), ImmutableMap.of("create", true))) {
+				Files.copy(fs.getPath("conf/fields.csv"), output.getPath("fields.csv"), StandardCopyOption.REPLACE_EXISTING);
+				Files.copy(fs.getPath("conf/methods.csv"), output.getPath("methods.csv"), StandardCopyOption.REPLACE_EXISTING);
+				Files.copy(fs.getPath("conf/params.csv"), output.getPath("params.csv"), StandardCopyOption.REPLACE_EXISTING);
+			}
+//			}
+
+			addDependency(mcpZip.toFile(), Constants.Configurations.MAPPINGS);
+		}
+
+		getProject().getLogger().info("Using default MCP path: " + defaultMCPPath);
+		getProject().getLogger().info("Using default Universal path: " + defaultUniversalPath);
+
+		addDependency(defaultMCPPath, Constants.Configurations.MCP_CONFIG);
+		addDependency(defaultMCPPath, Constants.Configurations.SRG);
+		addDependency(defaultUniversalPath, Constants.Configurations.FORGE_UNIVERSAL);
+
 	}
 
 	public void provideFG2(DependencyInfo dependency, Attribute<Boolean> transformed) throws URISyntaxException, IOException {

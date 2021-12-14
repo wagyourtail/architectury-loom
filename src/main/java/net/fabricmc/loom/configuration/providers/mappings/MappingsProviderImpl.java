@@ -64,10 +64,9 @@ import net.fabricmc.loom.configuration.accesswidener.AccessWidenerJarProcessor;
 import net.fabricmc.loom.configuration.accesswidener.TransitiveAccessWidenerJarProcessor;
 import net.fabricmc.loom.configuration.processors.JarProcessorManager;
 import net.fabricmc.loom.configuration.processors.MinecraftProcessedProvider;
-import net.fabricmc.loom.configuration.providers.MinecraftProvider;
 import net.fabricmc.loom.configuration.providers.MinecraftProviderImpl;
-import net.fabricmc.loom.configuration.providers.forge.ForgeProvider;
 import net.fabricmc.loom.configuration.providers.forge.MinecraftPatchedProvider;
+import net.fabricmc.loom.configuration.providers.forge.fg1.MinecraftPatchedProviderJARMOD;
 import net.fabricmc.loom.configuration.providers.forge.fg2.MinecraftPatchedProviderFG2;
 import net.fabricmc.loom.configuration.providers.forge.fg3.MinecraftPatchedProviderFG3;
 import net.fabricmc.loom.configuration.providers.forge.SrgProvider;
@@ -158,12 +157,22 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 		}
 
 		if (getExtension().isForge()) {
-			if (getExtension().getForgeProvider().getFG() != ForgeProvider.FG_VERSION.FG3) {
-				patchedProvider = new MinecraftPatchedProviderFG2(getProject());
-				patchedProvider.provide(dependency, postPopulationScheduler);
-			} else {
+			switch (getExtension().getForgeProvider().getFG()) {
+			case FG3:
 				patchedProvider = new MinecraftPatchedProviderFG3(getProject());
 				patchedProvider.provide(dependency, postPopulationScheduler);
+				break;
+			case FG2:
+			case ONE_SEVEN:
+				patchedProvider = new MinecraftPatchedProviderFG2(getProject());
+				patchedProvider.provide(dependency, postPopulationScheduler);
+				break;
+			case FG1:
+				patchedProvider = new MinecraftPatchedProviderJARMOD(getProject());
+				patchedProvider.provide(dependency, postPopulationScheduler);
+				break;
+			default:
+				throw new IllegalStateException("Unknown forge version: " + getExtension().getForgeProvider().getFG());
 			}
 		}
 

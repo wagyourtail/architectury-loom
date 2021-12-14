@@ -424,7 +424,7 @@ public abstract class MinecraftPatchedProvider extends DependencyProvider {
 					// fix badly formatted <init> on 1.7.10
 					if (getExtension().getForgeProvider().getFG() == ForgeProvider.FG_VERSION.ONE_SEVEN) {
 						String at = new String(atBytes, StandardCharsets.UTF_8);
-						at = replaceFunction(at, Pattern.compile("(.)(<init>\\([^\n]*\\))\n"), (g) -> {
+						at = replaceFunction(at, Pattern.compile("(.)(<init>\\([^\n]*\\))(?:#[^\n]*)?\n"), (g) -> {
 							if (!g[1].equals(" ")) {
 								return g[1] + " " + g[2] + "V\n";
 							}
@@ -555,7 +555,7 @@ public abstract class MinecraftPatchedProvider extends DependencyProvider {
 		}
 	}
 
-	private void walkFileSystems(File source, File target, Predicate<Path> filter, FsPathConsumer action) throws IOException {
+	protected void walkFileSystems(File source, File target, Predicate<Path> filter, FsPathConsumer action) throws IOException {
 		walkFileSystems(source, target, filter, FileSystem::getRootDirectories, action);
 	}
 
