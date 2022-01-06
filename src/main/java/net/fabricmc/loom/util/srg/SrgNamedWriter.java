@@ -28,7 +28,14 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import org.cadixdev.lorenz.MappingSet;
+import org.cadixdev.lorenz.impl.MappingSetModelFactoryImpl;
+import org.cadixdev.lorenz.impl.model.InnerClassMappingImpl;
+import org.cadixdev.lorenz.impl.model.TopLevelClassMappingImpl;
 import org.cadixdev.lorenz.io.srg.SrgWriter;
+import org.cadixdev.lorenz.model.ClassMapping;
+import org.cadixdev.lorenz.model.InnerClassMapping;
+import org.cadixdev.lorenz.model.TopLevelClassMapping;
 import org.gradle.api.logging.Logger;
 
 import net.fabricmc.lorenztiny.TinyMappingsReader;
@@ -40,8 +47,35 @@ public class SrgNamedWriter {
 
 		try (SrgWriter writer = new SrgWriter(Files.newBufferedWriter(srgFile))) {
 			try (TinyMappingsReader reader = new TinyMappingsReader(mappings, from, to)) {
-				writer.write(reader.read());
+				writer.write(reader.read(MappingSet.create(new ClassesAlwaysHaveDeobfNameFactory())));
 			}
+		}
+	}
+
+	/**
+	 * Legacy Forge's FMLDeobfuscatingRemapper requires class mappings, even if they are identity maps, but such
+	 * mappings are filtered out by the SrgWriter. To get around that, we create a custom mapping set which always
+	 * claims to have deobfuscated names set for classes.
+	 */
+	private static class ClassesAlwaysHaveDeobfNameFactory extends MappingSetModelFactoryImpl {
+		@Override
+		public TopLevelClassMapping createTopLevelClassMapping(MappingSet parent, String obfuscatedName, String deobfuscatedName) {
+			return new TopLevelClassMappingImpl(parent, obfuscatedName, deobfuscatedName) {
+				@Override
+				public boolean hasDeobfuscatedName() {
+					return true;
+				}
+			};
+		}
+
+		@Override
+		public InnerClassMapping createInnerClassMapping(ClassMapping parent, String obfuscatedName, String deobfuscatedName) {
+			return new InnerClassMappingImpl(parent, obfuscatedName, deobfuscatedName) {
+				@Override
+				public boolean hasDeobfuscatedName() {
+					return true;
+				}
+			};
 		}
 	}
 }
