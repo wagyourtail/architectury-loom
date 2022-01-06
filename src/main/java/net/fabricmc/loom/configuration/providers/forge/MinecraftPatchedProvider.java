@@ -186,7 +186,7 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 		forgeMergedJar = getExtension().isForgeAndOfficial() ? null : new File(globalCache, "forge-official.jar");
 		minecraftMergedPatchedSrgAtJar = new File(projectDir, "merged-srg-at-patched.jar");
 		minecraftMergedPatchedJar = new File(projectDir, "merged-patched.jar");
-		minecraftClientExtra = new File(globalCache, "forge-client-extra.jar");
+		minecraftClientExtra = getExtension().isForgeAndOfficial() ? new File(globalCache, "forge-client-extra.jar") : null;
 
 		if (isRefreshDeps() || Stream.of(getGlobalCaches()).anyMatch(((Predicate<File>) File::exists).negate())
 						|| !isPatchedJarUpToDate(minecraftMergedPatchedJar)) {
