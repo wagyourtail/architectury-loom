@@ -340,6 +340,7 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 			getProject().getDependencies().add(provider.getTargetConfig(), "de.oceanlabs.mcp:mcp_config:" + getMinecraftProvider().minecraftVersion());
 			Configuration configuration = getProject().getConfigurations().getByName(provider.getTargetConfig());
 			provider.provide(DependencyInfo.create(getProject(), configuration.getDependencies().iterator().next(), configuration), postPopulationScheduler);
+			getExtension().getDependencyManager().addProvider(provider);
 		}
 
 		Path srgPath = getRawSrgFile();
