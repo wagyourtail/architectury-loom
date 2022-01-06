@@ -223,14 +223,9 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 				minecraftServerPatchedSrgJar,
 				minecraftMergedPatchedSrgJar,
 				minecraftClientExtra,
+				forgeMergedJar
 		};
-
-		if (forgeMergedJar != null) {
-			Arrays.copyOf(files, files.length + 1);
-			files[files.length - 1] = forgeMergedJar;
-		}
-
-		return files;
+		return Arrays.stream(files).filter(Objects::nonNull).toArray(File[]::new);
 	}
 
 	public void cleanProjectCache() {
