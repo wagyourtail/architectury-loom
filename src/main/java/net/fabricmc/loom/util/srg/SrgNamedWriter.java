@@ -36,18 +36,20 @@ import org.cadixdev.lorenz.io.srg.SrgWriter;
 import org.cadixdev.lorenz.model.ClassMapping;
 import org.cadixdev.lorenz.model.InnerClassMapping;
 import org.cadixdev.lorenz.model.TopLevelClassMapping;
-import org.gradle.api.logging.Logger;
 
 import net.fabricmc.lorenztiny.TinyMappingsReader;
 import net.fabricmc.mappingio.tree.MappingTree;
 
 public class SrgNamedWriter {
-	public static void writeTo(Logger logger, Path srgFile, MappingTree mappings, String from, String to) throws IOException {
+	public static void writeTo(Path srgFile, MappingTree mappings, String from, String to, boolean includeIdentityMappings) throws IOException {
 		Files.deleteIfExists(srgFile);
 
 		try (SrgWriter writer = new SrgWriter(Files.newBufferedWriter(srgFile))) {
 			try (TinyMappingsReader reader = new TinyMappingsReader(mappings, from, to)) {
-				writer.write(reader.read(MappingSet.create(new ClassesAlwaysHaveDeobfNameFactory())));
+				MappingSet mappingSet = includeIdentityMappings
+						? MappingSet.create(new ClassesAlwaysHaveDeobfNameFactory())
+						: MappingSet.create();
+				writer.write(reader.read(mappingSet));
 			}
 		}
 	}

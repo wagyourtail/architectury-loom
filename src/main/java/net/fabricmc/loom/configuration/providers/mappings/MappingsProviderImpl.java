@@ -202,7 +202,7 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 			}
 
 			if (Files.notExists(srgToNamedSrg) || isRefreshDeps()) {
-				SrgNamedWriter.writeTo(getProject().getLogger(), srgToNamedSrg, getMappingsWithSrg(), "srg", "named");
+				SrgNamedWriter.writeTo(srgToNamedSrg, getMappingsWithSrg(), "srg", "named", getExtension().isLegacyForge());
 			}
 		}
 
