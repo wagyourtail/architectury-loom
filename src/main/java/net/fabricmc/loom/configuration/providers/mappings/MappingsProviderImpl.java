@@ -589,8 +589,7 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 
 				// Download and extract intermediary
 				if (getExtension().isLegacyForge()) {
-					Path intermediaryV1Tiny = getMinecraftProvider().file("intermediary-v1.tiny").toPath();
-					generateDummyIntermediary(getProject().getLogger(), intermediaryV1Tiny, intermediaryTiny);
+					generateDummyIntermediary(getProject().getLogger(), intermediaryTiny);
 				} else {
 					String encodedMinecraftVersion = UrlEscapers.urlFragmentEscaper().escape(getMinecraftProvider().minecraftVersion());
 					String intermediaryArtifactUrl = getExtension().getIntermediaryUrl(encodedMinecraftVersion);
@@ -604,13 +603,16 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 		return intermediaryTiny;
 	}
 
-	private void generateDummyIntermediary(Logger logger, Path tinyV1, Path tinyV2) throws IOException {
+	private void generateDummyIntermediary(Logger logger, Path tinyV2) throws IOException {
 		Stopwatch stopwatch = Stopwatch.createStarted();
 		logger.lifecycle(":generating dummy intermediary");
 
 		Path minecraftJar = getExtension().getMinecraftProvider().getMergedJar().toPath();
 
-		Files.deleteIfExists(tinyV1); // file must not exist, otherwise stitch will try to read it
+		// create a temporary folder into which stitch will output the v1 file
+		// we cannot just create a temporary file directly, cause stitch will try to read it if it exists
+		Path tmpFolder = Files.createTempDirectory("dummy-intermediary");
+		Path tinyV1 = tmpFolder.resolve("intermediary-v1.tiny");
 
 		CommandGenerateIntermediary command = new CommandGenerateIntermediary();
 		LoggerFilter.withSystemOutAndErrSuppressed(() -> {
@@ -626,6 +628,9 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 		try (MappingWriter writer = MappingWriter.create(tinyV2, MappingFormat.TINY_2)) {
 			MappingReader.read(tinyV1, writer);
 		}
+
+		Files.delete(tinyV1);
+		Files.delete(tmpFolder);
 
 		logger.lifecycle(":generated dummy intermediary in " + stopwatch.stop());
 	}
