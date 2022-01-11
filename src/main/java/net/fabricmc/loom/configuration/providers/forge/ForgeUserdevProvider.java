@@ -164,8 +164,14 @@ public class ForgeUserdevProvider extends DependencyProvider {
 		// TODO: Should I copy the patches from here as well?
 		//       That'd require me to run the "MCP environment" fully up to merging.
 
-		JsonObject runs = isLegacyForge ? new JsonObject() : json.getAsJsonObject("runs");
+		if (!isLegacyForge) {
+			configureRuns(json.getAsJsonObject("runs"));
+		} else {
+			configureRunsForLegacyForge();
+		}
+	}
 
+	private void configureRuns(JsonObject runs) {
 		for (Map.Entry<String, JsonElement> entry : runs.entrySet()) {
 			LaunchProviderSettings launchSettings = getExtension().getLaunchConfigs().findByName(entry.getKey());
 			RunConfigSettings settings = getExtension().getRunConfigs().findByName(entry.getKey());
@@ -211,14 +217,14 @@ public class ForgeUserdevProvider extends DependencyProvider {
 				});
 			}
 		}
+	}
 
-		if (isLegacyForge) {
-			getExtension().getRunConfigs().configureEach(config -> {
-				if (Constants.Forge.LAUNCH_TESTING.equals(config.getDefaultMainClass())) {
-					config.setDefaultMainClass(Constants.LegacyForge.LAUNCH_WRAPPER);
-				}
-			});
-		}
+	private void configureRunsForLegacyForge() {
+		getExtension().getRunConfigs().configureEach(config -> {
+			if (Constants.Forge.LAUNCH_TESTING.equals(config.getDefaultMainClass())) {
+				config.setDefaultMainClass(Constants.LegacyForge.LAUNCH_WRAPPER);
+			}
+		});
 	}
 
 	public boolean isLegacyForge() {
