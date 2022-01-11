@@ -50,6 +50,7 @@ import com.google.gson.JsonObject;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.artifacts.ModuleDependency;
+import org.gradle.api.artifacts.repositories.IvyArtifactRepository;
 import org.gradle.api.artifacts.transform.InputArtifact;
 import org.gradle.api.artifacts.transform.TransformAction;
 import org.gradle.api.artifacts.transform.TransformOutputs;
@@ -132,6 +133,7 @@ public class ForgeUserdevProvider extends DependencyProvider {
 			addDependency(mcpDep, Constants.Configurations.MCP_CONFIG);
 			addDependency(mcpDep, Constants.Configurations.SRG);
 			addDependency(dependency.getDepString() + ":universal", Constants.Configurations.FORGE_UNIVERSAL);
+			addLegacyMCPRepo();
 		}
 
 		for (JsonElement lib : json.get("libraries").getAsJsonArray()) {
@@ -225,6 +227,23 @@ public class ForgeUserdevProvider extends DependencyProvider {
 			if (Constants.Forge.LAUNCH_TESTING.equals(config.getDefaultMainClass())) {
 				config.setDefaultMainClass(Constants.LegacyForge.LAUNCH_WRAPPER);
 			}
+		});
+	}
+
+	private void addLegacyMCPRepo() {
+		getProject().getRepositories().ivy(repo -> {
+			// Old MCP data does not have POMs
+			repo.setName("LegacyMCP");
+			repo.setUrl("https://maven.minecraftforge.net/");
+			repo.patternLayout(layout -> {
+				layout.artifact("[orgPath]/[artifact]/[revision]/[artifact]-[revision](-[classifier])(.[ext])");
+				// also check the zip so people do not have to explicitly specify the extension for older versions
+				layout.artifact("[orgPath]/[artifact]/[revision]/[artifact]-[revision](-[classifier]).zip");
+			});
+			repo.content(descriptor -> {
+				descriptor.includeGroup("de.oceanlabs.mcp");
+			});
+			repo.metadataSources(IvyArtifactRepository.MetadataSources::artifact);
 		});
 	}
 
