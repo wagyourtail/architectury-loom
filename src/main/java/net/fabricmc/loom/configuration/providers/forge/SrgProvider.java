@@ -94,6 +94,7 @@ public class SrgProvider extends DependencyProvider {
 				Path srgPath = fs.getPath("joined.srg");
 
 				if (Files.exists(srgPath)) {
+					// FG2-era MCP uses the older SRG format, convert it on the fly
 					try (Reader reader = Files.newBufferedReader(srgPath); Writer writer = Files.newBufferedWriter(srg)) {
 						new TSrgWriter(writer).write(new SrgReader(reader).read());
 					}

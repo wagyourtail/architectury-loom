@@ -102,6 +102,7 @@ public class ForgeUserdevProvider extends DependencyProvider {
 			try (FileSystem fs = FileSystems.newFileSystem(new URI("jar:" + resolved.toURI()), ImmutableMap.of("create", false))) {
 				Path configEntry = fs.getPath("config.json");
 
+				// If we cannot find a modern config json, try the legacy/FG2-era one
 				if (!Files.exists(configEntry)) {
 					configEntry = fs.getPath("dev.json");
 				}
