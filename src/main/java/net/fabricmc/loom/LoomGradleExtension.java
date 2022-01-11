@@ -143,7 +143,7 @@ public interface LoomGradleExtension extends LoomGradleExtensionAPI {
 		return isForge() && getForgeUserdevProvider().isLegacyForge();
 	}
 
-	default boolean isModLauncher() {
+	default boolean isModernForge() {
 		return isForge() && !isLegacyForge();
 	}
 

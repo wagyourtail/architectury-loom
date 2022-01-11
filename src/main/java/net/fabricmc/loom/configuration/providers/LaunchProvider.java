@@ -66,7 +66,7 @@ public class LaunchProvider extends DependencyProvider {
 				.property("client", "java.library.path", getExtension().getMinecraftProvider().nativesDir().getAbsolutePath())
 				.property("client", "org.lwjgl.librarypath", getExtension().getMinecraftProvider().nativesDir().getAbsolutePath());
 
-		if (!getExtension().isModLauncher()) {
+		if (!getExtension().isModernForge()) {
 			launchConfig
 					.argument("client", "--assetIndex")
 					.argument("client", getExtension().getMinecraftProvider().getVersionInfo().assetIndex().fabricId(getExtension().getMinecraftProvider().minecraftVersion()))
@@ -74,7 +74,7 @@ public class LaunchProvider extends DependencyProvider {
 					.argument("client", new File(getDirectories().getUserCache(), "assets").getAbsolutePath());
 		}
 
-		if (getExtension().isModLauncher()) {
+		if (getExtension().isModernForge()) {
 			launchConfig
 					// Should match YarnNamingService.PATH_TO_MAPPINGS in forge-runtime
 					.property("fabric.yarnWithSrg.path", getExtension().getMappingsProvider().tinyMappingsWithSrg.toAbsolutePath().toString())
