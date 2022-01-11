@@ -101,7 +101,7 @@ public abstract class AnnotationProcessorInvoker<T extends Task> {
 		ConfigurationContainer configs = project.getConfigurations();
 		LoomGradleExtension extension = LoomGradleExtension.get(project);
 
-		if (!extension.ideSync() || extension.isLegacyForge()) {
+		if (!extension.ideSync()) {
 			for (Configuration processorConfig : apConfigurations) {
 				project.getLogger().info("Adding mixin to classpath of AP config: " + processorConfig.getName());
 				// Pass named MC classpath to mixin AP classpath
