@@ -477,6 +477,26 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 	}
 
 	private void accessTransformForge(Logger logger) throws Exception {
+		List<byte[]> ats = new ArrayList<>();
+
+		for (File jar : ImmutableList.of(getForgeJar(), getForgeUserdevJar(), minecraftMergedPatchedSrgJar)) {
+			byte[] atBytes = ZipUtils.unpackNullable(jar.toPath(), Constants.Forge.ACCESS_TRANSFORMER_PATH);
+
+			if (atBytes != null) {
+				ats.add(atBytes);
+			}
+		}
+
+		if (usesProjectCache()) {
+			for (File projectAt : projectAts) {
+				ats.add(Files.readAllBytes(projectAt.toPath()));
+			}
+		}
+
+		accessTransformForge(logger, minecraftMergedPatchedSrgJar, minecraftMergedPatchedSrgAtJar, ats);
+	}
+
+	protected void accessTransformForge(Logger logger, File input, File target, List<byte[]> ats) throws Exception {
 		MinecraftProviderImpl minecraftProvider = getExtension().getMinecraftProvider();
 		List<File> toDelete = new ArrayList<>();
 		String atDependency = Constants.Dependencies.ACCESS_TRANSFORMERS + (minecraftProvider.isNewerThan21w39a() ? Constants.Dependencies.Versions.ACCESS_TRANSFORMERS_NEW : Constants.Dependencies.Versions.ACCESS_TRANSFORMERS);
@@ -485,8 +505,6 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 
 		logger.lifecycle(":access transforming minecraft");
 
-		File input = minecraftMergedPatchedSrgJar;
-		File target = minecraftMergedPatchedSrgAtJar;
 		Files.deleteIfExists(target.toPath());
 
 		List<String> args = new ArrayList<>();
@@ -495,23 +513,12 @@ public class MinecraftPatchedProvider extends DependencyProvider {
 		args.add("--outJar");
 		args.add(target.getAbsolutePath());
 
-		for (File jar : ImmutableList.of(getForgeJar(), getForgeUserdevJar(), minecraftMergedPatchedSrgJar)) {
-			byte[] atBytes = ZipUtils.unpackNullable(jar.toPath(), Constants.Forge.ACCESS_TRANSFORMER_PATH);
-
-			if (atBytes != null) {
-				File tmpFile = File.createTempFile("at-conf", ".cfg");
-				toDelete.add(tmpFile);
-				Files.write(tmpFile.toPath(), atBytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
-				args.add("--atFile");
-				args.add(tmpFile.getAbsolutePath());
-			}
-		}
-
-		if (usesProjectCache()) {
-			for (File projectAt : projectAts) {
-				args.add("--atFile");
-				args.add(projectAt.getAbsolutePath());
-			}
+		for (byte[] atBytes : ats) {
+			File tmpFile = File.createTempFile("at-conf", ".cfg");
+			toDelete.add(tmpFile);
+			Files.write(tmpFile.toPath(), atBytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+			args.add("--atFile");
+			args.add(tmpFile.getAbsolutePath());
 		}
 
 		getProject().javaexec(spec -> {

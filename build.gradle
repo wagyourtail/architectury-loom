@@ -119,9 +119,6 @@ dependencies {
 	implementation ('de.oceanlabs.mcp:mcinjector:3.8.0')
 	implementation ('com.opencsv:opencsv:5.4')
 
-	// Legacy Forge access transformers
-	implementation ('net.md-5:SpecialSource:1.10.0')
-
 	// Testing
 	testImplementation(gradleTestKit())
 	testImplementation('org.spockframework:spock-core:2.0-groovy-3.0') {

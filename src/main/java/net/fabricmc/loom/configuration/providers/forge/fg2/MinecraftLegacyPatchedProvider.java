@@ -24,11 +24,13 @@
 
 package net.fabricmc.loom.configuration.providers.forge.fg2;
 
-import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.net.URI;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
@@ -37,6 +39,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -44,8 +47,9 @@ import java.util.stream.Stream;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
-import net.md_5.specialsource.AccessChange;
-import net.md_5.specialsource.AccessMap;
+import org.cadixdev.at.AccessTransformSet;
+import org.cadixdev.at.io.AccessTransformFormats;
+import org.cadixdev.lorenz.MappingSet;
 import org.gradle.api.Project;
 import org.gradle.api.logging.Logger;
 import org.objectweb.asm.AnnotationVisitor;
@@ -63,6 +67,8 @@ import net.fabricmc.loom.util.FileSystemUtil;
 import net.fabricmc.loom.util.ThreadingUtils;
 import net.fabricmc.loom.util.TinyRemapperHelper;
 import net.fabricmc.loom.util.ZipUtils;
+import net.fabricmc.loom.util.srg.AccessTransformSetMapper;
+import net.fabricmc.lorenztiny.TinyMappingsReader;
 import net.fabricmc.mappingio.tree.MappingTree;
 import net.fabricmc.stitch.merge.JarMerger;
 
@@ -224,26 +230,30 @@ public class MinecraftLegacyPatchedProvider extends MinecraftPatchedProvider {
 	}
 
 	private void accessTransformForge(Logger logger) throws Exception {
-		Stopwatch stopwatch = Stopwatch.createStarted();
-
-		logger.lifecycle(":access transforming minecraft");
-
-		MappingTree mappingTree = getExtension().getMappingsProvider().getMappingsWithSrg();
-
-		AccessMap accessMap = new LegacyAccessMap();
+		// Load all applicable access transformers
+		AccessTransformSet accessTransformSet = AccessTransformSet.create();
 
 		byte[] forgeAt = ZipUtils.unpack(forgeJar.toPath(), "forge_at.cfg");
-		accessMap.loadAccessTransformer(new BufferedReader(new InputStreamReader(new ByteArrayInputStream(forgeAt))));
+		AccessTransformFormats.FML.read(new InputStreamReader(new ByteArrayInputStream(forgeAt)), accessTransformSet);
 
 		for (File projectAt : projectAts) {
-			accessMap.loadAccessTransformer(projectAt);
+			AccessTransformFormats.FML.read(projectAt.toPath(), accessTransformSet);
 		}
 
-		Files.copy(minecraftMergedPatchedJar.toPath(), minecraftMergedPatchedAtJar.toPath(), StandardCopyOption.REPLACE_EXISTING);
+		// Remap them from srg to official mappings
+		MappingTree mappingTree = getExtension().getMappingsProvider().getMappingsWithSrg();
+		MappingSet mappingSet = new TinyMappingsReader(mappingTree, "srg", "official").read();
+		accessTransformSet = AccessTransformSetMapper.remap(accessTransformSet, mappingSet);
 
-		modifyClasses(minecraftMergedPatchedAtJar, writer -> new AccessTransformingVisitor(accessMap, mappingTree, writer));
+		ByteArrayOutputStream remappedOut = new ByteArrayOutputStream();
+		// TODO the extra BufferedWriter wrapper and closing can be removed once https://github.com/CadixDev/at/issues/6 is fixed
+		BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(remappedOut));
+		AccessTransformFormats.FML.write(writer, accessTransformSet);
+		writer.close();
+		byte[] remappedAt = remappedOut.toByteArray();
 
-		logger.lifecycle(":access transformed minecraft in " + stopwatch.stop());
+		// And finally, apply them to the merged+patched jar
+		accessTransformForge(logger, minecraftMergedPatchedJar, minecraftMergedPatchedAtJar, Collections.singletonList(remappedAt));
 	}
 
 	private void modifyClasses(File jarFile, Function<ClassVisitor, ClassVisitor> func) throws Exception {
@@ -378,70 +388,6 @@ public class MinecraftLegacyPatchedProvider extends MinecraftPatchedProvider {
 
 				return super.visitAnnotation(descriptor, visible);
 			}
-		}
-	}
-
-	private static class LegacyAccessMap extends AccessMap {
-		@Override
-		public void addAccessChange(String key, AccessChange accessChange) {
-			// Forge's AT separates fields/methods from their owner by a space but we require a slash
-			int spaceIdx = key.indexOf(' ');
-
-			if (spaceIdx != -1 && key.charAt(spaceIdx + 1) != '(') {
-				key = key.replaceFirst(" ", "/");
-			}
-
-			super.addAccessChange(key, accessChange);
-		}
-	}
-
-	private static class AccessTransformingVisitor extends ClassVisitor {
-		private final AccessMap accessMap;
-		private final MappingTree mappingTree;
-		private final int src;
-		private final int dst;
-
-		private MappingTree.ClassMapping classMapping;
-		private String mappedClassName;
-
-		private AccessTransformingVisitor(AccessMap accessMap, MappingTree mappingTree, ClassVisitor classVisitor) {
-			super(Opcodes.ASM9, classVisitor);
-			this.accessMap = accessMap;
-			this.mappingTree = mappingTree;
-			this.src = mappingTree.getNamespaceId("official");
-			this.dst = mappingTree.getNamespaceId("srg");
-		}
-
-		@Override
-		public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
-			classMapping = mappingTree.getClass(name, src);
-			mappedClassName = classMapping != null ? classMapping.getName(dst) : name;
-			access = accessMap.applyClassAccess(mappedClassName, access);
-			super.visit(version, access, name, signature, superName, interfaces);
-		}
-
-		@Override
-		public FieldVisitor visitField(int access, String name, String descriptor, String signature, Object value) {
-			MappingTree.FieldMapping field = classMapping != null ? classMapping.getField(name, descriptor, src) : null;
-			String mappedName = field != null ? field.getName(dst) : name;
-			access = accessMap.applyFieldAccess(mappedClassName, mappedName, access);
-			return super.visitField(access, name, descriptor, signature, value);
-		}
-
-		@Override
-		public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
-			MappingTree.MethodMapping method = classMapping != null ? classMapping.getMethod(name, desc, src) : null;
-			String mappedName = method != null ? method.getName(dst) : name;
-			String mappedDesc = method != null ? method.getDesc(dst) : mappingTree.mapDesc(desc, src, dst);
-			access = accessMap.applyMethodAccess(mappedClassName, mappedName, mappedDesc, access);
-			return super.visitMethod(access, name, desc, signature, exceptions);
-		}
-
-		@Override
-		public void visitInnerClass(String name, String outerName, String innerName, int access) {
-			MappingTree.ClassMapping classMapping = mappingTree.getClass(name, src);
-			access = accessMap.applyClassAccess(classMapping != null ? classMapping.getName(dst) : name, access);
-			super.visitInnerClass(name, outerName, innerName, access);
 		}
 	}
 }
