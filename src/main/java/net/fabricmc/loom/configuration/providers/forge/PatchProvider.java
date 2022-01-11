@@ -75,16 +75,16 @@ public class PatchProvider extends DependencyProvider {
 		if (Files.notExists(clientPatches) || Files.notExists(serverPatches) || isRefreshDeps()) {
 			getProject().getLogger().info(":extracting forge patches");
 
-			Path installerJar = getExtension().isLegacyForge()
-					? getExtension().getForgeUniversalProvider().getForge().toPath()
-					: dependency.resolveFile().orElseThrow(() -> new RuntimeException("Could not resolve Forge installer")).toPath();
+			Path installerJar = getExtension().isModernForge()
+					? dependency.resolveFile().orElseThrow(() -> new RuntimeException("Could not resolve Forge installer")).toPath()
+					: getExtension().getForgeUniversalProvider().getForge().toPath();
 
 			try (FileSystem fs = FileSystems.newFileSystem(new URI("jar:" + installerJar.toUri()), ImmutableMap.of("create", false))) {
-				if (getExtension().isLegacyForge()) {
-					splitAndConvertLegacyPatches(fs.getPath("binpatches.pack.lzma"));
-				} else {
+				if (getExtension().isModernForge()) {
 					Files.copy(fs.getPath("data", "client.lzma"), clientPatches, StandardCopyOption.REPLACE_EXISTING);
 					Files.copy(fs.getPath("data", "server.lzma"), serverPatches, StandardCopyOption.REPLACE_EXISTING);
+				} else {
+					splitAndConvertLegacyPatches(fs.getPath("binpatches.pack.lzma"));
 				}
 			}
 		}

@@ -103,7 +103,7 @@ public class ForgeUserdevProvider extends DependencyProvider {
 				Path configEntry = fs.getPath("config.json");
 
 				// If we cannot find a modern config json, try the legacy/FG2-era one
-				if (!Files.exists(configEntry)) {
+				if (Files.notExists(configEntry)) {
 					configEntry = fs.getPath("dev.json");
 				}
 
@@ -117,7 +117,11 @@ public class ForgeUserdevProvider extends DependencyProvider {
 
 		isLegacyForge = !json.has("mcp");
 
-		if (isLegacyForge) {
+		if (!isLegacyForge) {
+			addDependency(json.get("mcp").getAsString(), Constants.Configurations.MCP_CONFIG);
+			addDependency(json.get("mcp").getAsString(), Constants.Configurations.SRG);
+			addDependency(json.get("universal").getAsString(), Constants.Configurations.FORGE_UNIVERSAL);
+		} else {
 			Map<String, String> mcpDep = Map.of(
 					"group", "de.oceanlabs.mcp",
 					"name", "mcp",
@@ -128,10 +132,6 @@ public class ForgeUserdevProvider extends DependencyProvider {
 			addDependency(mcpDep, Constants.Configurations.MCP_CONFIG);
 			addDependency(mcpDep, Constants.Configurations.SRG);
 			addDependency(dependency.getDepString() + ":universal", Constants.Configurations.FORGE_UNIVERSAL);
-		} else {
-			addDependency(json.get("mcp").getAsString(), Constants.Configurations.MCP_CONFIG);
-			addDependency(json.get("mcp").getAsString(), Constants.Configurations.SRG);
-			addDependency(json.get("universal").getAsString(), Constants.Configurations.FORGE_UNIVERSAL);
 		}
 
 		for (JsonElement lib : json.get("libraries").getAsJsonArray()) {

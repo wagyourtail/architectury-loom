@@ -152,10 +152,10 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 		}
 
 		if (getExtension().isForge()) {
-			if (getExtension().isLegacyForge()) {
-				patchedProvider = new MinecraftLegacyPatchedProvider(getProject());
-			} else {
+			if (getExtension().isModernForge()) {
 				patchedProvider = new MinecraftPatchedProvider(getProject());
+			} else {
+				patchedProvider = new MinecraftLegacyPatchedProvider(getProject());
 			}
 
 			patchedProvider.provide(dependency, postPopulationScheduler);
@@ -588,14 +588,14 @@ public class MappingsProviderImpl extends DependencyProvider implements Mappings
 				hasRefreshed = true;
 
 				// Download and extract intermediary
-				if (getExtension().isLegacyForge()) {
-					generateDummyIntermediary(getProject().getLogger(), intermediaryTiny);
-				} else {
+				if (!getExtension().isLegacyForge()) {
 					String encodedMinecraftVersion = UrlEscapers.urlFragmentEscaper().escape(getMinecraftProvider().minecraftVersion());
 					String intermediaryArtifactUrl = getExtension().getIntermediaryUrl(encodedMinecraftVersion);
 					File intermediaryJar = getMinecraftProvider().file("intermediary-v2.jar");
 					DownloadUtil.downloadIfChanged(new URL(intermediaryArtifactUrl), intermediaryJar, getProject().getLogger());
 					extractMappings(intermediaryJar.toPath(), intermediaryTiny);
+				} else {
+					generateDummyIntermediary(getProject().getLogger(), intermediaryTiny);
 				}
 			}
 		}
