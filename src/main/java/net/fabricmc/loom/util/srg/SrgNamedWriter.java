@@ -25,17 +25,12 @@
 package net.fabricmc.loom.util.srg;
 
 import java.io.IOException;
+import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
 import org.cadixdev.lorenz.MappingSet;
-import org.cadixdev.lorenz.impl.MappingSetModelFactoryImpl;
-import org.cadixdev.lorenz.impl.model.InnerClassMappingImpl;
-import org.cadixdev.lorenz.impl.model.TopLevelClassMappingImpl;
 import org.cadixdev.lorenz.io.srg.SrgWriter;
-import org.cadixdev.lorenz.model.ClassMapping;
-import org.cadixdev.lorenz.model.InnerClassMapping;
-import org.cadixdev.lorenz.model.TopLevelClassMapping;
 
 import net.fabricmc.lorenztiny.TinyMappingsReader;
 import net.fabricmc.mappingio.tree.MappingTree;
@@ -44,40 +39,35 @@ public class SrgNamedWriter {
 	public static void writeTo(Path srgFile, MappingTree mappings, String from, String to, boolean includeIdentityMappings) throws IOException {
 		Files.deleteIfExists(srgFile);
 
-		try (SrgWriter writer = new SrgWriter(Files.newBufferedWriter(srgFile))) {
+		try (SrgWriter writer = newSrgWriter(Files.newBufferedWriter(srgFile), includeIdentityMappings)) {
 			try (TinyMappingsReader reader = new TinyMappingsReader(mappings, from, to)) {
-				MappingSet mappingSet = includeIdentityMappings
-						? MappingSet.create(new ClassesAlwaysHaveDeobfNameFactory())
-						: MappingSet.create();
-				writer.write(reader.read(mappingSet));
+				writer.write(reader.read());
 			}
 		}
 	}
 
+	private static SrgWriter newSrgWriter(Writer writer, boolean includeIdentityMappings) {
+		return includeIdentityMappings ? new SrgWithIdentitiesWriter(writer) : new SrgWriter(writer);
+	}
+
 	/**
 	 * Legacy Forge's FMLDeobfuscatingRemapper requires class mappings, even if they are identity maps, but such
-	 * mappings are filtered out by the SrgWriter. To get around that, we create a custom mapping set which always
-	 * claims to have deobfuscated names set for classes.
+	 * mappings are filtered out by the SrgWriter. To get around that, this SrgWriter manually emits identity mappings
+	 * before emitting all regular mappings.
 	 */
-	private static class ClassesAlwaysHaveDeobfNameFactory extends MappingSetModelFactoryImpl {
-		@Override
-		public TopLevelClassMapping createTopLevelClassMapping(MappingSet parent, String obfuscatedName, String deobfuscatedName) {
-			return new TopLevelClassMappingImpl(parent, obfuscatedName, deobfuscatedName) {
-				@Override
-				public boolean hasDeobfuscatedName() {
-					return true;
-				}
-			};
+	private static class SrgWithIdentitiesWriter extends SrgWriter {
+		private SrgWithIdentitiesWriter(Writer writer) {
+			super(writer);
 		}
 
 		@Override
-		public InnerClassMapping createInnerClassMapping(ClassMapping parent, String obfuscatedName, String deobfuscatedName) {
-			return new InnerClassMappingImpl(parent, obfuscatedName, deobfuscatedName) {
-				@Override
-				public boolean hasDeobfuscatedName() {
-					return true;
-				}
-			};
+		public void write(MappingSet mappings) {
+			mappings.getTopLevelClassMappings().stream()
+					.filter(cls -> !cls.hasDeobfuscatedName())
+					.sorted(getConfig().getClassMappingComparator())
+					.forEach(cls -> writer.format("CL: %s %s%n", cls.getFullObfuscatedName(), cls.getFullDeobfuscatedName()));
+
+			super.write(mappings);
 		}
 	}
 }
